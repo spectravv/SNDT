@@ -1,0 +1,30 @@
+# SNDT roadmap (ideas parked for later versions)
+
+## v1.0
+- Update name (decided 2026-10-28): v1.0 is the **"Super Original Networking (SON)" update** ("v1.0 – Super Original Networking (SON) Update"). The app itself stays SNDT.
+- Massive final bugfix pass before release.
+  - ~~Fixed (likely cause)~~: station label positions sometimes don't apply; the label stays where it was. Needs a map or steps to reproduce.
+  - ~~Fixed~~: holding the middle mouse button and scrolling fast jumps the view to around x 20000, y 20000. Cause found: the middle-button pan keeps the view position from when the drag started, so after a wheel zoom mid-drag, the next mouse move puts that old position back at the new zoom. Fix: restart the pan from the current view after each zoom (or ignore the wheel while panning). Not caused by the v1.0 panning change; the pan code is unchanged.
+  - ~~Improve "Reorder lines at stations"~~ (done): at busy junctions the reorder dots are a jumbled mess. Place each dot relative to the direction its line comes from and goes to, instead of at a fixed position.
+  - MTR import follow-ups to check in that pass: ~~the MTR import dialog's Line types rows at phone width~~ (tested by the user, fine); "Fetch map" end to end on a phone: decided to test on sndt.cc right after the v1.0 deploy; crowded MTR city centres: moved to v1.1.
+- ~~Turn on the donate button~~ (done in v1.0: https://ko-fi.com/spectra_vv).
+- ~~Smooth panning~~ (done, see CHANGES-v1.0.md): dragging the map stuttered more the more things were on it.
+- ~~New connection type "Zigzag"~~ (done) (idea by 81_71M): straight, then 45°, then straight again (the `_/‾` shape).
+- ~~Mixing connection types~~ (done, "Mix types") (idea by 81_71M): in the map-wide route picker, tick several types at once (for example Direct + Curve + "45°, then straight"). For each segment the engine then picks the best of the ticked types, based on where the two stations are: Direct when they're already in a straight or 45° line, otherwise the ticked bend that fits best. Segments set by hand keep their own type. (Not "several types inside one connection"; 81_71M clarified this.)
+- ~~One-way routes and one-way stops~~ (done) (idea by Vsad): a line, or a part of it, that runs in one direction only, and stops that are only served in one direction.
+  - Agreed: set per segment, as "One way" or "Two way" (the default). One-way segments show small arrows along the track. A stop counts as one-way when the line passes it only in one direction; the stop marker shows that (exact look to propose).
+- ~~More map colour templates~~ (done: six new ones, see CHANGES-v1.0.md).
+- ~~A full tutorial~~ (done, English; translate after approval) that covers every feature, possibly interactive (the player does each step).
+- ~~Auto build~~ (done): selecting a station shows short "o<" stubs pointing out of it in the directions you could build, plus a floating bar to pick "New line" or "Extend <line>" (default: extend if the station is the end of a line, else new line). Clicking a stub opens the line tool and keeps drawing from the stub's tip. Inspired by RMP but not a copy.
+  - Agreed details: stubs are 3 grid steps long (15 at the default grid). The tip is only a temporary bend point; it is removed when the first station is placed, and that segment uses the automatic routing.
+- ~~More station shapes~~ (done) (idea by Vsad): the map-wide stop style only offers Circles and Ticks (London style). Add more, for example square, rounded square, diamond, and a thin bar.
+- ~~Square station blobs~~ (done) where needed (idea by Plentk): a per-station (or per-interchange) option to draw the station as a square or rounded-square blob instead of the default shape.
+  - Agreed: build these two as one feature. The map-wide stop style sets the default shape, and every station can override it in its own settings ("Same as map" by default), with all the same shapes available.
+- ~~Custom station icons~~ (done) (idea by Curt): import a PNG or SVG as a station's icon, scale it, replace the marker or sit on top of it.
+- ~~Handbook~~ (done, English): sndt.cc/handbook with live demos. Translate it into all 11 languages LAST, after the tutorial translation, and only after the user has checked their usage budget.
+- ~~Tutorial translation~~ (done, all 11 languages).
+- ~~Tool search~~ (done): a search bar that finds tools (and probably settings) by name.
+- ~~Turn on the Discord button~~ (done in v1.0).
+
+## v1.1
+- MTR import: an option to spread out only the crowded areas (dense city centres) on import, instead of the whole map (decided 2026-10-28).

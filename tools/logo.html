@@ -1,0 +1,15 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap">
+<style>html,body{margin:0;background:transparent}body{width:100vw;height:100vh;display:grid;place-items:center}
+.word{display:flex;align-items:center;gap:6vh}.word span{font-family:'Archivo Black',sans-serif;font-size:42vh;letter-spacing:-.05em;line-height:.8}
+svg{display:block}</style></head><body><div id="root"></div>
+<script>
+const v=location.hash.slice(1)||'mark',INK='#0b0b0b',PAPER='#efede7',RED='#e61919';
+const mark=(sz,ink=INK,paper=PAPER)=>`<svg width="${sz}" height="${sz}" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="${ink}"/><path d="M5 21H12L20 13H28" fill="none" stroke="${paper}" stroke-width="3.2" stroke-linejoin="miter"/><path d="M5 17V25" stroke="${paper}" stroke-width="3.2"/><path d="M19 3V29" fill="none" stroke="${RED}" stroke-width="3.2"/><circle cx="19" cy="14" r="3.7" fill="${paper}" stroke="${ink}" stroke-width="1.8"/></svg>`;
+const r=document.getElementById('root');
+if(v==='mark')r.innerHTML=mark('100vh');
+else if(v==='mark-light')r.innerHTML=mark('100vh',PAPER,INK);
+else if(v==='icon'){document.body.style.background=PAPER;r.innerHTML=mark('72vh')}
+else if(v==='word-light')r.innerHTML=`<div class="word">${mark('52vh')}<span style="color:${INK}">SNDT</span></div>`;
+else if(v==='word-dark')r.innerHTML=`<div class="word">${mark('52vh',PAPER,INK)}<span style="color:${PAPER}">SNDT</span></div>`;
+</script></body></html>

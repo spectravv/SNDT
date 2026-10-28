@@ -1,0 +1,14 @@
+test-maps/
+releases/
+assets/
+tools/layout-out/
+sndt.zip
+/sndt.html
+/layout-check.mjs
+/touch-test.mjs
+site/.vercel/
+site/index.html
+site/handbook/
+node_modules/
+CHANGELOG-v0.*.md
+CHANGES-v0.*.md

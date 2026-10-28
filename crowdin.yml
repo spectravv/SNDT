@@ -1,0 +1,5 @@
+# Crowdin project config for SNDT. Source: i18n/en.json (made by `node scripts/i18n-export.mjs`).
+# Translations come back as i18n/<two-letter code>.json, then `node scripts/i18n-import.mjs` puts them into src/sndt.html.
+files:
+  - source: /i18n/en.json
+    translation: /i18n/%two_letters_code%.json
