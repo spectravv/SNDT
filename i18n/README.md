@@ -8,8 +8,12 @@ The app's text lives in `src/sndt.html`. These files are the copy Crowdin works 
 - Keep placeholders as they are: `{n}`, `{t}`, `{h}`, `{v}` and `$1`, `$2` (a name or number goes there).
 
 ## Workflow
-1. After changing app text: `node scripts/i18n-export.mjs`, then upload `en.json` to Crowdin as the new source.
-2. To bring translations in: download them from Crowdin into this folder (one `<lang>.json` per language), then
+Crowdin project: https://crowdin.com/project/sndt-cc (string-based). `scripts/crowdin.mjs` reads the API token from
+`CROWDIN_TOKEN` or `~/.crowdin-token`.
+
+1. After changing app text: `node scripts/i18n-export.mjs`, then `node scripts/crowdin.mjs push` to send `en.json` to Crowdin.
+   Lines whose English didn't change keep their translations.
+2. To bring translations in: `node scripts/crowdin.mjs pull` (approved translations only, into `<lang>.json`), then
    `node scripts/i18n-import.mjs --dry` to see what would change, and `node scripts/i18n-import.mjs` to write it.
    Lines that are empty, still English, or lose a placeholder or HTML tag are skipped and listed.
 3. Test (`node tools/touch-test.mjs`, a look in the changed languages), then deploy as usual.
