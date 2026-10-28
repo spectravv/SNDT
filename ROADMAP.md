@@ -28,3 +28,6 @@
 
 ## v1.1
 - MTR import: an option to spread out only the crowded areas (dense city centres) on import, instead of the whole map (decided 2026-10-28).
+- Translator credits: a Translators part in the Creators popup (and the handbook's Creators section), filled from the Crowdin contributors once translations arrive.
+- New languages from Crowdin (Czech, Danish, Japanese, Korean, Dutch, Polish, Filipino are open there): add each to LANGS/LI and the language menu once it is translated and approved.
+- Handbook translation: put the handbook's text on Crowdin too, instead of translating it by hand.
