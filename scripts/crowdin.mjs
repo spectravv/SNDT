@@ -19,6 +19,8 @@ async function push(){
 const unxml=s=>s.replace(/&#x([0-9a-f]+);/gi,(_,h)=>String.fromCodePoint(parseInt(h,16))).replace(/&#(\d+);/g,(_,d)=>String.fromCodePoint(+d))
   .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,'&');
 // keys with a full stop come back in quotes (Crowdin reads dots as nesting otherwise)
+// bundle files are named <two-letter code>~<locale>.xliff; languages that share a two-letter code with another get their own file
+const OWN_FILE={'zh-HK':'zh-HK'};
 const unkey=k=>/^".*"$/s.test(k)?k.slice(1,-1).replace(/\\(.)/g,'$1'):k;
 async function pull(){
   const ex=await api(`/projects/${PROJECT}/bundles/${BUNDLE}/exports`,{method:'POST'});
@@ -29,7 +31,7 @@ async function pull(){
   for(const f of fs.readdirSync(tmp+'/x').filter(f=>f.endsWith('.xliff')).sort()){
     const out={};for(const m of fs.readFileSync(tmp+'/x/'+f,'utf8').matchAll(/<trans-unit\b[^>]*\bresname="([^"]*)"[^>]*>([\s\S]*?)<\/trans-unit>/g)){
       const t=/<target\b[^>]*>([\s\S]*?)<\/target>/.exec(m[2]);if(t)out[unkey(unxml(m[1]))]=unxml(t[1])}
-    const n=Object.keys(out).length,lang=f.slice(0,-6);
+    const n=Object.keys(out).length,[two,loc]=f.slice(0,-6).split('~'),lang=OWN_FILE[loc]||two;
     if(!n){continue}fs.writeFileSync(DIR+lang+'.json',JSON.stringify(out,null,2)+'\n');console.log(`${lang}: ${n} approved translations`)}
   fs.rmSync(tmp,{recursive:true,force:true});
 }

@@ -26,8 +26,26 @@
 - ~~Tool search~~ (done): a search bar that finds tools (and probably settings) by name.
 - ~~Turn on the Discord button~~ (done in v1.0).
 
+## v1.0.2 (released 2026-10-29)
+- ~~ILVF~~ (done 2026-10-29, user-approved, in the handbook) Isolated line view, "ILVF" (idea by Paddy): a straight, horizontal strip of one or more chosen lines for platform displays and station signs (his reference: the brown line drawn straight, stations evenly spaced, names above, interchange markers with short stubs of the other lines' colours going off it). His proposed flow: a button next to + in the Lines panel → pick the lines to isolate → a panel at the bottom shows the strip → its own export (PNG/SVG).
+- ~~Circular routes~~ (done 2026-10-29): a loop line can be drawn as a real round circle ("Draw as a round circle"), plus "Put the stations on the circle".
+- ~~Delete a selected segment, not the whole line; double-click a segment selects the whole line~~ (done 2026-10-29, idea: the user).
+- ~~Map cleaner tool (idea by rthorpey12)~~ (done 2026-10-29): "Clean up map…" under the map name in the Map panel.
+
 ## v1.1
-- MTR import: an option to spread out only the crowded areas (dense city centres) on import, instead of the whole map (decided 2026-10-28).
-- Translator credits: a Translators part in the Creators popup (and the handbook's Creators section), filled from the Crowdin contributors once translations arrive.
-- New languages from Crowdin (Czech, Danish, Japanese, Korean, Dutch, Polish, Filipino are open there): add each to LANGS/LI and the language menu once it is translated and approved.
-- Handbook translation: put the handbook's text on Crowdin too, instead of translating it by hand.
+- Style sets: one pick restyles the whole map, beyond what colour templates do (background, line look, station and interchange style, fonts, labels, terminus badges, frame/title/legend). Geometry and label positions never change. References (2026-10-29, in ~/Downloads): 
+  - Łódź regional poster (ŁKA): cream paper, thick coloured frame, big two-language title block, thin parallel lines, white stations with dark outline, IC markers, two-column legend.
+  - Charlotte (transitscapes): white, heavy rounded lines, small white dots, lettered roundels at each terminus, huge bold title, roundel legend with end stations.
+  - Moscow metro/MCD (metro_map_0926.pdf): white, thin lines, outlined-circle interchanges joined by connectors, numbered line circles at the ends, green parks and landmark icons behind.
+  - Dark Transit (Claude web, sndt-style-reference.html + SNDT_MAP_STYLES.md): dark slate with a faint grid, glowing lines, pill interchanges with one dot per line, number badges.
+  - Frosted Glass (same files): pastel gradient with blurred colour blobs, white-cased lines with soft shadow, white discs, labels on frosted pills.
+  - Dutch rail (photo of an NS map, 2026-10-29): thick parallel lines with thin white gaps between them, small white stop dots inside the line, short black leader ticks from the stop to its name, interchanges as a dark bar across all lines with a white dot per line, line codes (S64, IC27) written in pills inside the line, big bold capitals for main stations.
+- Style set decisions (user, 2026-10-29): picking a set only FILLS the existing settings, which stay editable after; line colours are kept but their saturation/brightness is shifted to match the set; all six ship in v1.1; names: Poster (Łódź), Bold (Charlotte), Flowing (Moscow), Night Transit (Dark Transit), Frost (Frosted Glass), Ribbon (Dutch rail).
+
+## Later
+- MTR import: an option to spread out only the crowded areas (dense city centres) on import, instead of the whole map (decided 2026-10-28). (moved out of v1.0.2 on 2026-10-29)
+- Translator credits: a Translators part in the Creators popup (and the handbook's Creators section), filled from the Crowdin contributors once translations arrive. (moved out of v1.0.2 on 2026-10-29)
+- New languages from Crowdin (Czech, Danish, Irish, Japanese, Korean, Dutch, Polish, Filipino are open there; Irish added 2026-10-28 on a player request): add each to LANGS/LI and the language menu once it is translated and approved. (moved out of v1.0.2 on 2026-10-29)
+- Handbook translation: put the handbook's text on Crowdin too, instead of translating it by hand. (moved out of v1.0.2 on 2026-10-29)
+- Traditional Chinese (Hong Kong) on Crowdin (idea by Curt, who will translate with VSad/義沙得): zh-HK added as a Crowdin target 2026-10-28 (replaced zh-TW, which was the wrong variant); add it to LANGS/LI and the language menu once translated (pull writes i18n/zh-HK.json). The app's current `zh` is Simplified. Cantonese dropped: the user decided Traditional Chinese is enough. (moved out of v1.0.2 on 2026-10-29)
+- Ticks station style polish (moved out of v1.0.2 on 2026-10-29) (rthorpey12: "hella unpolished"; optional, he's fine without it).

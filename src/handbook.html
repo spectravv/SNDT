@@ -267,7 +267,8 @@ td:first-child{white-space:nowrap;font-weight:600}
   <ul>
     <li>With the line tool, click stations in order; empty map adds a stop, a track adds a stop on that track. Enter (or Done on phones) finishes.</li>
     <li>To extend a line, select it and use <span class="ui">Extend from start</span> or <span class="ui">Extend from end</span>, click its first or last station with the line tool, or use <a href="#auto-build">Auto build</a>.</li>
-    <li>Double-click a track (long-press on phones) to insert a station; a segment's panel also has <span class="ui">Insert station</span> and <span class="ui">Insert bend point</span>.</li>
+    <li>To insert a station, right-click a track (long-press on phones) and pick <span class="ui">Add stop here</span>; a segment's panel also has <span class="ui">Insert station</span> and <span class="ui">Insert bend point</span>.</li>
+    <li>Double-click a track to select the whole line. With a segment selected, <kbd>Delete</kbd> (or <span class="ui">Delete this segment</span>) removes only that piece: a loop opens there, any other line splits in two.</li>
   </ul>
   <h3>Line <span class="tag s">Simple</span></h3>
   <ul>
@@ -279,11 +280,23 @@ td:first-child{white-space:nowrap;font-weight:600}
     <li><b>Leave out of the legend</b>.</li>
   </ul>
   <h3>Stops</h3>
-  <p>The stops in order, with buttons to move each one earlier or later or remove it. <b>Loop back to the first stop</b> makes a circle line; <span class="ui">Reverse</span> flips the order.</p>
+  <p>The stops in order, with buttons to move each one earlier or later or remove it. <b>Loop back to the first stop</b> makes a circle line, and <b>Draw as a round circle</b> then bends every segment of it along one true circle (<span class="ui">Put the stations on the circle</span> moves the stations exactly onto it); <span class="ui">Reverse</span> flips the order.</p>
   <h3>Fine control <span class="tag a">Advanced</span></h3>
   <p><b>Width</b>, <b>Opacity</b>, <b>Speed, blocks per second</b> (for travel times and the Timeline), <b>Custom dash pattern</b>, and <span class="ui">Draw above</span> / <span class="ui">Draw below</span> to decide which line passes over at a crossing. Below: <span class="ui">Duplicate line</span> and <span class="ui">Delete line</span>.</p>
   <h3>One segment of a line</h3>
   <p>Click a track to select just that segment. For the line on that segment you can set its own status (<i>Same as line</i>, Open, Planned, Building), <b>Colour here</b> and <b>Style here</b> (<span class="ui">Reset colour and style here</span> undoes both), and the <a href="#one-way">Direction</a>.</p>
+</article>
+
+<article id="ilvf" data-group="Tracks">
+  <h2>Isolated line view</h2>
+  <p>Shows one or more lines as straight strips, for platform displays and station signs (idea by Paddy). Click the strip button next to <b>+</b> in the Lines panel, tick the lines and press <span class="ui">Show strip</span>. A panel opens at the bottom of the map; it redraws as you edit.</p>
+  <ul>
+    <li>Stations are evenly spaced with their names above; second names are smaller, end stations bold, stations not in service crossed.</li>
+    <li>Interchanges are ringed dots with short stubs in the other lines' colours and a small tag with each line's name. Stations joined by a transfer count too.</li>
+    <li><b>Names</b>: <span class="ui">Auto</span> tilts them only when they don't fit, <span class="ui">Straight</span> keeps them level and spaces the stations wider, <span class="ui">Angled</span> always tilts them.</li>
+    <li>Drag the slider under the strip (or the strip itself) to scroll along it. Drag the bar on top of the panel to make it taller or shorter; double-click the bar to reset.</li>
+    <li><span class="ui">PNG</span> and <span class="ui">SVG</span> export just the strips. A loop line ends back at its first station.</li>
+  </ul>
 </article>
 
 <article id="bends" data-group="Tracks">
@@ -349,7 +362,7 @@ td:first-child{white-space:nowrap;font-weight:600}
 <article id="map-settings" data-group="The map">
   <h2>Map settings</h2>
   <p>Click empty map so nothing is selected; the panel shows the map's own settings.</p>
-  <h3>Map</h3><p><b>Map name</b>, shown in the maps menu and used for exported files.</p>
+  <h3>Map</h3><p><b>Map name</b>, shown in the maps menu and used for exported files. Under it, <span class="ui">Clean up map…</span>; see <a href="#maps">Your maps</a>.</p>
   <h3>Colours</h3>
   <p><b>Background</b>, <b>Text &amp; outlines</b>, <b>Station fill</b> and <b>Water</b>, or a <b>Colour template</b>: Paper, Night, Blueprint, Sandstone, Slate, Mint, Mono, Overworld, Nether and The End. Templates change those four colours; line colours, parks and areas stay as they are.</p>
   <div class="demo" data-demo="colours"><div class="demo-head">Colour templates<span>pick one</span></div><div class="stagebox"></div><div class="controls"></div></div>
@@ -436,6 +449,7 @@ td:first-child{white-space:nowrap;font-weight:600}
 <article id="maps" data-group="Sharing">
   <h2>Maps and saving</h2>
   <p>Your maps save automatically in this browser; the status in the header shows when. The maps menu (the map's name) has <span class="ui">New blank map</span>, <span class="ui">Duplicate this map</span>, your other maps, and the imports. Delete a map from the same menu.</p>
+  <p><span class="ui">Clean up map…</span>, under the map name in the Map panel (shown when nothing is selected), lists lines with fewer than two stations, duplicate lines (same stops as another line, also reversed), bend points no line uses and stations on no line. Tick what should go and press <span class="ui">Remove ticked</span>; one undo brings it all back.</p>
   <div class="note"><b>Back up</b>Maps live in the browser you made them in. Clearing site data removes them, and they don't move to other devices by themselves. Export a JSON backup now and then.</div>
 </article>
 
