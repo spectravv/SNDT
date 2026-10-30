@@ -33,12 +33,12 @@
 - ~~Map cleaner tool (idea by rthorpey12)~~ (done 2026-10-29): "Clean up map…" under the map name in the Map panel.
 
 ## v1.0.3
-Player suggestions (2026-10-30):
+Suggestions by ChaoDee (2026-10-30):
 - Legend text for every row: change what Planned, Under construction, Out-of-station interchange and Not in service say, with a description after each (e.g. a second language), like a line's legend text; facility icons in the legend (none / the ones used / all / chosen ones), also with their own text. DONE (preview).
 - The not-in-service X follows the station mark when the mark sits off the station's point (lane offsets). DONE (preview).
 - Facility icon size: a slider in Station → Facilities. DONE (preview).
 - Tighter line spacing in names whose CJK row is drawn bigger (孖角 / Twin Point). DONE (preview).
-- Header/"Map" panel naming is confusing (renaming the map; "Map" sounded like map settings): to discuss with the user before changing anything.
+- Header/"Map" panel naming is confusing (renaming the map; "Map" sounded like map settings). User picked (2026-10-30), to try first: rename the map by clicking its name in the header, the arrow opens Your maps, the panel is called "This map", header buttons stay. DONE (preview).
 - Bug: a segment whose two stations are both pills (Ma Lai Hau – Wong Hoi Shek, yellow line next to a wide pink one) gets wrong lane offsets with every bend type except Zigzag. Needs the reporter's map file to reproduce.
 - Creators: StarlightPixels joins as Tester; a quote under every creator ("Yo tengo" for StarlightPixels); ChaoDee is now Lead Tester. DONE (preview).
 
