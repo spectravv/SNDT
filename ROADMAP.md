@@ -39,7 +39,8 @@ Suggestions by ChaoDee (2026-10-30):
 - Facility icon size: a slider in Station → Facilities. DONE (preview).
 - Tighter line spacing in names whose CJK row is drawn bigger (孖角 / Twin Point). DONE (preview).
 - Header/"Map" panel naming is confusing (renaming the map; "Map" sounded like map settings). User picked (2026-10-30), to try first: rename the map by clicking its name in the header, the arrow opens Your maps, the panel is called "This map", header buttons stay. DONE (preview).
-- Bug: a segment whose two stations are both pills (Ma Lai Hau – Wong Hoi Shek, yellow line next to a wide pink one) gets wrong lane offsets with every bend type except Zigzag. Needs the reporter's map file to reproduce.
+- Bug: Ma Lai Hau – Wong Hoi Shek gets wrong lane offsets with every bend type except Zigzag (the pink band was only the selection highlight). FIXED (preview) with the reporter's map.
+- Bug (ChaoDee, video 2026-10-30): an express passing Stations 22 and 21 without stopping can't be put beside the stopping line or reordered there. FIXED (preview) with "Stops here" (pass without stopping).
 - Creators: StarlightPixels joins as Tester; a quote under every creator ("Yo tengo" for StarlightPixels); ChaoDee is now Lead Tester. DONE (preview).
 
 ## v1.1

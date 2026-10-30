@@ -818,6 +818,12 @@ function laneNow(sid,G){const X=G.st.get(sid),r=G.ref.get(sid),pos=new Map();if(
   return[...pos].map(([lid,o])=>{const e=o.pts.find(e=>e.dir.x*r.x+e.dir.y*r.y>.9997)||o.pts.find(e=>e.dir.x*r.x+e.dir.y*r.y<-.9997)||o.pts[0];
     return{lid,v:o.v,x:e.x+e.dir.x*D,y:e.y+e.dir.y*D}}).sort((a,b)=>a.v-b.v)}
 function makeCustom(key){const b=segBase(key);if(!b)return null;const sg=M.segs[key]||(M.segs[key]={});sg.route='custom';sg.pts=b.pts;sg.smooth=b.smooth;return sg}
+// a sideways step of about one lane or less on a long straight run, at a station where another segment leaves the same way, is a
+// lane change, not a bend: whatever the bend type, it is drawn like Zigzag (leaving both stations straight), so the line runs beside
+// that other one instead of leaving at an angle onto its lane (nb(X,dir) says whether another segment leaves station X along dir)
+function laneStep(A,B,route,nb){if(!A||!B||!['oct1','oct2','straight','l1','l2','curve'].includes(route))return false;const sp=M.settings.lineWidth+M.settings.lineGap,dx=B.x-A.x,dy=B.y-A.y,adx=Math.abs(dx),ady=Math.abs(dy),m=Math.min(adx,ady);
+  if(!(m>.01&&m<=sp*1.25&&Math.max(adx,ady)>=m*4))return false;const ax=adx>=ady?{x:Math.sign(dx),y:0}:{x:0,y:Math.sign(dy)};
+  return!nb||nb(A,ax)||nb(B,{x:-ax.x,y:-ax.y})}
 function routePts(A,B,route,sg){
   if(route==='arc'){const c=Math.hypot(B.x-A.x,B.y-A.y);if(c<.5)return[{x:A.x,y:A.y},{x:B.x,y:B.y}];
     const ang=Math.min(179.5,Math.max(5,(sg&&sg.arc)||90))*Math.PI/180,th=ang/2,R=c/(2*Math.sin(th)),s=sg&&sg.flip?-1:1;
@@ -832,6 +838,8 @@ function routePts(A,B,route,sg){
   if(route==='custom'){const P=[{x:A.x,y:A.y}];for(const p of ((sg&&sg.pts)||[]).concat([B])){const l=P[P.length-1];if(Math.hypot(p.x-l.x,p.y-l.y)>.5)P.push({x:p.x,y:p.y})}
     if(P.length<2)P.push({x:B.x+.01,y:B.y});return sg&&sg.smooth&&P.length>2?catmull(P):P}
   const dx=B.x-A.x,dy=B.y-A.y,adx=Math.abs(dx),ady=Math.abs(dy),sx=Math.sign(dx),sy=Math.sign(dy),m=Math.min(adx,ady);
+  // a sideways step of about one lane or less on a long straight run is a lane change, not a bend: whatever the bend type, leave both
+  // stations straight (as Zigzag does), so the line can run beside the others there instead of leaving at an angle onto their lane
   let mid=null;
   if(route==='curve'){
     let c1,c2;
@@ -929,10 +937,12 @@ function geom(){
   M.lines.forEach(L=>{if(L.hidden)return;for(const [a,b] of pairs(L)){if(a===b||!st.has(a)||!st.has(b))continue;const key=segKey(a,b);let t=tracks.get(key);if(!t){t={key,a:a<b?a:b,b:a<b?b:a,lines:[]};tracks.set(key,t)}if(!t.lines.includes(L.id))t.lines.push(L.id)}});
   const sp=M.settings.lineWidth+M.settings.lineGap,mix=routeMix(),rings=new Map();
   M.lines.forEach(L=>{if(L.hidden||!L.loop||!L.circle)return;const c=ringFit(L);if(!c)return;const dir=ringDir(L,c);for(const [a,b] of pairs(L))if(a!==b)rings.set(segKey(a,b),{c,dir,from:a})});
+  // which way each segment heads from each of its stations (straight towards the other station), for laneStep
+  const segsAt=new Map();for(const t of tracks.values())for(const [X,Y] of [[t.a,t.b],[t.b,t.a]]){const p=st.get(X),q=st.get(Y);if(!p||!q)continue;if(!segsAt.has(X))segsAt.set(X,[]);segsAt.get(X).push({key:t.key,d:unit(q.x-p.x,q.y-p.y)})}
   for(const t of tracks.values()){
     const sg=M.segs[t.key]||{};
     if(sg.order){t.lines.sort((x,y)=>{const i=sg.order.indexOf(x),j=sg.order.indexOf(y);return(i<0?99:i)-(j<0?99:j)})}
-    const ring=rings.get(t.key);t.route=ring?'ring':sg.route||M.settings.route;t.auto=!ring&&!sg.route&&mix.length>1;
+    const ring=rings.get(t.key);t.route=ring?'ring':sg.route||M.settings.route;if(!ring&&laneStep(st.get(t.a),st.get(t.b),t.route,(X,ax)=>(segsAt.get(X.id)||[]).some(o=>o.key!==t.key&&o.d.x*ax.x+o.d.y*ax.y>.97)))t.route='zigzag';t.auto=!ring&&!sg.route&&mix.length>1;
     t.fit=t.route==='arc'&&arcFit(sg);
     t.pts=dedupePts(ring?(ring.from===t.a?ringPts(st.get(t.a),st.get(t.b),ring.c,ring.dir):ringPts(st.get(t.b),st.get(t.a),ring.c,ring.dir).reverse()):t.fit?[{x:st.get(t.a).x,y:st.get(t.a).y},{x:st.get(t.b).x,y:st.get(t.b).y}]:routePts(st.get(t.a),st.get(t.b),t.route,sg));
     t.pts0=t.pts;
@@ -1206,8 +1216,11 @@ function shapeSVG(shape,p,q,fill,stroke,size,sw,dir,E){
   if(one)return `<circle cx="${f(p.x)}" cy="${f(p.y)}" r="${f((size-sw)/2)}" ${paint}/>`;
   const ln=`x1="${f(p.x)}" y1="${f(p.y)}" x2="${f(q.x)}" y2="${f(q.y)}" stroke-linecap="round"`;
   return `<line ${ln} stroke="${stroke}" stroke-width="${f(size)}"/>`+(sw?`<line ${ln} stroke="${fill}" stroke-width="${f(Math.max(0,size-2*sw))}"/>`:'')}
+// a line can pass through a station without stopping (line.skip: station ids): it shares the tracks and lanes there and can be
+// reordered at the station, but gets no stop mark and doesn't make the station an interchange
+const passesAt=(lid,sid)=>{const L=lnOf(lid);return!!(L&&L.skip&&L.skip.includes(sid))};
 function stationSVG(s,G,editor){
-  const S=M.settings,E=G.ends.get(s.id)||[],sz=stSize(s),lids=[...new Set(E.map(e=>e.lid))],k=s.kind||'stop';
+  const S=M.settings,E=(G.ends.get(s.id)||[]).filter(e=>!passesAt(e.lid,s.id)),sz=stSize(s),lids=[...new Set(E.map(e=>e.lid))],k=s.kind||'stop';
   const cb=ciconBox(s),hit=editor&&(k!=='waypoint'||showBends)?`<circle cx="${s.x}" cy="${s.y}" r="${Math.max(sz/2+5,10,cb?Math.max(cb.w,cb.h)/2+3:0)}" fill="transparent"/>`:'';
   const [p,q]=farPair(E,s),one=Math.hypot(p.x-q.x,p.y-q.y)<.5,lineCol=lids.length===1?lnOf(lids[0]).color:S.ink;
   const shape=s.shape||S.stopStyle||'circle';
@@ -1751,6 +1764,7 @@ function inspStation(s){
    ${ciconField([s])}
    ${chk('station',s.id,'closed',!!s.closed,'Not in service')}
    <div class="fld"><span>Served by</span><div class="chips">${lines.map(L=>`<button class="chip" data-nt data-act="sel-line:${L.id}"><i style="background:${L.color}"></i>${esc(L.name)}</button>`).join('')||'<span class="sub">No lines yet. Use the line tool (L) and click this station.</span>'}</div></div>
+   ${lines.length?`<div class="fld"><span>${tr('Stops here')}</span><div class="chips">${lines.map(L=>`<button class="chip" data-nt data-act="skip-tog:${L.id}" aria-pressed="${!passesAt(L.id,s.id)}" title="${esc(tr('Untick a line that passes through without stopping'))}"><i style="background:${L.color}"></i>${esc(L.name)}</button>`).join('')}</div><p class="sub">${tr('Untick a line that passes through without stopping: it keeps its lane here (and can be reordered) but gets no stop.')}</p></div>`:''}
    ${lines.length>1?`<div class="adv-only" style="display:flex;flex-direction:column;gap:10px">
    <div class="fld"><span>Reorder lines at stations</span><div class="opts" style="width:fit-content"><button class="opt" data-act="lane-edit:off" aria-pressed="${!laneEdit}">Off</button><button class="opt" data-act="lane-edit:on" aria-pressed="${laneEdit}">On</button></div></div>
    <p class="sub">${laneEdit?'Drag a line’s dot on the map onto another to swap the two lines here.':'Turn it on to see a dot where each line meets this station, then drag one onto another to swap the two lines.'}</p>
@@ -2049,6 +2063,7 @@ function act(name,arg,el){
     case 'lstyle-reset':if(curSt){pushUndo();delete curSt.lbg;delete curSt.lcolor;delete curSt.sub;changed()}break;
     case 'bends':toggleBends();break;
     case 'lane-edit':if((arg==='on')!==laneEdit)toggleLaneEdit();break;
+    case 'skip-tog':{const L=lnOf(arg);if(!curSt||!L)break;pushUndo();const k=(L.skip||[]).indexOf(curSt.id);if(k>=0){L.skip.splice(k,1);if(!L.skip.length)delete L.skip}else(L.skip||(L.skip=[])).push(curSt.id);changed();break}
     case 'lane-reset':if(curSt&&curSt.laneOrder){pushUndo();delete curSt.laneOrder;changed()}break;
     case 'ncolor':natureColor=arg;lsSet('sndt:ncolor',arg);if(natureDraft){natureDraft.color=arg;render()}renderInspector();break;
     case 'nsmooth':natureSmooth=!natureSmooth;lsSet('sndt:nsmooth',natureSmooth?'1':'0');if(natureDraft){natureDraft.smooth=natureSmooth;render()}renderInspector();break;
@@ -2625,7 +2640,7 @@ function ilvfOthers(st,L){const ids=new Set([st.id]),x=xferOf(st.id);if(x)x.sts.
   return M.lines.filter(l=>l!==L&&!l.hidden&&l.stops.length>1&&l.stops.some(i=>ids.has(i)))}
 function ilvfSVG(lids,mode,font){const S=M.settings,fs=Math.max(11,S.labelSize||13),fs2=fs*.78,pad=24,gap0=96,ang=40*Math.PI/180;let y=pad,W=0,o='';
   const nm=st=>String(st.name||'').split('\n'),rowsOf=st=>{const r=nm(st);return[r[0],r.slice(1).concat(st.sub?String(st.sub).split('\n'):[]).join(' ').trim()]};
-  for(const lid of lids){const L=lnOf(lid);if(!L)continue;let P=[];for(const id of L.stops){const st=stOf(id);if(st&&st.kind!=='waypoint'&&P[P.length-1]!==st)P.push(st)}
+  for(const lid of lids){const L=lnOf(lid);if(!L)continue;let P=[];for(const id of L.stops){const st=stOf(id);if(st&&st.kind!=='waypoint'&&!(L.skip||[]).includes(id)&&P[P.length-1]!==st)P.push(st)}
     if(L.loop&&P.length>2)P.push(P[0]);if(P.length<2)continue;
     const wOf=st=>{const [a,b]=rowsOf(st);return Math.max(textW(a,fs,800),b?textW(b,fs2,400,true):0)},maxW=Math.max(...P.map(wOf));
     // angled names run the second name on after the first; 1.1× leaves room for a wider fallback font in PNG export
