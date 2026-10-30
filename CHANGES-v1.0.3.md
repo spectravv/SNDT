@@ -1,0 +1,8 @@
+# SNDT v1.0.3
+
+- Legend text (player suggestion): the legend's own rows (Planned, Under construction, Out-of-station interchange, Not in service) can say anything, with an optional description shown muted after the text, like a line's legend text and description; empty fields fall back to the translated default. Click the legend → "Legend text" lists only the rows the legend shows now. Stored in `legend.text` and `legend.desc` by row key (`planned`, `construction`, `xfer`, `nis`, `fac_<icon>`). The timeline's end legend board uses the same rows (`legendExtraRows`).
+- Facilities in the legend (player suggestion): Legend → "Facilities": None (default), The ones used on this map, All, or Choose… (chips). Each shows the facility icon with its name, which can be changed in Legend text too (`legend.fac`, `legend.facPick`).
+- Not in service: the X is drawn in the middle of the station's mark, so it stays on the mark when the mark sits on a line's lane away from the station's own point (it used to stay on the point). Custom station icons keep it on the point. (player report)
+- Facility icon size (player suggestion): "Icon size" slider (50–300%) under Facilities in the Station panel, also for several stations at once (`station.iconScale`).
+- Name line spacing (player report): each row of a name gets the height of its own text, so a big CJK row over a Latin row (孖角 / Twin Point) no longer leaves a wide gap. Names whose rows are all the same size look exactly as before.
+- Creators: StarlightPixels joins as a tester; every creator has a quote under their name ("Yo tengo"); ChaoDee is now Lead Tester. The cards are three across (two on phones). Same in the handbook.
