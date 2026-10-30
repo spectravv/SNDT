@@ -50,7 +50,8 @@ Bug fixes and small features; v1.1 is shelved until these are done (user decisio
 - Step 3 of the precision plan: an interchange's pill length and angle set by hand (moved here from v1.0.3).
 - Free placement: new stations placed by clicking snap into line with other stations too (only dragging does so far).
 - Header is cut off at about 950 px wide (since v1.0.2).
-- Bugs from players: (list to come)
+- Bugs from players:
+  - Using "Line order on this segment" (the ↑/↓ arrows in a segment's panel) completely disables reordering lines by dragging the dots at stations (screenshot 2026-10-31, ~/Pictures/Screenshots/2026-10-31_00-31.png). Likely cause, not yet checked: the arrows store a fixed order on the segment (`M.segs[key].order`), and the layout skips both the automatic ordering and the station's dot order (`station.laneOrder`) for any segment that has one; nothing clears it when dots are dragged later.
 
 ## v1.1 (shelved 2026-10-31; work kept on branch v1.1, worktree ~/Documents/sndt-1.1, last commit c76726c)
 - Style sets: one pick restyles the whole map, beyond what colour templates do (background, line look, station and interchange style, fonts, labels, terminus badges, frame/title/legend). Geometry and label positions never change. References (2026-10-29, in ~/Downloads): 
