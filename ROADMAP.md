@@ -45,7 +45,14 @@ Suggestions by ChaoDee (2026-10-30):
 
 - Precision (user decision 2026-10-31, from "how costly would RMP-style placement be"): step 1 precise placement (Grid / Free switch in the top bar, alignment snapping with guides, tenths, arrow nudges) DONE (preview); step 3 manual station marks (an interchange's pill length and angle set by hand) to do in v1.0.3.
 
-## v1.1
+## v1.0.4 (next, started 2026-10-31)
+Bug fixes and small features; v1.1 is shelved until these are done (user decision 2026-10-31).
+- Step 3 of the precision plan: an interchange's pill length and angle set by hand (moved here from v1.0.3).
+- Free placement: new stations placed by clicking snap into line with other stations too (only dragging does so far).
+- Header is cut off at about 950 px wide (since v1.0.2).
+- Bugs from players: (list to come)
+
+## v1.1 (shelved 2026-10-31; work kept on branch v1.1, worktree ~/Documents/sndt-1.1, last commit c76726c)
 - Style sets: one pick restyles the whole map, beyond what colour templates do (background, line look, station and interchange style, fonts, labels, terminus badges, frame/title/legend). Geometry and label positions never change. References (2026-10-29, in ~/Downloads): 
   - Łódź regional poster (ŁKA): cream paper, thick coloured frame, big two-language title block, thin parallel lines, white stations with dark outline, IC markers, two-column legend.
   - Charlotte (transitscapes): white, heavy rounded lines, small white dots, lettered roundels at each terminus, huge bold title, roundel legend with end stations.
