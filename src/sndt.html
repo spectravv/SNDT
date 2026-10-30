@@ -1764,6 +1764,7 @@ function inspStation(s){
    ${ciconField([s])}
    ${chk('station',s.id,'closed',!!s.closed,'Not in service')}
    <div class="fld"><span>Served by</span><div class="chips">${lines.map(L=>`<button class="chip" data-nt data-act="sel-line:${L.id}"><i style="background:${L.color}"></i>${esc(L.name)}</button>`).join('')||'<span class="sub">No lines yet. Use the line tool (L) and click this station.</span>'}</div></div>
+   ${(()=>{const nl=nearLines(s,lastG);return nl.length?`<div class="fld"><span>${tr('Lines passing close by')}</span><div class="chips">${nl.map(o=>`<button class="chip" data-nt data-act="near-add:${o.L.id}" title="${esc(tr('Make this station a stop on this line'))}">+ <i style="background:${o.L.color}"></i>${esc(String(o.L.name||'').replace(/\n/g,' '))}</button>`).join('')}</div><p class="sub">${tr('Lines within two grid steps that don’t stop here yet. Click one to add this station to it.')}</p></div>`:''})()}
    ${lines.length?`<div class="fld"><span>${tr('Stops here')}</span><div class="chips">${lines.map(L=>`<button class="chip" data-nt data-act="skip-tog:${L.id}" aria-pressed="${!passesAt(L.id,s.id)}" title="${esc(tr('Untick a line that passes through without stopping'))}"><i style="background:${L.color}"></i>${esc(L.name)}</button>`).join('')}</div><p class="sub">${tr('Untick a line that passes through without stopping: it keeps its lane here (and can be reordered) but gets no stop.')}</p></div>`:''}
    ${lines.length>1?`<div class="adv-only" style="display:flex;flex-direction:column;gap:10px">
    <div class="fld"><span>Reorder lines at stations</span><div class="opts" style="width:fit-content"><button class="opt" data-act="lane-edit:off" aria-pressed="${!laneEdit}">Off</button><button class="opt" data-act="lane-edit:on" aria-pressed="${laneEdit}">On</button></div></div>
@@ -2063,6 +2064,7 @@ function act(name,arg,el){
     case 'lstyle-reset':if(curSt){pushUndo();delete curSt.lbg;delete curSt.lcolor;delete curSt.sub;changed()}break;
     case 'bends':toggleBends();break;
     case 'lane-edit':if((arg==='on')!==laneEdit)toggleLaneEdit();break;
+    case 'near-add':if(curSt)addToNearLine(curSt,arg);break;
     case 'skip-tog':{const L=lnOf(arg);if(!curSt||!L)break;pushUndo();const k=(L.skip||[]).indexOf(curSt.id);if(k>=0){L.skip.splice(k,1);if(!L.skip.length)delete L.skip}else(L.skip||(L.skip=[])).push(curSt.id);changed();break}
     case 'lane-reset':if(curSt&&curSt.laneOrder){pushUndo();delete curSt.laneOrder;changed()}break;
     case 'ncolor':natureColor=arg;lsSet('sndt:ncolor',arg);if(natureDraft){natureDraft.color=arg;render()}renderInspector();break;
@@ -2197,6 +2199,21 @@ function selectEl(el){if(!el)return;if(el.select){el.focus();el.select();return}
 function nextColor(){const used=new Set(M.lines.map(l=>l.color.toLowerCase()));return NEXT_COLORS.find(c=>!used.has(c.toLowerCase()))||NEXT_COLORS[M.lines.length%NEXT_COLORS.length]}
 function newLine(){const c=nextColor(),dye=DYES.find(d=>d[1]===c);return{id:uid(),name:(dye?dye[0]:'New')+' Line',color:c,mode:'subway',style:'solid',stops:[]}}
 function newStation(p,kind){return{id:uid(),name:kind==='waypoint'?'':'Station '+(M.stations.filter(s=>s.kind!=='waypoint').length+1),x:p.x,y:p.y,kind:kind||'stop',label:'auto',mc:null,dim:'overworld',notes:''}}
+// lines passing close to a station without stopping there (within two grid steps of their drawn lane), with where to insert it
+function nearLines(s,G){const lim=2*(M.settings.grid||5)+.5,out=[];if(!s||!G)return out;
+  for(const L of M.lines){if(L.hidden||L.stops.includes(s.id)||L.stops.length<2)continue;let best=null;const n=L.stops.length;
+    for(let i=0;i<n;i++){const j=i+1<n?i+1:(L.loop&&n>2?0:-1);if(j<0)continue;const a=L.stops[i],b=L.stops[j];if(a===b)continue;const t=G.tracks.get(segKey(a,b)),P=t&&t.off&&t.off.get(L.id);if(!P)continue;
+      for(let k=0;k<P.length-1;k++){const p=P[k],q=P[k+1],vx=q.x-p.x,vy=q.y-p.y,l2=vx*vx+vy*vy||1,u=Math.max(0,Math.min(1,((s.x-p.x)*vx+(s.y-p.y)*vy)/l2)),d=Math.hypot(p.x+vx*u-s.x,p.y+vy*u-s.y);if(d<=lim&&(!best||d<best.d))best={L,i,d}}}
+    if(best)out.push(best)}
+  return out.sort((x,y)=>x.d-y.d)}
+// make an existing station a stop on a line passing close by: inserted between the two stops of the piece it is next to
+function addToNearLine(s,lid){const o=nearLines(s,lastG||geom()).find(x=>x.L.id===lid);if(!o)return;const L=o.L,a=L.stops[o.i],b=L.stops[(o.i+1)%L.stops.length],key=segKey(a,b);pushUndo();
+  L.stops.splice(o.i+1,0,s.id);
+  // the piece's own look and the map's settings for it carry over to both new halves (a hand-drawn shape doesn't)
+  const ls=L.segs&&L.segs[key];if(ls){L.segs[segKey(a,s.id)]=clone(ls);L.segs[segKey(s.id,b)]=clone(ls);delete L.segs[key]}
+  const sg=M.segs[key];if(sg){const c=clone(sg);if(c.route==='custom'){delete c.route;delete c.pts;delete c.smooth}if(Object.keys(c).length){if(!M.segs[segKey(a,s.id)])M.segs[segKey(a,s.id)]=clone(c);if(!M.segs[segKey(s.id,b)])M.segs[segKey(s.id,b)]=c}
+    if(!M.lines.some(l=>l!==L&&!l.hidden&&l.stops.some((x,k)=>{const y=l.stops[k+1];return y&&segKey(x,y)===key})))delete M.segs[key]}
+  changed();toast(tr('Added to')+' '+String(L.name||'').replace(/\n/g,' '))}
 function insertOnTrack(key,p,kind){
   const [a,b]=key.split('~');pushUndo();
   const s=newStation({x:snap(p.x),y:snap(p.y)},kind);M.stations.push(s);
