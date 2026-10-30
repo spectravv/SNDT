@@ -43,6 +43,8 @@ Suggestions by ChaoDee (2026-10-30):
 - Bug (ChaoDee, video 2026-10-30): an express passing Stations 22 and 21 without stopping can't be put beside the stopping line or reordered there. FIXED (preview) with "Stops here" (pass without stopping).
 - Creators: StarlightPixels joins as Tester; a quote under every creator ("Yo tengo" for StarlightPixels); ChaoDee is now Lead Tester. DONE (preview).
 
+- Precision (user decision 2026-10-31, from "how costly would RMP-style placement be"): step 1 precise placement (Grid / Free switch in the top bar, alignment snapping with guides, tenths, arrow nudges) DONE (preview); step 3 manual station marks (an interchange's pill length and angle set by hand) to do in v1.0.3.
+
 ## v1.1
 - Style sets: one pick restyles the whole map, beyond what colour templates do (background, line look, station and interchange style, fonts, labels, terminus badges, frame/title/legend). Geometry and label positions never change. References (2026-10-29, in ~/Downloads): 
   - Łódź regional poster (ŁKA): cream paper, thick coloured frame, big two-language title block, thin parallel lines, white stations with dark outline, IC markers, two-column legend.
@@ -52,6 +54,9 @@ Suggestions by ChaoDee (2026-10-30):
   - Frosted Glass (same files): pastel gradient with blurred colour blobs, white-cased lines with soft shadow, white discs, labels on frosted pills.
   - Dutch rail (photo of an NS map, 2026-10-29): thick parallel lines with thin white gaps between them, small white stop dots inside the line, short black leader ticks from the stop to its name, interchanges as a dark bar across all lines with a white dot per line, line codes (S64, IC27) written in pills inside the line, big bold capitals for main stations.
 - Style set decisions (user, 2026-10-29): picking a set only FILLS the existing settings, which stay editable after; line colours are kept but their saturation/brightness is shifted to match the set; all six ship in v1.1; names: Poster (Łódź), Bold (Charlotte), Flowing (Moscow), Night Transit (Dark Transit), Frost (Frosted Glass), Ribbon (Dutch rail).
+
+## v1.2 (planned)
+- Manual layout (step 2 of the precision plan, user decision 2026-10-31): a "Manual layout" switch per map (Free mode then means precise + manual) that freezes the automatic layout into per-line, per-segment sideways offsets, which the user then sets by dragging or typing; the automatic bundling/reordering leaves them alone; switching back returns to automatic; a single segment can be re-frozen from the automatic layout.
 
 ## Later
 - MTR import: an option to spread out only the crowded areas (dense city centres) on import, instead of the whole map (decided 2026-10-28). (moved out of v1.0.2 on 2026-10-29)

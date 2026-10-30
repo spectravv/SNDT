@@ -146,6 +146,8 @@ aside{background:var(--paper);overflow-y:auto;min-height:0}
 .hsearch:focus-within{outline:2px solid var(--red);outline-offset:1px}
 @media (hover:hover){.hsearch:hover{background:var(--paper);color:var(--ink)}}
 @media (max-width:1250px){.hsearch kbd{display:none}header #status{display:none}}
+@media (max-width:1499px){header #status{font-size:0;gap:0}}
+@media (max-width:1199px){header .seg.place{display:none}}
 @media (max-width:1100px) and (min-width:901px){header .seg button{padding:0 7px}header .hbtn{margin-left:4px}.logo{padding-right:10px;margin-right:6px}.mapname{max-width:140px}}
 #navMenu .hsearch input,#navMenu .hsearch kbd{display:none}#navMenu .hsearch{cursor:pointer;flex:none}
 .cmdk-drop{position:fixed;z-index:45;background:var(--paper);border:2px solid var(--ink);box-shadow:var(--hard);max-height:min(60vh,460px);display:flex;flex-direction:column}
@@ -462,6 +464,7 @@ input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}
     <button class="hbtn icon" id="themeBtn" data-act="theme" aria-label="Switch theme" title="Theme"><span class="nm-lbl">Switch theme</span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4v16A8 8 0 0012 4z" fill="currentColor"/></svg></button>
     <button class="hbtn icon" id="undoBtn" data-act="undo" aria-label="Undo" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/></svg></button>
     <button class="hbtn icon" id="redoBtn" data-act="redo" aria-label="Redo" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 000 11H13"/></svg></button>
+    <div class="seg place hide-narrow" role="group" aria-label="Placement" title="Grid: stations snap to the grid. Free: place precisely, snapping into line with other stations"><button id="plGrid" data-act="place:grid" aria-pressed="true">Grid</button><button id="plFree" data-act="place:free" aria-pressed="false">Free</button></div>
     <div class="seg" role="group" aria-label="Section"><button id="secMap" data-act="section:map" aria-pressed="true">Map</button><button id="secTl" data-act="section:timeline" aria-pressed="false">Timeline</button></div>
     <div class="seg ctl" role="group" aria-label="Control level">
       <button id="mSimple" data-act="mode:simple" aria-pressed="true">Simple</button>
@@ -792,7 +795,9 @@ function changed(full){if(ilvfOn)ilvfDraw();render();renderLists();if(full!==fal
 // free-shape segments need finer placement: while one is selected (or one of its end stations, or free shape is the default bend) the grid is 5
 function gridNow(){const S=M.settings;if(S.route==='custom')return 5;if(sel.length===1&&sel[0].t==='line'&&sel[0].seg&&(M.segs[sel[0].seg]||{}).route==='custom')return 5;
   const ids=new Set(sel.filter(x=>x.t==='station').map(x=>x.id));if(ids.size)for(const [k,v] of Object.entries(M.segs))if(v&&v.route==='custom'&&k.split('~').some(id=>ids.has(id)))return 5;return S.grid}
-const snap=(v,free)=>{const g=gridNow();return(!free&&M.settings.snap)?Math.round(v/g)*g:Math.round(v)};
+// Grid placement snaps to the grid (Alt: whole units); Free placement (settings.place) keeps positions to a tenth of a unit
+const freePlace=()=>M.settings.place==='free';
+const snap=(v,free)=>{if(freePlace())return Math.round(v*10)/10;const g=gridNow();return(!free&&M.settings.snap)?Math.round(v/g)*g:Math.round(v)};
 function catmull(P){const out=[P[0]];for(let i=0;i<P.length-1;i++){const p0=P[i-1]||P[i],p1=P[i],p2=P[i+1],p3=P[i+2]||P[i+1];
     for(let k=1;k<=12;k++){const t=k/12,t2=t*t,t3=t2*t;out.push({x:.5*(2*p1.x+(-p0.x+p2.x)*t+(2*p0.x-5*p1.x+4*p2.x-p3.x)*t2+(-p0.x+3*p1.x-3*p2.x+p3.x)*t3),y:.5*(2*p1.y+(-p0.y+p2.y)*t+(2*p0.y-5*p1.y+4*p2.y-p3.y)*t2+(-p0.y+3*p1.y-3*p2.y+p3.y)*t3)})}}
   return out}
@@ -1554,8 +1559,23 @@ function startStub(sid,di){const I=abInfo(sid,lastG);const t=I&&I.stubs.find(x=>
 function dropTip(ended){const d=drawTip;drawTip=null;if(!d)return;const L=lnOf(d.line);if(L)L.stops=L.stops.filter(x=>x!==d.sid);
   if(!M.lines.some(l=>l.stops.includes(d.sid)))M.stations=M.stations.filter(s=>s.id!==d.sid);
   if(ended&&L&&d.isNew&&L.stops.length<2)M.lines=M.lines.filter(l=>l!==L)}
+// Free placement: while stations are dragged, the one under the pointer snaps into line with other stations (same x, same y or
+// 45°) when within a few pixels; every dragged item moves by the same nudge. Returns the guide lines to draw.
+function alignMove(d){const mv=d.items.filter(it=>!it.orig&&!it.rel&&it.o&&M.stations.includes(it.o));if(!mv.length)return null;
+  if(!d.lead){let b=null;for(const it of mv){const q=Math.hypot(it.ox-d.start.x,it.oy-d.start.y);if(!b||q<b.q)b={it,q}}d.lead=b.it}
+  const L=d.lead.o,moving=new Set(mv.map(it=>it.o)),T=7/view.k;let bx=null,by=null,bd=null;
+  for(const o of M.stations){if(moving.has(o))continue;const ex=o.x-L.x,ey=o.y-L.y;
+    if(Math.abs(ex)<T&&(!bx||Math.abs(ex)<Math.abs(bx.d)))bx={d:ex,o};if(Math.abs(ey)<T&&(!by||Math.abs(ey)<Math.abs(by.d)))by={d:ey,o};
+    const d1=(o.x-o.y)-(L.x-L.y),d2=(o.x+o.y)-(L.x+L.y);for(const [dd,k] of [[d1,1],[d2,-1]])if(Math.abs(dd)/Math.SQRT2<T&&Math.hypot(ex,ey)>T&&(!bd||Math.abs(dd)<Math.abs(bd.d)))bd={d:dd,k,o}}
+  let sx=bx?bx.d:0,sy=by?by.d:0;const g=[];
+  if(!bx&&!by&&bd){sx=bd.d/2;sy=-bd.k*bd.d/2}else bd=null;
+  if(sx||sy)for(const it of mv){it.o.x=Math.round((it.o.x+sx)*10)/10;it.o.y=Math.round((it.o.y+sy)*10)/10}
+  if(bx)g.push([bx.o.x,bx.o.y,L.x,L.y]);if(by)g.push([by.o.x,by.o.y,L.x,L.y]);if(bd)g.push([bd.o.x,bd.o.y,L.x,L.y]);
+  return g.length?g:null}
 function overlaySVG(G){
   let o=autoBuildSVG(G);const c=selColor;
+  if(drag&&drag.guides)for(const [x1,y1,x2,y2] of drag.guides){const ux=x2-x1,uy=y2-y1,l=Math.hypot(ux,uy)||1,e=40/view.k;
+    o+=`<path d="M${f(x1-ux/l*e)} ${f(y1-uy/l*e)}L${f(x2+ux/l*e)} ${f(y2+uy/l*e)}" stroke="${c}" stroke-width="${f(1.2/view.k)}" stroke-dasharray="${f(5/view.k)} ${f(4/view.k)}" fill="none"/><circle cx="${f(x1)}" cy="${f(y1)}" r="${f(3.5/view.k)}" fill="${c}"/>`}
   if(laneEdit&&adv()&&G&&tool==='select'&&sel.length===1&&sel[0].t==='station'){const N=laneNow(sel[0].id,G),r=M.settings.lineWidth*.6,k=view.k;
     if(N.length>1)for(const n of N){const L=lnOf(n.lid);if(!L)continue;const dr=drag&&drag.type==='lane'&&drag.lid===n.lid;
       o+=`<circle data-kind="lane" data-id="${sel[0].id}" data-key="${n.lid}" cx="${f(n.x)}" cy="${f(n.y)}" r="${f(Math.max(r,7/k))}" fill="${L.color}" stroke="#fff" stroke-width="${f(2/k)}" style="cursor:grab"${dr?' opacity=".35"':''}><title>${esc(L.name)}</title></circle>`}
@@ -1627,7 +1647,7 @@ function natureAt(w){const A=M.nature||[];for(let i=A.length-1;i>=0;i--){const P
 function finishNature(){const d=natureDraft;if(!d)return;natureDraft=null;if(d.pts.length<3)M.nature=M.nature.filter(x=>x!==d);else sel=[{t:'nature',id:d.id}];updHint();changed()}
 function cancelNature(){if(!natureDraft)return;natureDraft=null;if(undoS.length){M=liveKeep(JSON.parse(undoS.pop()),undoQ.pop());updUndo()}updHint();render();renderInspector()}
 function renderWater(){const S=M.settings,key=JSON.stringify([M.water,S.water,S.shapeR]);if(key===waterKey)return;waterKey=key;$('#waterL').innerHTML=waterSVG()}
-function render(){if(drawTip&&drawLine!==drawTip.line)dropTip(true);draftClass();document.body.classList.toggle('has-sel',sel.length>0);sheetSync();
+function render(){if(drawTip&&drawLine!==drawTip.line)dropTip(true);draftClass();{const fr=freePlace(),a=document.getElementById('plGrid'),b=document.getElementById('plFree');if(a){a.setAttribute('aria-pressed',String(!fr));b.setAttribute('aria-pressed',String(fr))}}document.body.classList.toggle('has-sel',sel.length>0);sheetSync();
   const S=M.settings;ensureLayers();
   selColor=getComputedStyle(document.documentElement).getPropertyValue('--sel').trim()||'#e8590c';
   const {o,G}=mapSVG(true);lastG=G;
@@ -1728,7 +1748,8 @@ function inspMap(){
    ${fld('Label font',selectF('settings','s','labelFont',S.labelFont,FONTS.map(x=>[x,x])))}
    ${chk('settings','s','boldInter',S.boldInter,'Bold names at interchanges')}</div></div>
   <div class="pane"><h3>Grid</h3>
-   <div class="grid2">${chk('settings','s','showGrid',S.showGrid,'Show grid')}${chk('settings','s','snap',S.snap,'Snap to grid')}</div>
+   <div class="fld"><span>Placement</span><div class="opts" style="width:fit-content"><button class="opt" data-act="place:grid" aria-pressed="${!freePlace()}">Grid</button><button class="opt" data-act="place:free" aria-pressed="${freePlace()}">Free (precise)</button></div></div>
+   <div class="grid2">${chk('settings','s','showGrid',S.showGrid,'Show grid')}${freePlace()?'':chk('settings','s','snap',S.snap,'Snap to grid')}</div>
    ${fld('Grid size',inp('settings','s','grid',S.grid,'num','min="5" max="100" step="5"'))}
    <div class="btns"><button class="btn" data-act="snap-all">Snap all to grid</button></div></div>
   <div class="pane"><h3>Legend</h3>
@@ -1772,7 +1793,7 @@ function inspStation(s){
    ${s.laneOrder?'<p class="sub">This station’s order was set by hand.</p><div class="btns"><button class="btn" data-act="lane-reset">Reset to automatic</button></div>':''}</div>`:''}
   </div>
   <div class="pane"><h3>Position</h3>
-   <div class="grid2">${fld('Map X',inp('station',s.id,'x',s.x,'num','data-pos="1" step="'+M.settings.grid+'"'))}${fld('Map Y',inp('station',s.id,'y',s.y,'num','data-pos="1" step="'+M.settings.grid+'"'))}</div>
+   <div class="grid2">${fld('Map X',inp('station',s.id,'x',s.x,'num','data-pos="1" step="'+(freePlace()?'0.1':M.settings.grid)+'"'))}${fld('Map Y',inp('station',s.id,'y',s.y,'num','data-pos="1" step="'+(freePlace()?'0.1':M.settings.grid)+'"'))}</div>
    <p class="sub">Type a position and the station jumps there. It snaps to the grid unless snapping is off.</p>
    ${chk('settings','s','mcFollow',!!M.settings.mcFollow,'Follow in-game X/Z')}
    ${M.settings.mcFollow?fld('Blocks per grid cell',inp('settings','s','mcScale',M.settings.mcScale,'num','min="1"')):''}
@@ -2001,6 +2022,7 @@ function act(name,arg,el){
     case 'toolgroup':toolGroupOpen();break;
     case 'tool-g':closePop();if(arg==='image'){toolGroupLast='image';lsSet('sndt:tgroup','image');toolsSync()}setTool(arg);break;
     case 'mode':setMode(arg);break;
+    case 'place':{const v=arg==='free'?'free':'grid';if((M.settings.place||'grid')===v)break;pushUndo();if(v==='free')M.settings.place='free';else delete M.settings.place;changed();toast(tr(v==='free'?'Free placement: drag to place precisely; stations snap into line with others (hold Alt to stop that).':'Grid placement: stations snap to the grid.'));break}
     case 'theme':themePref={auto:'light',light:'dark',dark:'auto'}[themePref]||'auto';lsSet('sndt:theme',themePref);applyTheme();break;
     case 'tour':closePop();tourStart();break;
     case 'img-replace':if(one&&one.t==='image'){imgReplace=one.id;$('#imgIn').click()}break;
@@ -2463,7 +2485,8 @@ svg.addEventListener('pointermove',e=>{
   const dx=w.x-drag.start?.x,dy=w.y-drag.start?.y;
   if(drag.type==='move'){
     if(!drag.moved){if(Math.hypot(dx,dy)*view.k<3)return;pushUndo();drag.moved=true}
-    const free=e.altKey,ddx=snap(dx,free),ddy=snap(dy,free);for(const it of drag.items){if(it.orig){it.o.pts=it.orig.map(q=>[q[0]+ddx,q[1]+ddy]);continue}if(it.rel){it.o.x=it.ox+ddx;it.o.y=it.oy+ddy;continue}it.o.x=snap(it.ox+dx,free);it.o.y=snap(it.oy+dy,free)}requestRender();return}
+    const free=e.altKey,ddx=snap(dx,free),ddy=snap(dy,free);for(const it of drag.items){if(it.orig){it.o.pts=it.orig.map(q=>[q[0]+ddx,q[1]+ddy]);continue}if(it.rel){it.o.x=it.ox+ddx;it.o.y=it.oy+ddy;continue}it.o.x=snap(it.ox+dx,free);it.o.y=snap(it.oy+dy,free)}
+    drag.guides=freePlace()&&!e.altKey?alignMove(drag):null;requestRender();if(drag.guides||drag.hadGuides){drag.hadGuides=!!drag.guides;requestOverlay()}return}
   if(drag.type==='label'){if(!drag.moved){if(Math.hypot(dx,dy)*view.k<2)return;pushUndo();drag.moved=true}drag.s.ldx=Math.round(drag.ox+dx);drag.s.ldy=Math.round(drag.oy+dy);requestRender();return}
   if(drag.type==='cp'||drag.type==='cpadd'){
     if(!drag.moved){if(Math.hypot(dx,dy)*view.k<2)return;pushUndo();const sg=makeCustom(drag.key);if(!sg){drag=null;return}
@@ -2559,14 +2582,14 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Delete'||e.key==='Backspace'){if(sel.length){e.preventDefault();deleteSel()}return}
   if(k==='f'){fit();return}
   if(k==='b'){toggleBends();return}
-  if(e.key.startsWith('Arrow')&&sel.length){e.preventDefault();const g=e.shiftKey?1:gridNow(),dx=e.key==='ArrowLeft'?-g:e.key==='ArrowRight'?g:0,dy=e.key==='ArrowUp'?-g:e.key==='ArrowDown'?g:0;
-    pushUndo();for(const s of sel){const o=s.t==='station'?stOf(s.id):s.t==='text'?M.texts.find(x=>x.id===s.id):s.t==='region'?M.regions.find(x=>x.id===s.id):s.t==='image'?(M.images||[]).find(x=>x.id===s.id):s.t==='legend'?M.settings.legend:null;if(o&&!o.locked){if(o.pts)o.pts=o.pts.map(q=>[q[0]+dx,q[1]+dy]);else{o.x+=dx;o.y+=dy}}}changed()}
+  if(e.key.startsWith('Arrow')&&sel.length){e.preventDefault();const g=freePlace()?(e.shiftKey?.1:1):e.shiftKey?1:gridNow(),dx=e.key==='ArrowLeft'?-g:e.key==='ArrowRight'?g:0,dy=e.key==='ArrowUp'?-g:e.key==='ArrowDown'?g:0;
+    pushUndo();for(const s of sel){const o=s.t==='station'?stOf(s.id):s.t==='text'?M.texts.find(x=>x.id===s.id):s.t==='region'?M.regions.find(x=>x.id===s.id):s.t==='image'?(M.images||[]).find(x=>x.id===s.id):s.t==='legend'?M.settings.legend:null;if(o&&!o.locked){if(o.pts)o.pts=o.pts.map(q=>[Math.round((q[0]+dx)*10)/10,Math.round((q[1]+dy)*10)/10]);else{o.x=Math.round((o.x+dx)*10)/10;o.y=Math.round((o.y+dy)*10)/10}}}changed()}
 });
 document.addEventListener('keyup',e=>{if(e.key===' '){spaceDown=false;svg.style.cursor=''}});
 $('#stFilter').addEventListener('input',renderLists);
 
 /* ---------- drawers, popovers, modal, toast ---------- */
-const NAV=[['header [data-act="export-menu"]','export'],['header .seg:not(.ctl)','section'],['header .seg.ctl','mode'],['#installBtn','install'],['#liveBtn','live'],['#searchBtn','search'],['#tourBtn','tour'],['#themeBtn','theme'],['#langSel','lang'],['#donateBtn','donate'],['#discordBtn','discord'],['#status','status']]
+const NAV=[['header [data-act="export-menu"]','export'],['header .seg:not(.ctl):not(.place)','section'],['header .seg.ctl','mode'],['#installBtn','install'],['#liveBtn','live'],['#searchBtn','search'],['#tourBtn','tour'],['#themeBtn','theme'],['#langSel','lang'],['#donateBtn','donate'],['#discordBtn','discord'],['#status','status']]
   .map(([q,slot])=>{const el=document.querySelector(q),ph=document.createComment(slot);el.before(ph);return{el,ph,slot}});
 let navNarrow=null;
 function navPlace(){const n=window.innerWidth<=900;if(n===navNarrow)return;navNarrow=n;for(const o of NAV){if(n)document.querySelector(`#navMenu [data-slot="${o.slot}"]`).appendChild(o.el);else o.ph.after(o.el)}}
@@ -2711,7 +2734,7 @@ function ago(t){const s=(Date.now()-t)/1000;if(s<60)return'just now';if(s<3600)r
 
 /* ---------- storage ---------- */
 let saveT=null,saving=false,again=false;
-function status(t,c){const s=$('#status');s.textContent=t;s.style.setProperty('--status',c||'#9aa')}
+function status(t,c){const s=$('#status');s.textContent=t;s.title=t;s.style.setProperty('--status',c||'#9aa')}
 function scheduleSave(){
   if(EMBED)return;
   if(isExample){isExample=false;mapId=uid();if(M.name==='Example network')M.name='My network';$('#mapName').textContent=M.name;$('#banner').hidden=true}
