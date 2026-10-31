@@ -1038,11 +1038,23 @@ function geom(){
       const nw=its.slice().sort((p,q)=>p.k-q.k);let cost=0;
       for(let i=0;i<its.length;i++)for(let j=i+1;j<its.length;j++)if(nw.indexOf(its[i])>nw.indexOf(its[j]))cost+=its[i].o.t.lines.length*its[j].o.t.lines.length;
       return{cost,apply:()=>slots.forEach((s,i)=>g.items[s]=nw[i].o)}};
-    for(const [X,gs] of byX)if(!lo.has(X))for(let i=0;i<gs.length;i++)for(let j=i+1;j<gs.length;j++){const g=gs[i],h=gs[j];if(across(g,h)>-.97)continue;
-      if(!crossed(g,h))continue;
+    // (also at stations with a hand-set line order: that order is the same on both sides by design, so this only changes anything
+    // where it can't be kept, e.g. a line ranked between two lines that share a segment)
+    const thru=[];for(const [X,gs] of byX)for(let i=0;i<gs.length;i++)for(let j=i+1;j<gs.length;j++)if(across(gs[i],gs[j])<=-.97)thru.push([gs[i],gs[j]]);
+    const fixItems=()=>{for(const [g,h] of thru){if(!crossed(g,h))continue;
       // try reordering each side; keep the one that leaves fewer lines crossed (a side that is one segment can't be reordered at all)
       const tryIt=(x,y)=>{const keep=x.items.slice(),r=reorder(x,y);r.apply();r.left=crossed(g,h);x.items=keep;return r},A=tryIt(h,g),B=tryIt(g,h);
-      (A.left<B.left||(A.left===B.left&&(A.cost<B.cost||(A.cost===B.cost&&h.total<=g.total)))?A:B).apply()}
+      (A.left<B.left||(A.left===B.left&&(A.cost<B.cost||(A.cost===B.cost&&h.total<=g.total)))?A:B).apply()}};
+    fixItems();
+    // still crossed: the order inside a shared segment may be what's wrong (e.g. a line shared by both segments across the station has
+    // to run in the middle of both); reorder that segment's lines to mirror the other side, kept only if fewer lines cross at its two ends
+    {const pairsOf=new Map();for(const pr of thru)for(const g of pr)for(const o of g.items){if(!pairsOf.has(o.t))pairsOf.set(o.t,new Set());pairsOf.get(o.t).add(pr)}
+      const cost=t=>{let n=0;for(const [g,h] of pairsOf.get(t)||[])n+=crossed(g,h);return n};let moved=false;
+      for(const [g,h] of thru){if(!crossed(g,h))continue;
+        for(const [x,y] of [[g,h],[h,g]])for(const o of x.items){const t=o.t;if(t.lines.length<2||(M.segs[t.key]||{}).order)continue;
+          const pr=lane(y),was=t.lines.slice(),c0=cost(t);slotSort(t.lines,l=>pr.has(l)?(o.atA?-1:1)*pr.get(l):null);
+          if(cost(t)<c0)moved=true;else t.lines.splice(0,t.lines.length,...was)}}
+      if(moved)fixItems()}
     for(const g of groups){let n0=0;for(const o of g.items){const c=o.t.lines.length;o.off=(n0+(c-1)/2-(g.total-1)/2)*sp;n0+=c}}
     // sideways position of each line in a bundle, measured across the direction the bundle leaves the station
     // (a line that branches into two segments of the same bundle has no single lane, so it is left out)
