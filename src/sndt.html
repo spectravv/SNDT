@@ -353,6 +353,7 @@ body:not(.adv) .adv-only{display:none!important}
 .ilvf-grip{flex:none;height:12px;margin-top:-3px;display:flex;align-items:center;justify-content:center;cursor:row-resize;touch-action:none;background:var(--paper)}.ilvf-grip i{width:44px;height:4px;background:var(--ink)}
 @media (hover:hover){.ilvf-grip:hover i{background:var(--red)}}@media (pointer:coarse){.ilvf-grip{height:22px}}
 .ilvf-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 10px;border-bottom:1px solid var(--hair)}.ilvf-bar b{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;margin-right:4px}.ilvf-bar .opts{flex:none}
+.sizepair{display:grid;grid-template-columns:1fr 72px;gap:8px;align-items:center}.sizepair input[type=range]{width:100%}
 .fac-tog{display:inline-flex;align-items:center;gap:6px}.fac-tog i{width:10px;height:10px;border:1.5px solid currentColor;display:inline-block;position:relative}
 .fac-tog[aria-pressed="true"] i::after{content:"";position:absolute;left:2px;top:-1px;width:3px;height:6px;border:solid currentColor;border-width:0 2px 2px 0;transform:rotate(45deg)}
 .ilvf-body{flex:1;overflow:auto;padding:12px;background:var(--paper-2);cursor:grab}.ilvf-body.drag{cursor:grabbing;user-select:none}
@@ -1336,7 +1337,9 @@ function stNums(G){if(G.nums)return G.nums;const out=new Map();
     seq.forEach((st,i)=>{const own=st.nums&&String(st.nums[L.id]||'').trim();if(!out.has(st.id))out.set(st.id,[]);out.get(st.id).push({lid:L.id,text:own||pre+'\u2009'+(n0+i),color:L.color||'#888'})})}
   return G.nums=out}
 function numBox(s,G){if(M.settings.stNums!=='marks'||s.kind==='waypoint')return null;const B=stNums(G).get(s.id);if(!B||!B.length)return null;
-  const h=Math.max(12,stSize(s)*1.05),fs=h*.62,pad=h*.32,ws=B.map(b=>textW(b.text,fs,700)+pad*2);return{B,h,fs,ws,W:ws.reduce((a,v)=>a+v,0)}}
+  const h=s.numSize>0?s.numSize:M.settings.numSize>0?M.settings.numSize:Math.max(12,stSize(s)*1.05),fs=h*.62,pad=h*.32,ws=B.map(b=>textW(b.text,fs,700)+pad*2);return{B,h,fs,ws,W:ws.reduce((a,v)=>a+v,0)}}
+// a slider and a number box for the same size (empty number = automatic / follow the map)
+function sizePair(o,id,p,v,auto){return `<div class="sizepair"><input type="range" data-obj="${o}" data-id="${id}" data-prop="${p}" data-type="numnull" min="6" max="60" step="1" value="${v>0?v:auto}" aria-label="Size"><input type="number" id="${fid(o,p)}" data-obj="${o}" data-id="${id}" data-prop="${p}" data-type="numnull" min="4" max="200" step="0.5" value="${v>0?v:''}" placeholder="${f(auto)}"></div>`}
 function numBadgesSVG(s,nb,c){const S=M.settings,x0=c.x-nb.W/2,y0=c.y-nb.h/2,r=nb.h*.3,id='nb'+s.id;let x=x0,o='';
   nb.B.forEach((b,i)=>{o+=`<rect x="${f(x)}" y="${f(y0)}" width="${f(nb.ws[i]+.5)}" height="${f(nb.h)}" fill="${esc(b.color)}"/><text x="${f(x+nb.ws[i]/2)}" y="${f(c.y+nb.fs*.36)}" text-anchor="middle" font-size="${f(nb.fs)}" font-weight="700" fill="${contrastOn(b.color)}">${esc(b.text)}</text>`;x+=nb.ws[i]});
   return `<clipPath id="${id}"><rect x="${f(x0)}" y="${f(y0)}" width="${f(nb.W)}" height="${f(nb.h)}" rx="${f(r)}"/></clipPath><rect x="${f(x0-1)}" y="${f(y0-1)}" width="${f(nb.W+2)}" height="${f(nb.h+2)}" rx="${f(r+1)}" fill="${S.bg}"/><g clip-path="url(#${id})">${o}</g>`}
@@ -1877,6 +1880,7 @@ function inspMap(){
   <div class="pane"><h3>Stations</h3>
    ${fld('Single-line stops',selectF('settings','s','stopStyle',S.stopStyle,SHAPES))}
    ${fld('Station numbers',selectF('settings','s','stNums',S.stNums||'off',[['off','Off'],['marks','Codes as station marks']]))}
+   ${S.stNums==='marks'?fld('Code size (empty = automatic)',sizePair('settings','s','numSize',S.numSize,Math.max(12,(S.stationSize||14)*1.05))):''}
    <p class="sub">Give a line a station code (like NS) in its panel and its stations are numbered along it: NS 1, NS 2… An interchange shows the codes of all its numbered lines side by side.</p>
    <div class="adv-only">${fld('Station size',inp('settings','s','stationSize',S.stationSize,'num','min="4" max="60"'))}</div></div>
   <div class="pane"><h3>Labels</h3>
@@ -1919,7 +1923,7 @@ function inspStation(s){
    ${adv()?'<p class="sub" style="margin-top:-4px">Press Enter for a second line.</p>':''}
    <div class="fld"><span>Type</span>${kindPicker(s.kind||'stop')}</div>
    ${(()=>{if(s.kind==='waypoint')return'';const G=lastG||geom(),B=stNums(G).get(s.id)||[],ls=lines.filter(L=>String(L.numPrefix||'').trim());if(!ls.length)return'';
-     return `<div class="grid2">${ls.map(L=>{const auto=(B.find(b=>b.lid===L.id)||{}).text||'';return fld(tr('Number on')+' '+String(L.name).split('\n')[0],inp('station',s.id,'nums.'+L.id,(s.nums||{})[L.id]||'','text','placeholder="'+esc(auto)+'" maxlength="10"'))}).join('')}</div>`})()}
+     return (M.settings.stNums==='marks'?fld(tr('Code size here (empty = same as map)'),sizePair('station',s.id,'numSize',s.numSize,M.settings.numSize>0?M.settings.numSize:Math.max(12,stSize(s)*1.05))):'')+`<div class="grid2">${ls.map(L=>{const auto=(B.find(b=>b.lid===L.id)||{}).text||'';return fld(tr('Number on')+' '+String(L.name).split('\n')[0],inp('station',s.id,'nums.'+L.id,(s.nums||{})[L.id]||'','text','placeholder="'+esc(auto)+'" maxlength="10"'))}).join('')}</div>`})()}
    ${['stop','interchange','terminus','hub'].includes(s.kind||'stop')?fld('Shape',selectF('station',s.id,'shape',s.shape||'',[['',tr('Same as map')+' ('+tr((SHAPES.find(x=>x[0]===(M.settings.stopStyle||'circle'))||SHAPES[0])[1])+')']].concat(SHAPES))):''}
    ${s.kind==='waypoint'?fld('Corner radius at this bend point',inp('station',s.id,'radius',s.radius??'','numnull','min="0" max="400" placeholder="'+(M.settings.cornerR??16)+' (map default)"')):''}
    <div class="fld"><span>Label position</span><div class="opts" style="width:fit-content"><button class="opt" data-act="label:auto" aria-pressed="${s.label==='auto'}">Auto: find free space</button></div><div class="compass">${comp}</div></div>
@@ -2148,6 +2152,7 @@ insp.addEventListener('input',e=>{const el=e.target;
   if(el.dataset.ncolor){natureColor=el.value;lsSet('sndt:ncolor',natureColor);if(natureDraft){natureDraft.color=natureColor;requestRender()}return}
   if(el.dataset.brush){const v=+el.value;if(v>=1){brush=Math.min(240,Math.max(4,v));lsSet('sndt:brush',brush);insp.querySelectorAll('[data-brush]').forEach(x=>{if(x!==el)x.value=brush});draftClass();requestOverlay()}return}
   if(!el.dataset.prop||el.tagName==='SELECT'||el.type==='checkbox')return;
+  if(el.closest('.sizepair'))el.closest('.sizepair').querySelectorAll('input').forEach(x=>{if(x!==el)x.value=el.value});
   if(pendingUndo){pushUndo();pendingUndo=false}
   if(applyField(el)){requestRender();scheduleSave();updUndo();if(el.dataset.relist)renderLists();
     if(el.dataset.obj==='seg'&&el.dataset.prop==='arc'){insp.querySelectorAll('[data-obj="seg"][data-prop="arc"]').forEach(x=>{if(x!==el)x.value=el.value});insp.querySelectorAll('[data-act^="arc-angle:"]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.act==='arc-angle:'+(+el.value)))}}});
