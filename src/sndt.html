@@ -1049,7 +1049,9 @@ function geom(){
     // that needs fewer lines to cross over is reordered to match, so lines cross where they split instead of inside the station
     // two bundles carry on straight across the station if they leave it in opposite directions, or are heading that way a little further on
     const across=(g,h)=>Math.min(g.d.x*h.d.x+g.d.y*h.d.y,g.dl.x*h.dl.x+g.dl.y*h.dl.y);
-    const lane=g=>{const m=new Map();let n0=0;for(const o of g.items){const n=o.t.lines.length;o.t.lines.forEach((l,k)=>m.set(l,n0+(o.atA?k:n-1-k)));n0+=n}return m};
+    // a segment whose lines swap sides along the way has its own order at one end (endOrd)
+    const linesAt=(t,X)=>t.endOrd&&t.endOrd.at===X?t.endOrd.lines:t.lines;
+    const lane=g=>{const m=new Map();let n0=0;for(const o of g.items){const n=o.t.lines.length;linesAt(o.t,g.X).forEach((l,k)=>m.set(l,n0+(o.atA?k:n-1-k)));n0+=n}return m};
     // pairs of lines on both sides whose order flips across the station (seen from either side, a straight-through bundle is mirrored)
     const crossed=(g,h)=>{const a=lane(g),b=lane(h),c=[...a.keys()].filter(l=>b.has(l));let n=0;
       for(let i=0;i<c.length;i++)for(let j=i+1;j<c.length;j++)if((a.get(c[i])-a.get(c[j]))*(b.get(c[i])-b.get(c[j]))>0)n++;return n};
@@ -1070,15 +1072,19 @@ function geom(){
     // to run in the middle of both); reorder that segment's lines to mirror the other side, kept only if fewer lines cross at its two ends
     {const pairsOf=new Map();for(const pr of thru)for(const g of pr)for(const o of g.items){if(!pairsOf.has(o.t))pairsOf.set(o.t,new Set());pairsOf.get(o.t).add(pr)}
       const cost=t=>{let n=0;for(const [g,h] of pairsOf.get(t)||[])n+=crossed(g,h);return n};let moved=false;
+      const plen=P=>{let l=0;for(let i=1;i<P.length;i++)l+=Math.hypot(P[i].x-P[i-1].x,P[i].y-P[i-1].y);return l};
+      const canSwap=t=>!t.via&&!t.over&&[t.a,t.b].every(X=>(st.get(X)||{}).kind!=='waypoint')&&plen(t.pts)>=sp*(t.lines.length+3);
       for(const [g,h] of thru){if(!crossed(g,h))continue;
         for(const [x,y] of [[g,h],[h,g]])for(const o of x.items){const t=o.t;if(t.lines.length<2||(M.segs[t.key]||{}).order)continue;
           const pr=lane(y),was=t.lines.slice(),c0=cost(t);slotSort(t.lines,l=>pr.has(l)?(o.atA?-1:1)*pr.get(l):null);
-          if(cost(t)<c0)moved=true;else t.lines.splice(0,t.lines.length,...was)}}
+          if(cost(t)<c0){moved=true;continue}const nw=t.lines.slice();t.lines.splice(0,t.lines.length,...was);
+          // the new order suits this station but not the far end: the lines cross once along the segment instead (a clean X between the stations)
+          if(!t.endOrd&&canSwap(t)){t.endOrd={at:x.X,lines:nw};if(cost(t)<c0)moved=true;else delete t.endOrd}}}
       if(moved)fixItems()}
     for(const g of groups){let n0=0;for(const o of g.items){const c=o.t.lines.length;o.off=(n0+(c-1)/2-(g.total-1)/2)*sp;n0+=c}}
     // sideways position of each line in a bundle, measured across the direction the bundle leaves the station
     // (a line that branches into two segments of the same bundle has no single lane, so it is left out)
-    const lat=g=>{const m=new Map(),twice=new Set();for(const o of g.items){const n=o.t.lines.length;const ln=o.ln||0;o.t.lines.forEach((l,k)=>{if(m.has(l))twice.add(l);m.set(l,ln+o.off+(k-(n-1)/2)*sp*(o.atA?1:-1))})}twice.forEach(l=>m.delete(l));return m};
+    const lat=g=>{const m=new Map(),twice=new Set();for(const o of g.items){const n=o.t.lines.length;const ln=o.ln||0;linesAt(o.t,g.X).forEach((l,k)=>{if(m.has(l))twice.add(l);m.set(l,ln+o.off+(k-(n-1)/2)*sp*(o.atA?1:-1))})}twice.forEach(l=>m.delete(l));return m};
     const links=[],link=(g,h,c,w)=>links.push({g,h,c,w});
     // bundles across a station, straight or (two or more lines) turning there: line the shared lines up (shift of one side = -shift of the other - c)
     for(const gs of byX.values())for(let i=0;i<gs.length;i++)for(let j=i+1;j<gs.length;j++){const g=gs[i],h=gs[j],dot=across(g,h);if(dot>.1)continue;
@@ -1129,7 +1135,7 @@ function geom(){
     list.forEach((it,i)=>{let piece=C.slice(cuts[i],cuts[i+1]+1);if(piece.length<2)piece=[C[cuts[i]],C[Math.min(C.length-1,cuts[i]+1)]];
       it.t.pts=it.rev?piece.slice().reverse():piece;it.t.off=new Map();it.t.lines=it.rev?ordC.slice().reverse():ordC.slice()});
     ordC.forEach((lid,k)=>{const op=offsetPoly(C,(k-(n-1)/2)*sp);
-      list.forEach((it,i)=>{let piece=op.slice(cuts[i],cuts[i+1]+1);if(piece.length<2)piece=[op[cuts[i]],op[Math.min(op.length-1,cuts[i]+1)]];if(it.rev)piece=piece.slice().reverse();it.t.off.set(lid,piece);
+      list.forEach((it,i)=>{let piece=op.slice(cuts[i],cuts[i+1]+1);if(piece.length<2)piece=[op[cuts[i]],op[Math.min(op.length-1,cuts[i]+1)]];if(it.rev)piece=piece.slice().reverse();if(it.t.endOrd&&list.length===1)piece=swapPiece(it.t,lid);it.t.off.set(lid,piece);
         const t=it.t,P=t.pts,q=P.length,d0=unit(P[1].x-P[0].x,P[1].y-P[0].y),d1=unit(P[q-2].x-P[q-1].x,P[q-2].y-P[q-1].y);
         if(!ends.has(t.a))ends.set(t.a,[]);if(!ends.has(t.b))ends.set(t.b,[]);const pass=t.over&&t.over.get(lid);
         if(!pass||!pass.has(t.a))ends.get(t.a).push({x:piece[0].x,y:piece[0].y,lid,dir:d0});if(!pass||!pass.has(t.b))ends.get(t.b).push({x:piece[piece.length-1].x,y:piece[piece.length-1].y,lid,dir:d1})})});
@@ -1141,6 +1147,19 @@ function geom(){
     for(const lid of t.lines){let O=[];for(const {u,from} of t.via){const P=u.off&&u.off.get(lid);if(P)O=glue(O,u.a===from?P:P.slice().reverse())}t.off.set(lid,O)}}
   return{st,tracks,ends,ref};
 }
+// a line of a segment whose lines swap sides: its own lane at each end, stepping across at 45° around the middle of the segment
+// (the middle of its longest straight stretch when that is long enough)
+function swapPiece(t,lid){const sp=M.settings.lineWidth+M.settings.lineGap,n=t.lines.length,P=dedupePts(t.pts),o=t.endOrd;
+  const La=o.at===t.a?o.lines:t.lines,Lb=o.at===t.b?o.lines:t.lines,oa=(La.indexOf(lid)-(n-1)/2)*sp,ob=(Lb.indexOf(lid)-(n-1)/2)*sp;
+  if(Math.abs(ob-oa)<.01||P.length<2)return offsetPoly(P,oa);
+  const S=[0];for(let i=1;i<P.length;i++)S.push(S[i-1]+Math.hypot(P[i].x-P[i-1].x,P[i].y-P[i-1].y));const T=S[S.length-1],w=Math.min(Math.abs(ob-oa),T*.6);
+  let li=0;for(let i=1;i<P.length-1;i++)if(S[i+1]-S[i]>S[li+1]-S[li])li=i;
+  const m=S[li+1]-S[li]>=w+sp?(S[li]+S[li+1])/2:T/2,lo=m-w/2,hi=m+w/2;
+  const Q=[];for(let i=0;i<P.length;i++){if(i){for(const c of [lo,hi])if(c>S[i-1]&&c<S[i]){const k=(c-S[i-1])/(S[i]-S[i-1]);Q.push({x:P[i-1].x+(P[i].x-P[i-1].x)*k,y:P[i-1].y+(P[i].y-P[i-1].y)*k,s:c})}}Q.push({x:P[i].x,y:P[i].y,s:S[i]})}
+  const off=s=>s<=lo?oa:s>=hi?ob:oa+(ob-oa)*(s-lo)/w,N=[];
+  for(let i=0;i<Q.length-1;i++){const u=unit(Q[i+1].x-Q[i].x,Q[i+1].y-Q[i].y);N.push({x:-u.y,y:u.x})}
+  return Q.map((q,i)=>{const d=off(q.s);if(!i)return{x:q.x+N[0].x*d,y:q.y+N[0].y*d};if(i===Q.length-1)return{x:q.x+N[i-1].x*d,y:q.y+N[i-1].y*d};
+    const a=N[i-1],b=N[i],den=1+a.x*b.x+a.y*b.y;return den<.05?{x:q.x+b.x*d,y:q.y+b.y*d}:{x:q.x+(a.x+b.x)*d/den,y:q.y+(a.y+b.y)*d/den}})}
 function filletPts(P,rad,only,minR=0){
   if(P.length<3)return P;const R=i=>(only&&!only.has(i))?0:rad(i),out=[P[0]];
   for(let i=1;i<P.length-1;i++){const prev=P[i-1],cur=P[i],next=P[i+1],r=R(i);
@@ -1508,7 +1527,7 @@ function crossings(G){
   // inside a station marker lines meet rather than cross
   const rad=new Map(),radOf=id=>{if(!rad.has(id)){const s=G.st.get(id);let r=0;for(const e of G.ends.get(id)||[])r=Math.max(r,Math.hypot(e.x-s.x,e.y-s.y));rad.set(id,r+stSize(s)/2+2)}return rad.get(id)};
   for(let i=0;i<T.length;i++)for(let j=i+1;j<T.length;j++){const A=T[i],B=T[j];
-    if(A.lid===B.lid||A.t===B.t||A.x1<B.x0||B.x1<A.x0||A.y1<B.y0||B.y1<A.y0)continue;
+    if(A.lid===B.lid||(A.t===B.t&&!A.t.endOrd)||A.x1<B.x0||B.x1<A.x0||A.y1<B.y0||B.y1<A.y0)continue;
     const shared=[A.t.a,A.t.b].filter(n=>n===B.t.a||n===B.t.b);
     const up=A.top<=B.top?A:B,lo=up===A?B:A,P=up.P,Q=lo.P;
     for(let a=0;a<P.length-1;a++)for(let b=0;b<Q.length-1;b++){const p=P[a],p2=P[a+1],q=Q[b],q2=Q[b+1];
