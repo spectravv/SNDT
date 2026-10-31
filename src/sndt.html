@@ -468,19 +468,20 @@ input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}
     <button class="hbtn icon" id="undoBtn" data-act="undo" aria-label="Undo" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/></svg></button>
     <button class="hbtn icon" id="redoBtn" data-act="redo" aria-label="Redo" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 000 11H13"/></svg></button>
     <div class="seg place hide-narrow" role="group" aria-label="Placement" title="Grid: stations snap to the grid. Free: place precisely, snapping into line with other stations"><button id="plGrid" data-act="place:grid" aria-pressed="true">Grid</button><button id="plFree" data-act="place:free" aria-pressed="false">Free</button></div>
-    <div class="seg place lay hide-narrow" role="group" aria-label="Lane layout" title="Lines first: lines stay straight in their lanes and stations sit where their lines pass. Stations first: each station stays on its point and the lines fit around it"><button id="lyLines" data-act="mlayout:lines" aria-pressed="true">Lines</button><button id="lyStations" data-act="mlayout:stations" aria-pressed="false">Stations</button></div>
-    <div class="seg" role="group" aria-label="Section"><button id="secMap" data-act="section:map" aria-pressed="true">Map</button><button id="secTl" data-act="section:timeline" aria-pressed="false">Timeline</button></div>
+    <div class="seg place lay" role="group" aria-label="Lane layout" title="Lines first: lines stay straight in their lanes and stations sit where their lines pass. Stations first: each station stays on its point and the lines fit around it"><button id="lyLines" data-act="mlayout:lines" aria-pressed="true">Lines</button><button id="lyStations" data-act="mlayout:stations" aria-pressed="false">Stations</button></div>
     <div class="seg ctl" role="group" aria-label="Control level">
       <button id="mSimple" data-act="mode:simple" aria-pressed="true">Simple</button>
       <button id="mAdv" data-act="mode:adv" aria-pressed="false">Advanced</button>
     </div>
+    <div class="seg" role="group" aria-label="Section"><button id="secMap" data-act="section:map" aria-pressed="true">Map</button><button id="secTl" data-act="section:timeline" aria-pressed="false">Timeline</button></div>
     <button class="hbtn primary" data-act="export-menu" aria-haspopup="true"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span class="hide-narrow">Export</span></button>
     
   </header>
   <aside id="navMenu" aria-label="Menu">
     <div class="nm-head"><span class="nm-k">Menu</span><button class="hbtn icon" data-act="drawer:navMenu" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="nm-sec"><div class="nm-k">Map</div><button class="hbtn" data-act="sheet-map"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span class="nm-lbl">Map settings</span></button><div class="nm-slot" data-slot="export"></div></div>
-    <div class="nm-sec"><div class="nm-k">View</div><div class="nm-slot" data-slot="section"></div><div class="nm-slot" data-slot="mode"></div></div>
+    <div class="nm-sec"><div class="nm-k">Lane layout</div><div class="nm-slot" data-slot="layout"></div></div>
+    <div class="nm-sec"><div class="nm-k">View</div><div class="nm-slot" data-slot="mode"></div><div class="nm-slot" data-slot="section"></div></div>
     <div class="nm-sec"><div class="nm-slot" data-slot="search"></div><div class="nm-slot" data-slot="install"></div><div class="nm-slot" data-slot="live"></div><div class="nm-slot" data-slot="tour"></div><div class="nm-slot" data-slot="theme"></div>
       <label class="nm-row"><span class="nm-k">Language</span><span class="nm-slot" data-slot="lang"></span></label>
       <div class="nm-slot" data-slot="donate"></div><div class="nm-slot" data-slot="discord"></div></div>
@@ -1825,8 +1826,6 @@ function inspMap(){
    <div class="fld"><span>${esc(tr('Auto build'))}</span><div class="opts" style="width:fit-content"><button class="opt" data-act="autobuild:on" aria-pressed="${autoBuild}">On</button><button class="opt" data-act="autobuild:off" aria-pressed="${!autoBuild}">Off</button></div><p class="sub">${esc(tr('Select a station to see short stubs where you could build next. Click one to start drawing from there.'))}</p></div>
    <div class="fld"><span>Corner rounding</span><div class="opts">${[[0,'Sharp'],[8,'Soft'],[16,'Round'],[32,'Wide'],[60,'Sweeping']].map(([v,l])=>`<button class="opt" data-act="mcorner:${v}" aria-pressed="${(S.cornerR??16)===v}">${l}</button>`).join('')}</div></div>
    <div class="adv-only">${fld('Corner radius',inp('settings','s','cornerR',S.cornerR??16,'num','min="0" max="400"'))}</div>
-   <div class="fld"><span>Lane layout</span><div class="opts" style="width:fit-content"><button class="opt" data-act="mlayout:stations" aria-pressed="${S.layout!=='lines'}">Stations first</button><button class="opt" data-act="mlayout:lines" aria-pressed="${S.layout==='lines'}">Lines first (beta)</button></div></div>
-   <p class="sub">Stations first keeps each station's mark on its point and fits the lines around it. Lines first keeps lines straight and in their lanes, and draws each station where its lines pass, up to about a lane from its point.</p>
    <div class="adv-only"><div class="fld"><span>Reorder lines at stations</span><div class="opts" style="width:fit-content"><button class="opt" data-act="lane-edit:off" aria-pressed="${!laneEdit}">Off</button><button class="opt" data-act="lane-edit:on" aria-pressed="${laneEdit}">On</button></div></div>
    <p class="sub">When on, select a station to see a dot where each line meets it. Drag a dot onto another to swap the two lines there.</p></div>
    <div class="fld"><span>Where lines cross</span><div class="opts">${[[0,'Draw straight over'],[1.5,'Small gap'],[3,'Medium gap'],[6,'Large gap']].map(([v,l])=>`<button class="opt" data-act="mgap:${v}" aria-pressed="${(S.crossGap??1.5)===v}">${l}</button>`).join('')}</div></div>
@@ -2686,7 +2685,7 @@ document.addEventListener('keyup',e=>{if(e.key===' '){spaceDown=false;svg.style.
 $('#stFilter').addEventListener('input',renderLists);
 
 /* ---------- drawers, popovers, modal, toast ---------- */
-const NAV=[['header [data-act="export-menu"]','export'],['header .seg:not(.ctl):not(.place)','section'],['header .seg.ctl','mode'],['#installBtn','install'],['#liveBtn','live'],['#searchBtn','search'],['#tourBtn','tour'],['#themeBtn','theme'],['#langSel','lang'],['#donateBtn','donate'],['#discordBtn','discord'],['#status','status']]
+const NAV=[['header [data-act="export-menu"]','export'],['header .seg.lay','layout'],['header .seg:not(.ctl):not(.place)','section'],['header .seg.ctl','mode'],['#installBtn','install'],['#liveBtn','live'],['#searchBtn','search'],['#tourBtn','tour'],['#themeBtn','theme'],['#langSel','lang'],['#donateBtn','donate'],['#discordBtn','discord'],['#status','status']]
   .map(([q,slot])=>{const el=document.querySelector(q),ph=document.createComment(slot);el.before(ph);return{el,ph,slot}});
 let navNarrow=null;
 function navPlace(){const n=window.innerWidth<=900;if(n===navNarrow)return;navNarrow=n;for(const o of NAV){if(n)document.querySelector(`#navMenu [data-slot="${o.slot}"]`).appendChild(o.el);else o.ph.after(o.el)}}
