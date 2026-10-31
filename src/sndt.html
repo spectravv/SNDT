@@ -1812,6 +1812,7 @@ function renderInspector(){
   else if(tool==='nature')h=inspNatureTool();
   else if(tool==='region'&&!regionAdd)h=inspRegionTool();
   else if(!sel.length)h=inspMap();
+  else if(sel.length>1&&wholeLineSel())h=inspLine(wholeLineSel());
   else if(sel.length>1)h=inspMulti();
   else{const s=sel[0];h=s.t==='station'?inspStation(stOf(s.id)):s.t==='line'?inspLine(lnOf(s.id),s.seg):s.t==='text'?inspText(M.texts.find(t=>t.id===s.id)):s.t==='region'?inspRegion(M.regions.find(r=>r.id===s.id)):s.t==='legend'?inspLegend():s.t==='nature'?inspNature((M.nature||[]).find(a=>a.id===s.id)):s.t==='water'?inspWaterItem(shapeOf(s)):s.t==='image'?inspImage((M.images||[]).find(a=>a.id===s.id)):inspMap()}
   const a=document.activeElement,aid=a&&insp.contains(a)?a.id:null;let ss=null,se=null;try{ss=a.selectionStart;se=a.selectionEnd}catch(e){}
@@ -2112,7 +2113,7 @@ insp.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.tagName==='INPU
 
 /* ---------- actions ---------- */
 function act(name,arg,el){
-  const one=sel.length===1?sel[0]:null;
+  const one=sel.length===1||wholeLineSel()?sel[0]:null;
   const curSt=one&&one.t==='station'?stOf(one.id):null, curL=one&&one.t==='line'?lnOf(one.id):null;
   switch(name){
     case 'tool':setTool(arg);break;
@@ -2212,7 +2213,7 @@ function act(name,arg,el){
     case 'z-up':case 'z-down':if(curL){const i=M.lines.indexOf(curL),j=name==='z-up'?i-1:i+1;if(j<0||j>=M.lines.length)break;pushUndo();M.lines.splice(i,1);M.lines.splice(j,0,curL);changed()}break;
     case 'dup-line':if(curL){pushUndo();const L=clone(curL);L.id=uid();L.name=curL.name+' copy';L.color=nextColor();M.lines.splice(M.lines.indexOf(curL)+1,0,L);sel=[{t:'line',id:L.id}];changed()}break;
     case 'ring-snap':if(curL&&ringFit(curL)){pushUndo();ringSnap(curL);changed()}break;
-    case 'sel-whole':if(curL)select([{t:'line',id:curL.id}]);break;
+    case 'sel-whole':if(curL)selectWhole(curL.id);break;
     case 'del-seg':if(one&&one.seg)deleteSel();break;
     case 'del-line':if(curL){pushUndo();M.lines=M.lines.filter(l=>l!==curL);if(drawLine===curL.id)drawLine=null;sel=[];changed()}break;
     case 'kind':{const ss=sel.filter(s=>s.t==='station').map(s=>stOf(s.id));if(!ss.length)break;pushUndo();ss.forEach(s=>s.kind=arg);
@@ -2352,8 +2353,13 @@ function cutSeg(lid,key){const [a,b]=key.split('~');
         if(rest.length>1){const N=JSON.parse(JSON.stringify(L));N.id=uid();N.stops=rest;N.noLegend=true;N.cutFrom=lid;M.lines.splice(M.lines.indexOf(L)+1,0,N)}}
       if(L.stops.length<2){M.lines=M.lines.filter(l=>l!==L);const k=!L.noLegend&&M.lines.find(l=>l.noLegend&&l.name===L.name&&l.color===L.color);if(k)delete k.noLegend}
       if(!M.lines.some(l=>pairs(l).some(([p,q])=>segKey(p,q)===key)))delete M.segs[key];return}}}
+// a whole line selected together with all its stations and bend points (double-click a track, idea by Curt): handy for moving
+// it or adding it to the timeline in one go; panels and Delete still treat it as the line
+function selectWhole(id){const L=lnOf(id);if(!L)return;select([{t:'line',id},...[...new Set(L.stops)].map(s=>({t:'station',id:s}))])}
+function wholeLineSel(){const a=sel[0];if(!a||a.t!=='line'||a.seg||sel.length<2)return null;const L=lnOf(a.id);if(!L)return null;const st=new Set(L.stops);
+  return sel.slice(1).every(x=>x.t==='station'&&st.has(x.id))?L:null}
 function deleteSel(){
-  if(!sel.length)return;pushUndo();
+  if(!sel.length)return;if(wholeLineSel())sel=[sel[0]];pushUndo();
   const ids=new Set(sel.filter(s=>s.t==='station').map(s=>s.id));
   M.stations=M.stations.filter(s=>!ids.has(s.id));
   for(const x of M.transfers||[])x.sts=x.sts.filter(id=>!ids.has(id));M.transfers=(M.transfers||[]).filter(x=>x.sts.length>1);
@@ -2644,7 +2650,7 @@ svg.addEventListener('dblclick',e=>{const h=hitOf(e);
   if(h&&h.kind==='cpadd')return;
   if(tool==='line'&&drawLine){finishDraw();return}
   if(tool!=='select'||lastPT==='touch')return;
-  if(h&&h.kind==='line'){select([{t:'line',id:h.id}]);return}
+  if(h&&h.kind==='line'){selectWhole(h.id);return}
   if(!sel.length)return;
   openDrawer('right');focusPanes();
   if(h&&(h.kind==='station'||h.kind==='label')){const el=document.getElementById('f-station-name');if(el){el.focus();el.select()}return}
@@ -3336,7 +3342,10 @@ function tlBuild(onlyMissing){const T=TLS(),hasN=new Set(),hasE=new Set(),out=[]
   for(const st of M.stations)addN(st.id);return out}
 function tlFromSel(){const T=TLS(),out=[],hasN=new Set(T.items.filter(i=>i.t==='node').map(i=>i.st));
   for(const x of sel){if(x.t==='station'){const st=stOf(x.id);if(st&&st.kind!=='waypoint'&&!hasN.has(st.id)){hasN.add(st.id);out.push({id:uid(),t:'node',st:st.id})}}
-    else if(x.t==='line'&&x.seg){const L=lnOf(x.id);const pr=L&&pairs(L).find(([a,b])=>segKey(a,b)===x.seg);if(pr)out.push({id:uid(),t:'edge',line:L.id,a:pr[0],b:pr[1]})}}
+    else if(x.t==='line'&&x.seg){const L=lnOf(x.id);const pr=L&&pairs(L).find(([a,b])=>segKey(a,b)===x.seg);if(pr)out.push({id:uid(),t:'edge',line:L.id,a:pr[0],b:pr[1]})}
+    // a whole line: its stations and segments from one end to the other
+    else if(x.t==='line'){const L=lnOf(x.id);if(!L)continue;const node=id=>{const st=stOf(id);if(st&&st.kind!=='waypoint'&&!hasN.has(id)){hasN.add(id);out.push({id:uid(),t:'node',st:id})}};
+      const P=pairs(L);if(P.length)node(P[0][0]);for(const [a,b] of P){if(a===b)continue;out.push({id:uid(),t:'edge',line:L.id,a,b});node(b)}}}
   return out}
 // move group g so it sits right after (or before) group o; indices are the current ones
 function tlMoveGroup(g,o,after){const T=TLS(),n=g.b-g.a+1;if(o.a===g.a)return;pushUndo();const part=T.items.splice(g.a,n);let at=after?o.b+1:o.a;if(at>g.a)at-=n;

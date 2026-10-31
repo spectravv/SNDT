@@ -6,7 +6,7 @@ const [,,root,mapIn,out,js]=process.argv;
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'sndt-ev-'));const built=path.join(tmp,'b.html');
 const b=spawnSync('python3',[path.join(root,'scripts/build.py'),path.join(root,'src/sndt.html'),built],{encoding:'utf8'});if(b.status)throw b.stderr;
 let html=fs.readFileSync(built,'utf8');const end=html.lastIndexOf('\n})();');
-html=html.slice(0,end)+'\nwindow.__t={get M(){return M},get view(){return view},geom,normalize,rmpToSndt,loadInto,exportSVG,render,mapSVG,legendSVG,select,applyStyleSet:typeof applyStyleSet!=="undefined"?applyStyleSet:null,renderInspector:typeof renderInsp!=="undefined"?renderInsp:null};'+html.slice(end);
+html=html.slice(0,end)+'\nwindow.__t={get M(){return M},get view(){return view},get sel(){return sel},act:typeof act!=="undefined"?act:null,geom,normalize,rmpToSndt,loadInto,exportSVG,render,mapSVG,legendSVG,select,applyStyleSet:typeof applyStyleSet!=="undefined"?applyStyleSet:null,renderInspector:typeof renderInsp!=="undefined"?renderInsp:null};'+html.slice(end);
 fs.writeFileSync(path.join(tmp,'page.html'),html);
 const port=9200+Math.floor(Math.random()*700),sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const chrome=spawn('google-chrome',['--headless=new','--no-sandbox',`--remote-debugging-port=${port}`,`--user-data-dir=${path.join(tmp,'p')}`,'about:blank'],{stdio:'ignore'});
