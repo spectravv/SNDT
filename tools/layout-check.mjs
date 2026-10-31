@@ -81,7 +81,7 @@ for(const f of maps){const name=f.replace(/\.json$/,''),m=JSON.parse(fs.readFile
   console.log(`\n== ${name}: ${r.jumps.length} sideways jump(s), ${r.gaps} crossing gap(s)`);
   console.log(`   lanes: ${nS} step(s) straight through a station, ${r.jumps.length-nS} at turns, ${r.jogs.length} jog(s) inside segments, ${r.stretched.length} stretched mark(s), marks off their point by ${r.drift} on average (max ${r.driftMax})`);
   for(const j of r.jumps.slice(0,10))console.log(`   jump: ${j.line} at ${j.at} (${j.by} units${j.straight?', straight through':', turning'})`);
-  for(const j of r.jogs.slice(0,6))console.log(`   jog: ${j.line} near ${j.x},${j.y} (${j.by} units)`);
+  for(const j of r.jogs.slice(0,+(process.env.NJOG||6)))console.log(`   jog: ${j.line} near ${j.x},${j.y} (${j.by} units)`);
   for(const j of r.stretched.slice(0,6))console.log(`   stretched: ${j.at} (${j.by} units longer than its lanes)`);
   const bf=path.join(baseDir,name+'.svg'),bmeta=path.join(baseDir,name+'.json');
   if(save){fs.writeFileSync(bf,r.svg);fs.writeFileSync(bmeta,JSON.stringify({jumps:r.jumps.length,gaps:r.gaps,jogs:r.jogs.length,stretched:r.stretched.length}));console.log('   baseline saved');}
