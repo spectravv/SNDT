@@ -49,6 +49,13 @@ Suggestions by ChaoDee (2026-10-30):
 Bug fixes and small features; v1.1 is shelved until these are done (user decision 2026-10-31).
 - Step 3 of the precision plan: an interchange's pill length and angle set by hand (moved here from v1.0.3).
 - Free placement: new stations placed by clicking snap into line with other stations too (only dragging does so far).
+- Lines-first lane layout (user decision 2026-10-31, after the "lines run straight" patch was reverted): stop letting station points decide where lanes go. Lanes are laid out along whole runs of lines first, and stations are drawn on top wherever their lines pass. Map format, editor, imports, timeline and ILVF stay as they are; this replaces the shift solver in geom() (bundles at each station linked in a spanning tree, where any link that disagrees is dropped and becomes a jump).
+  - S1. Measuring first: add to tools/layout-check.mjs, per map, steps at stations (straight-through and turns), jogs inside segments, stretched marks (pill wider than its lines need), how far marks drift from their station points. Test set: test-maps/ plus Curt's three Tung Sha versions (~/Downloads/chtr-tung-sha-rail.json, (1), (2)).
+  - S2. Solve all shifts together instead of a tree: weighted least squares over the same links (straight through a station: strong; along a straight segment: strong; turns: weak), reweighted so a conflict ends up as one clean step in the cheapest place rather than many small ones (IRLS); plus a cohesion term so a station's bundles don't drift apart (no stretched pill, the 馬麗口 case) and a weak pull towards the station point.
+  - S3. Stations slightly out of line (up to about one lane): add a "run straight" link for the segment, solved together with the rest, so a station pulled two ways (馬麗口 by 黃海石 and 羅方) settles where both fit (there: 5 units left, all three lines straight) or keeps the jog when nothing fits.
+  - S4. Labels, click areas and selection rings follow the drawn mark, not the station point.
+  - S5. Tune on the test set, check with the user on Curt's maps, then save the layout-check baseline.
+  - Kept from today: lines straight through a station aligned by their leaving direction, the reorder fixes, corner joins for turns, the clean X for unavoidable swaps.
 - Header is cut off at about 950 px wide (since v1.0.2).
 - Bugs from players:
   - Using "Line order on this segment" (the ↑/↓ arrows in a segment's panel) completely disables reordering lines by dragging the dots at stations (screenshot 2026-10-31, ~/Pictures/Screenshots/2026-10-31_00-31.png). Likely cause, not yet checked: the arrows store a fixed order on the segment (`M.segs[key].order`), and the layout skips both the automatic ordering and the station's dot order (`station.laneOrder`) for any segment that has one; nothing clears it when dots are dragged later.
@@ -83,8 +90,8 @@ Bug fixes and small features; v1.1 is shelved until these are done (user decisio
   - Dutch rail (photo of an NS map, 2026-10-29): thick parallel lines with thin white gaps between them, small white stop dots inside the line, short black leader ticks from the stop to its name, interchanges as a dark bar across all lines with a white dot per line, line codes (S64, IC27) written in pills inside the line, big bold capitals for main stations.
 - Style set decisions (user, 2026-10-29): picking a set only FILLS the existing settings, which stay editable after; line colours are kept but their saturation/brightness is shifted to match the set; all six ship in v1.1; names: Poster (Łódź), Bold (Charlotte), Flowing (Moscow), Night Transit (Dark Transit), Frost (Frosted Glass), Ribbon (Dutch rail).
 
-## v1.2 (planned)
-- Manual layout (step 2 of the precision plan, user decision 2026-10-31): a "Manual layout" switch per map (Free mode then means precise + manual) that freezes the automatic layout into per-line, per-segment sideways offsets, which the user then sets by dragging or typing; the automatic bundling/reordering leaves them alone; switching back returns to automatic; a single segment can be re-frozen from the automatic layout.
+## v1.0.5 (planned)
+- Manual layout (step 2 of the precision plan; moved here from v1.2 by the user on 2026-10-31): a "Manual layout" switch per map (Free mode then means precise + manual) that freezes the automatic layout into per-line, per-segment sideways offsets, which the user then sets by dragging or typing; the automatic bundling/reordering leaves them alone; switching back returns to automatic; a single segment can be re-frozen from the automatic layout.
 
 ## Later
 - MTR import: an option to spread out only the crowded areas (dense city centres) on import, instead of the whole map (decided 2026-10-28). (moved out of v1.0.2 on 2026-10-29)
