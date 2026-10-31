@@ -1394,16 +1394,18 @@ function labelBox(s,G,dk,push=0){
   const subRows=s.sub?String(s.sub).split('\n'):[],sfs=Math.round(fs*.8*10)/10,ssz=subRows.map(r=>cjkFs([r],sfs)),sfe=ssz[0]||sfs,sdys=subRows.map((r,i)=>i?ssz[i-1]*.35+ssz[i]*.85:0),sh=subRows.length?ssz.reduce((a,v)=>a+v*1.2,0)+fs*.1:0,H=h+sh;
   const anchor=dir[0]>.3?'start':dir[0]<-.3?'end':'middle';
   const bold=s.bold!=null&&s.bold!=='auto'?s.bold==='bold':(s.kind==='terminus'||s.kind==='hub'||(S.boldInter&&(s.kind==='interchange'||s.kind==='portal')));
-  const tw=Math.max(...rows.map(r=>textW(r,fs,bold?700:500,s.kind==='arrow')),...subRows.map(r=>textW(r,sfs,400,true)),0),icons=(s.icons||[]).filter(k=>ICONS[k]),isz=fs*1.15*(s.iconScale||100)/100,iw=icons.length?icons.length*(isz+2)-2:0;
+  const tw=Math.max(...rows.map(r=>textW(r,fs,bold?700:500,s.kind==='arrow')),...subRows.map(r=>textW(r,sfs,400,true)),0),icons=(s.icons||[]).filter(k=>ICONS[k]),isz=fs*1.15*(s.iconScale||100)/100,
+    // facility icons wrap after "icons per row" (0 = one row) and sit at the top, middle or bottom of the name (idea by Curt)
+    cols=Math.max(1,Math.min(icons.length,S.iconRow>0?Math.round(S.iconRow):icons.length)),irows=Math.ceil(icons.length/cols)||1,iw=icons.length?cols*(isz+2)-2:0,ih=irows*(isz+2)-2;
   let x=x0,top=dir[1]<-.3?y0-H:dir[1]>.3?y0:y0-H/2,ix=0,iy=0;
   if(icons.length){
     if(anchor==='start'){ix=x0;x=x0+iw+4}else if(anchor==='end'){ix=x0-iw;x=x0-iw-4}
-    else{ix=x0-iw/2;if(dir[1]>.3){iy=y0;top=y0+isz+3}else{iy=y0-isz;top=y0-isz-3-H}}
-    if(anchor!=='middle')iy=top+fs*.45-isz/2}
+    else{ix=x0-iw/2;if(dir[1]>.3){iy=y0;top=y0+ih+3}else{iy=y0-ih;top=y0-ih-3-H}}
+    if(anchor!=='middle')iy=S.iconAlign==='middle'?top+H/2-ih/2:S.iconAlign==='bottom'?top+H-ih:top+fs*.45-isz/2}
   const left=anchor==='start'?x:anchor==='end'?x-tw:x-tw/2;
   const tb={x0:left-bgp,x1:left+tw+bgp*1.5,y0:top-bgp*.6,y1:top+H+bgp*.6};
-  const rect={x0:Math.min(tb.x0,icons.length?ix:tb.x0),x1:Math.max(tb.x1,icons.length?ix+iw:tb.x1),y0:Math.min(tb.y0,icons.length?iy:tb.y0),y1:Math.max(tb.y1,icons.length?iy+isz:tb.y1)};
-  return{x,y:top+fe*.8,anchor,fs,rows,dys,bold,icons,ix,iy,isz,rect,tb,px:x0,py:y0,subRows,sfs,sdys,subY:top+h+fs*.1+sfe*.85};
+  const rect={x0:Math.min(tb.x0,icons.length?ix:tb.x0),x1:Math.max(tb.x1,icons.length?ix+iw:tb.x1),y0:Math.min(tb.y0,icons.length?iy:tb.y0),y1:Math.max(tb.y1,icons.length?iy+ih:tb.y1)};
+  return{x,y:top+fe*.8,anchor,fs,rows,dys,bold,icons,ix,iy,isz,cols,rect,tb,px:x0,py:y0,subRows,sfs,sdys,subY:top+h+fs*.1+sfe*.85};
 }
 function labelSVG(s,G){
   if(s.kind==='waypoint'||s.label==='none'||!s.name)return'';
@@ -1413,7 +1415,7 @@ function labelSVG(s,G){
   const halo=S.halo&&!s.lbg?` stroke="${S.bg}" stroke-width="3.5" stroke-linejoin="round" paint-order="stroke"`:'';
   const bg=s.lbg?`<rect x="${f(b.tb.x0)}" y="${f(b.tb.y0)}" width="${f(b.tb.x1-b.tb.x0)}" height="${f(b.tb.y1-b.tb.y0)}" rx="3" fill="${s.lbg}"/>`:'';
   const sub=b.subRows.length?`<text x="${f(b.x)}" y="${f(b.subY)}" text-anchor="${b.anchor}" font-size="${b.sfs}" font-weight="400" font-style="italic" fill="${s.lbg?tc:mix(S.ink,S.bg,.45)}"${s.lbg?' fill-opacity=".85"':''}${halo}>${b.subRows.map((r,i)=>`<tspan x="${f(b.x)}" dy="${f(b.sdys[i])}">${cjkT(r)||' '}</tspan>`).join('')}</text>`:'';
-  return `<g data-kind="label" data-id="${s.id}"${tr}>${bg}<text x="${f(b.x)}" y="${f(b.y)}" text-anchor="${b.anchor}" font-size="${b.fs}" font-weight="${b.bold?700:500}"${s.kind==='arrow'?' font-style="italic"':''} fill="${tc}"${halo}>${b.rows.map((r,i)=>`<tspan x="${f(b.x)}" dy="${f(b.dys[i])}">${cjkT(r)||' '}</tspan>`).join('')}</text>${sub}${b.icons.map((k,i)=>iconSVG(k,b.ix+i*(b.isz+2),b.iy,b.isz)).join('')}</g>`;
+  return `<g data-kind="label" data-id="${s.id}"${tr}>${bg}<text x="${f(b.x)}" y="${f(b.y)}" text-anchor="${b.anchor}" font-size="${b.fs}" font-weight="${b.bold?700:500}"${s.kind==='arrow'?' font-style="italic"':''} fill="${tc}"${halo}>${b.rows.map((r,i)=>`<tspan x="${f(b.x)}" dy="${f(b.dys[i])}">${cjkT(r)||' '}</tspan>`).join('')}</text>${sub}${b.icons.map((k,i)=>iconSVG(k,b.ix+i%b.cols*(b.isz+2),b.iy+Math.floor(i/b.cols)*(b.isz+2),b.isz)).join('')}</g>`;
 }
 const ovl=(a,b)=>a.x0<b.x1&&b.x0<a.x1&&a.y0<b.y1&&b.y0<a.y1;
 function segsCross(p,p2,q,q2){const r={x:p2.x-p.x,y:p2.y-p.y},s2={x:q2.x-q.x,y:q2.y-q.y},den=r.x*s2.y-r.y*s2.x;if(Math.abs(den)<1e-9)return false;const w={x:q.x-p.x,y:q.y-p.y},t=(w.x*s2.y-w.y*s2.x)/den,u=(w.x*r.y-w.y*r.x)/den;return t>=0&&t<=1&&u>=0&&u<=1}
@@ -1844,7 +1846,8 @@ function inspMap(){
    ${chk('settings','s','cjkBig',S.cjkBig,'Bigger Chinese, Japanese and Korean text')}${S.cjkBig?fld('CJK text size, times the normal size',inp('settings','s','cjkScale',S.cjkScale??1.25,'num','min="1" max="3" step="0.05"')):''}
    <div class="adv-only">${fld('Label size',inp('settings','s','labelSize',S.labelSize,'num','min="6" max="60"'))}
    ${fld('Label font',selectF('settings','s','labelFont',S.labelFont,FONTS.map(x=>[x,x])))}
-   ${chk('settings','s','boldInter',S.boldInter,'Bold names at interchanges')}</div></div>
+   ${chk('settings','s','boldInter',S.boldInter,'Bold names at interchanges')}</div>
+   <div class="grid2">${fld('Facility icons',selectF('settings','s','iconAlign',S.iconAlign||'top',[['top','Top'],['middle','Centre'],['bottom','Bottom']]))}${fld('Icons per row (0 = all)',inp('settings','s','iconRow',S.iconRow||0,'num','min="0" max="20"'))}</div></div>
   <div class="pane"><h3>Grid</h3>
    <div class="fld"><span>Placement</span><div class="opts" style="width:fit-content"><button class="opt" data-act="place:grid" aria-pressed="${!freePlace()}">Grid</button><button class="opt" data-act="place:free" aria-pressed="${freePlace()}">Free (precise)</button></div></div>
    <div class="grid2">${chk('settings','s','showGrid',S.showGrid,'Show grid')}${freePlace()?'':chk('settings','s','snap',S.snap,'Snap to grid')}</div>
