@@ -1337,7 +1337,10 @@ function stNums(G){if(G.nums)return G.nums;const out=new Map();
     seq.forEach((st,i)=>{const own=st.nums&&String(st.nums[L.id]||'').trim();if(!out.has(st.id))out.set(st.id,[]);out.get(st.id).push({lid:L.id,text:own||pre+'\u2009'+(n0+i),color:L.color||'#888'})})}
   return G.nums=out}
 function numBox(s,G){if(M.settings.stNums!=='marks'||s.kind==='waypoint')return null;const B=stNums(G).get(s.id);if(!B||!B.length)return null;
-  const h=s.numSize>0?s.numSize:M.settings.numSize>0?M.settings.numSize:Math.max(12,stSize(s)*1.05),fs=h*.62,pad=h*.32,ws=B.map(b=>textW(b.text,fs,700)+pad*2);return{B,h,fs,ws,W:ws.reduce((a,v)=>a+v,0)}}
+  const h=s.numH>0?s.numH:s.numSize>0?s.numSize:M.settings.numSize>0?M.settings.numSize:Math.max(12,stSize(s)*1.05),fs0=h*.62,pad=h*.32,tw=B.map(b=>textW(b.text,fs0,700));
+  let ws=tw.map(t=>t+pad*2);const W0=ws.reduce((a,v)=>a+v,0),W=s.numW>0?s.numW:W0;
+  // a box sized by hand (drag its handles): the badges share its width, and the text shrinks if it no longer fits
+  if(W!==W0)ws=ws.map(v=>v*W/W0);const fs=Math.min(fs0,...tw.map((t,i)=>t>0?fs0*(ws[i]-Math.min(pad,ws[i]*.15)*2)/t:fs0));return{B,h,fs,ws,W}}
 // a slider and a number box for the same size (empty number = automatic / follow the map)
 function sizePair(o,id,p,v,auto){return `<div class="sizepair"><input type="range" data-obj="${o}" data-id="${id}" data-prop="${p}" data-type="numnull" min="6" max="60" step="1" value="${v>0?v:auto}" aria-label="Size"><input type="number" id="${fid(o,p)}" data-obj="${o}" data-id="${id}" data-prop="${p}" data-type="numnull" min="4" max="200" step="0.5" value="${v>0?v:''}" placeholder="${f(auto)}"></div>`}
 function numBadgesSVG(s,nb,c){const S=M.settings,x0=c.x-nb.W/2,y0=c.y-nb.h/2,r=nb.h*.3,id='nb'+s.id;let x=x0,o='';
@@ -1751,6 +1754,11 @@ function overlaySVG(G){
     if(s.t==='station'){const st=stOf(s.id);if(!st)continue;const E=G.ends.get(st.id)||[];const [p,q]=farPair(E,st);const r=stSize(st)/2+6;
       o+=Math.hypot(p.x-q.x,p.y-q.y)<.5?`<circle cx="${f(st.x)}" cy="${f(st.y)}" r="${r}" fill="none" stroke="${c}" stroke-width="2" stroke-dasharray="4 3" pointer-events="none"/>`:`<line x1="${f(p.x)}" y1="${f(p.y)}" x2="${f(q.x)}" y2="${f(q.y)}" stroke="${c}" stroke-opacity=".9" stroke-width="${r*2}" stroke-linecap="round" fill="none" pointer-events="none" style="stroke-opacity:.18"/>`}
     if(s.t==='line'&&s.seg){const t=G.tracks.get(s.seg);if(t)o+=`<path d="${dOf(t.pts)}" fill="none" stroke="${c}" stroke-width="2" stroke-dasharray="5 4" pointer-events="none"/>`}
+    // station number codes: drag a corner or an edge to size the box by hand (it stays a rectangle centred on the station)
+    if(s.t==='station'&&sel.length===1&&tool==='select'){const st=stOf(s.id),nb=st&&!ciconBox(st)&&numBox(st,G);if(nb){const E=(G.ends.get(st.id)||[]).filter(e=>!passesAt(e.lid,st.id)),[p,q]=farPair(E,st),cx=(p.x+q.x)/2,cy=(p.y+q.y)/2,hw=nb.W/2,hh=nb.h/2,z=8/view.k;
+      o+=`<rect x="${f(cx-hw)}" y="${f(cy-hh)}" width="${f(nb.W)}" height="${f(nb.h)}" fill="none" stroke="${c}" stroke-width="${f(1.2/view.k)}" stroke-dasharray="${f(4/view.k)} ${f(3/view.k)}" pointer-events="none"/>`;
+      for(const [k,ax,ay] of [['nw',-1,-1],['n',0,-1],['ne',1,-1],['e',1,0],['se',1,1],['s',0,1],['sw',-1,1],['w',-1,0]])
+        o+=`<rect data-kind="nbh" data-id="${st.id}" data-i="${k}" x="${f(cx+ax*hw-z/2)}" y="${f(cy+ay*hh-z/2)}" width="${f(z)}" height="${f(z)}" fill="#fff" stroke="${c}" stroke-width="${f(1.5/view.k)}" style="cursor:${k==='n'||k==='s'?'ns':k==='e'||k==='w'?'ew':k==='nw'||k==='se'?'nwse':'nesw'}-resize"/>`}}
     if(s.t==='image'){const im=(M.images||[]).find(x=>x.id===s.id);if(im)o+=`<rect x="${f(im.x-3)}" y="${f(im.y-3)}" width="${f(im.w+6)}" height="${f(im.h+6)}" fill="none" stroke="${c}" stroke-width="${f(1.5/view.k)}" stroke-dasharray="${f(5/view.k)} ${f(4/view.k)}" pointer-events="none"${im.rot?` transform="rotate(${im.rot} ${f(im.x+im.w/2)} ${f(im.y+im.h/2)})"`:''}/><rect data-kind="ihandle" data-id="${im.id}" x="${f(im.x+im.w-6/view.k)}" y="${f(im.y+im.h-6/view.k)}" width="${f(12/view.k)}" height="${f(12/view.k)}" rx="2" fill="${c}" style="cursor:nwse-resize"/>`}
     if(s.t==='region'){const r=M.regions.find(x=>x.id===s.id);if(r&&r.pts&&!r.locked)continue;if(r)regionShapes(r).forEach((q,i)=>{o+=`<rect x="${q.x-3}" y="${q.y-3}" width="${q.w+6}" height="${q.h+6}" rx="${(r.radius??10)+3}" fill="none" stroke="${c}" stroke-width="1.5" stroke-dasharray="5 4" pointer-events="none"/>`+(r.locked?(i?'':`<g transform="translate(${f(q.x+q.w-10)} ${f(q.y-8)})" pointer-events="none"><rect width="18" height="18" rx="3" fill="${c}"/><path d="M5.5 8V6a3.5 3.5 0 0 1 7 0v2" fill="none" stroke="#fff" stroke-width="1.7"/><rect x="4" y="8" width="10" height="7" rx="1.2" fill="#fff"/></g>`):`<rect data-kind="handle" data-id="${r.id}" data-i="${i-1}" x="${q.x+q.w-6}" y="${q.y+q.h-6}" width="12" height="12" rx="2" fill="${c}" style="cursor:nwse-resize"/>`)})}
   }
@@ -1923,7 +1931,7 @@ function inspStation(s){
    ${adv()?'<p class="sub" style="margin-top:-4px">Press Enter for a second line.</p>':''}
    <div class="fld"><span>Type</span>${kindPicker(s.kind||'stop')}</div>
    ${(()=>{if(s.kind==='waypoint')return'';const G=lastG||geom(),B=stNums(G).get(s.id)||[],ls=lines.filter(L=>String(L.numPrefix||'').trim());if(!ls.length)return'';
-     return (M.settings.stNums==='marks'?fld(tr('Code size here (empty = same as map)'),sizePair('station',s.id,'numSize',s.numSize,M.settings.numSize>0?M.settings.numSize:Math.max(12,stSize(s)*1.05))):'')+`<div class="grid2">${ls.map(L=>{const auto=(B.find(b=>b.lid===L.id)||{}).text||'';return fld(tr('Number on')+' '+String(L.name).split('\n')[0],inp('station',s.id,'nums.'+L.id,(s.nums||{})[L.id]||'','text','placeholder="'+esc(auto)+'" maxlength="10"'))}).join('')}</div>`})()}
+     return (M.settings.stNums==='marks'?`<p class="sub">${tr('Drag the square handles around the codes on the map to size them.')}</p>`+(s.numW||s.numH||s.numSize?'<div class="btns"><button class="btn" data-act="num-size-reset">'+tr('Reset code size')+'</button></div>':''):'')+`<div class="grid2">${ls.map(L=>{const auto=(B.find(b=>b.lid===L.id)||{}).text||'';return fld(tr('Number on')+' '+String(L.name).split('\n')[0],inp('station',s.id,'nums.'+L.id,(s.nums||{})[L.id]||'','text','placeholder="'+esc(auto)+'" maxlength="10"'))}).join('')}</div>`})()}
    ${['stop','interchange','terminus','hub'].includes(s.kind||'stop')?fld('Shape',selectF('station',s.id,'shape',s.shape||'',[['',tr('Same as map')+' ('+tr((SHAPES.find(x=>x[0]===(M.settings.stopStyle||'circle'))||SHAPES[0])[1])+')']].concat(SHAPES))):''}
    ${s.kind==='waypoint'?fld('Corner radius at this bend point',inp('station',s.id,'radius',s.radius??'','numnull','min="0" max="400" placeholder="'+(M.settings.cornerR??16)+' (map default)"')):''}
    <div class="fld"><span>Label position</span><div class="opts" style="width:fit-content"><button class="opt" data-act="label:auto" aria-pressed="${s.label==='auto'}">Auto: find free space</button></div><div class="compass">${comp}</div></div>
@@ -2282,6 +2290,7 @@ function act(name,arg,el){
     case 'mixroute':{const m=routeMix(),on=m.includes(arg);if(on&&m.length<=2){toast(tr('Keep at least two types ticked, or switch to One type.'));break}pushUndo();M.settings.routeMix=on?m.filter(k=>k!==arg):m.concat([arg]);M.settings.route=routeMix()[0];changed();break}
     case 'mcorner':pushUndo();M.settings.cornerR=+arg;changed();break;
     case 'mgap':pushUndo();M.settings.crossGap=+arg;changed();break;
+    case 'num-size-reset':if(curSt){pushUndo();delete curSt.numW;delete curSt.numH;delete curSt.numSize;changed()}break;
     case 'mlayout':{const v=arg==='lines'?'lines':'stations';if(M.settings.layout===v)break;pushUndo();M.settings.layout=v;changed();toast(tr(v==='lines'?'Lines first: lines stay straight in their lanes, and each station sits where its lines pass.':'Stations first: each station stays on its point, and the lines fit around it.'));break}
     case 'arc-angle':case 'arc-flip':if(one&&one.seg){pushUndo();const sg=M.segs[one.seg]||(M.segs[one.seg]={});if(!sg.route)sg.route='arc';if(name==='arc-flip')sg.flip=!sg.flip;else{sg.arc=+arg;sg.fit=false}changed()}break;
     case 'arc-fit':case 'arc-manual':if(one&&one.seg){pushUndo();const sg=M.segs[one.seg]||(M.segs[one.seg]={});if(!sg.route)sg.route='arc';sg.fit=name==='arc-fit';if(!sg.fit&&sg.arc==null)sg.arc=90;changed()}break;
@@ -2600,6 +2609,7 @@ function pointerDown(e){if(multiAdd&&e.pointerType!=='mouse'&&dtapSel)Object.def
   if(h&&(h.kind==='cp'||h.kind==='cpadd')){const v=sel[0]&&segView(h.key,sel[0].id),i=+h.i,m=v&&(h.kind==='cp'?[v.ch[i+1],v.dv[i+1]]:[{x:(v.ch[i].x+v.ch[i+1].x)/2,y:(v.ch[i].y+v.ch[i+1].y)/2},{x:(v.dv[i].x+v.dv[i+1].x)/2,y:(v.dv[i].y+v.dv[i+1].y)/2}]);
     drag={type:h.kind,key:h.key,i,start:w,moved:false,off:m?{x:m[1].x-m[0].x,y:m[1].y-m[0].y}:{x:0,y:0}};return}
   if(h&&h.kind==='ihandle'){const im=(M.images||[]).find(x=>x.id===h.id);if(im){drag={type:'iresize',im,start:w,ow:im.w,oh:im.h,moved:false};return}}
+  if(h&&h.kind==='nbh'){const st=stOf(h.id),nb=st&&numBox(st,lastG);if(nb){drag={type:'nbresize',s:st,i:h.i,start:w,ow:nb.W,oh:nb.h,moved:false};return}}
   if(h&&h.kind==='handle'){const g=M.regions.find(x=>x.id===h.id),r=+h.i>=0?g.more[+h.i]:g;drag={type:'resize',r,start:w,ow:r.w,oh:r.h,moved:false};return}
   if(h&&h.kind==='label'&&adv()){const s=stOf(h.id);if(!isSel('station',s.id))select([{t:'station',id:s.id}]);drag={type:'label',s,start:w,ox:s.ldx||0,oy:s.ldy||0,moved:false};return}
   if(h&&(h.kind==='station'||h.kind==='label'||h.kind==='text'||h.kind==='region'||h.kind==='legend'||h.kind==='image')){
@@ -2656,6 +2666,9 @@ svg.addEventListener('pointermove',e=>{
   if(drag.type==='nvx'||drag.type==='nmid'){if(!drag.moved){if(Math.hypot(dx,dy)*view.k<2)return;pushUndo();if(drag.type==='nmid'){drag.a.pts.splice(drag.i+1,0,[0,0]);drag.i++;drag.type='nvx'}drag.moved=true}
     drag.a.pts[drag.i]=[snap(w.x,e.altKey),snap(w.y,e.altKey)];requestRender();return}
   if(drag.type==='nmove'){if(!drag.moved){if(Math.hypot(dx,dy)*view.k<3)return;pushUndo();drag.moved=true}const ddx=snap(dx,e.altKey),ddy=snap(dy,e.altKey);drag.a.pts=drag.orig.map(p=>[p[0]+ddx,p[1]+ddy]);requestRender();return}
+  if(drag.type==='nbresize'){if(!drag.moved){if(Math.hypot(dx,dy)*view.k<2)return;pushUndo();drag.moved=true}const k=drag.i,sx=k.includes('e')?1:k.includes('w')?-1:0,sy=k.includes('s')?1:k.includes('n')?-1:0;
+    // both sides move together, so the box stays centred on the station; Alt for finer steps
+    const st=e.altKey?.5:1,r=v=>Math.round(v/st)*st;if(sx)drag.s.numW=Math.max(8,r(drag.ow+2*dx*sx));if(sy)drag.s.numH=Math.max(6,r(drag.oh+2*dy*sy));requestRender();return}
   if(drag.type==='iresize'){if(!drag.moved){if(Math.hypot(dx,dy)*view.k<2)return;pushUndo();drag.moved=true}const im=drag.im,nw=Math.max(8,Math.round(drag.ow+dx));im.w=nw;im.h=(e.altKey||im.free)?Math.max(8,Math.round(drag.oh+dy)):Math.max(8,Math.round(nw/(im.ar||drag.ow/drag.oh)));if(e.altKey)im.free=true;requestRender();return}
   if(drag.type==='resize'){if(!drag.moved){pushUndo();drag.moved=true}drag.r.w=Math.max(20,snap(drag.ow+dx,e.altKey));drag.r.h=Math.max(20,snap(drag.oh+dy,e.altKey));requestRender();return}
   if(drag.type==='marquee'){drag.b=w;drag.moved=true;requestOverlay();return}
@@ -2673,7 +2686,7 @@ function endPointer(e){
   if(!d.moved&&d.type==='nvx'){const coll=d.a===shapeOf({t:'region',id:d.a.id})?'region':(M.water||[]).includes(d.a)?'water':'nature';anchorSel={kind:'vx',coll,id:d.a.id,i:d.i};requestOverlay();return}
   if(d.type==='lane'){if(d.moved)laneDrop(d);requestOverlay();return}
   if(d.type==='hdl'){if(d.moved)changed();return}
-  if(d.type==='move'||d.type==='label'||d.type==='resize'||d.type==='iresize'||d.type==='cp'||d.type==='cpadd'||d.type==='nvx'||d.type==='nmid'||d.type==='nmove'){if(d.moved){anchorSel=null;changed()}return}
+  if(d.type==='move'||d.type==='label'||d.type==='resize'||d.type==='iresize'||d.type==='nbresize'||d.type==='cp'||d.type==='cpadd'||d.type==='nvx'||d.type==='nmid'||d.type==='nmove'){if(d.moved){anchorSel=null;changed()}return}
   if(d.type==='marquee'){if(d.moved){const x0=Math.min(d.a.x,d.b.x),x1=Math.max(d.a.x,d.b.x),y0=Math.min(d.a.y,d.b.y),y1=Math.max(d.a.y,d.b.y);
     const inside=p=>p.x>=x0&&p.x<=x1&&p.y>=y0&&p.y<=y1;
     const box=r=>inside({x:r.x,y:r.y})&&inside({x:r.x+r.w,y:r.y+r.h}),pin=a=>(a.pts||[]).length&&a.pts.every(q=>inside({x:q[0],y:q[1]}));
