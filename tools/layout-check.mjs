@@ -3,7 +3,8 @@
 //  - compares the drawing with the saved baseline (test-maps/baseline/<map>.svg) and says which lines changed and where
 //  - counts sideways jumps (a line's two pieces at a station that neither meet nor turn into one corner)
 //  - draws random variations of each map (moved stations, other bend styles, hand-set line orders) and checks nothing breaks
-//  - measures how clean the lanes are: steps where a line goes straight through a station or turns there, jogs inside segments,
+//  - measures how clean the lanes are: steps where a line goes straight through a station or turns there, jogs inside segments
+//    (not counting curved, arc, ring or hand-drawn segments, whose S-bends are wanted),
 //    stretched station marks (wider than their lines need) and how far marks drift from their station points
 // usage: node tools/layout-check.mjs [--save] [--runs N] [--src path/to/sndt.html] [--mode stations|lines] [--only name]
 //   --mode   lane layout to draw with (settings.layout; 'stations' is the default, 'lines' the lines-first layout)
@@ -52,7 +53,7 @@ await run(`const uv=(a,b)=>{const x=b.x-a.x,y=b.y-a.y,l=Math.hypot(x,y)||1;retur
     return{svg:o,jumps,gaps:[...T.crossings(G).values()].reduce((n,a)=>n+a.length,0),...this.measure(G)}},
   // jogs inside segments, stretched marks, marks away from their station points
   measure(G){const T=__t,sp=T.M.settings.lineWidth+T.M.settings.lineGap,jogs=[],stretched=[];let drift=0,driftN=0,driftMax=0;
-    for(const t of G.tracks.values()){if(t.via)continue;for(const lid of t.lines){const P=(t.off.get(lid)||[]).filter((p,i,A)=>!i||Math.hypot(p.x-A[i-1].x,p.y-A[i-1].y)>.01);
+    for(const t of G.tracks.values()){if(t.via||['curve','arc','ring','custom'].includes(t.route))continue;for(const lid of t.lines){const P=(t.off.get(lid)||[]).filter((p,i,A)=>!i||Math.hypot(p.x-A[i-1].x,p.y-A[i-1].y)>.01);
       // two legs heading the same way, joined by a short stretch that moves the line sideways
       for(let i=0;i+1<P.length;i++){const di=uv(P[i],P[i+1]);let run=0;
         for(let j=i+1;j+1<P.length;j++){if(j>i+1)run+=Math.hypot(P[j].x-P[j-1].x,P[j].y-P[j-1].y);if(run>sp*3)break;const dj=uv(P[j],P[j+1]);

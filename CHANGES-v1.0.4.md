@@ -17,3 +17,8 @@ Bug fixes and small features after v1.0.3 (v1.1 shelved meanwhile).
   - a segment whose stations are up to one lane out of line, and which otherwise runs along one axis, is laid on that axis; the gap goes to the lane solver as a "run straight" rule (corrB) instead of being drawn as a jog;
   - all lane shifts are solved together (least squares reweighted towards least absolute error, light pull to the station points), then every rule it nearly met is made exact, so leftovers are only clean steps where it chose to break a rule.
   - Layout check, lines first vs stations first: Curt's Tung Sha maps jumps 5/4/5 → 2/2/4, jogs 10/14/12 → 9/12/8; rmp-tung-sha jogs 3 → 0, jumps 6 → 5. Slightly worse so far: rmp-older (one small straight step, one stretched mark) and rmp-tung-sha random variations (6.5 → 7.4 jumps); tuning is step 5. Stations first draws exactly as before.
+- Lines first, polishing (2026-10-31):
+  - across a station, bundles line up on the shift most shared lines agree on, so the rest carry straight on and only the odd one steps (was: the average, so all stepped a little; lines test map 4 → 1 steps at Station 2, rmp-tung-sha 5 → 3 jumps, its random variations 7.4 → 6.3);
+  - a straight piece that ends at a bend point which only ends a line can move with its lanes (rmp-older 花木路: no more step and stretched mark);
+  - labels, click areas and the one-way chevron follow the drawn mark (markAt) instead of the station point.
+  - Layout check now leaves curved, arc, ring and hand-drawn segments out of the jog count.

@@ -1079,9 +1079,11 @@ function geom(){
     // (a line that branches into two segments of the same bundle has no single lane, so it is left out)
     const lat=g=>{const m=new Map(),twice=new Set();for(const o of g.items){const n=o.t.lines.length;linesAt(o.t,g.X).forEach((l,k)=>{if(m.has(l))twice.add(l);m.set(l,o.off+(k-(n-1)/2)*sp*(o.atA?1:-1))})}twice.forEach(l=>m.delete(l));return m};
     const links=[],link=(g,h,c,w)=>links.push({g,h,c,w});
+    // lines first: across a station, line up on the shift most shared lines agree on (the rest step), not their average (all step a bit)
+    const agree=v=>{let best=v[0],bn=-1;const mean=v.reduce((a,x)=>a+x,0)/v.length;for(const x of v){const n=v.filter(y=>Math.abs(y-x)<.5).length;if(n>bn||(n===bn&&Math.abs(x-mean)<Math.abs(best-mean))){best=x;bn=n}}return best};
     // bundles across a station, straight or (two or more lines) turning there: line the shared lines up (shift of one side = -shift of the other - c)
     for(const gs of byX.values())for(let i=0;i<gs.length;i++)for(let j=i+1;j<gs.length;j++){const g=gs[i],h=gs[j],dot=across(g,h);if(dot>.1)continue;
-      const lg=lat(g),lh=lat(h),com=[...lg.keys()].filter(l=>lh.has(l));if(com.length>(dot<-.97?0:1))link(g,h,com.reduce((a,l)=>a+lg.get(l)+lh.get(l),0)/com.length,dot<-.97?3:1)}
+      const lg=lat(g),lh=lat(h),com=[...lg.keys()].filter(l=>lh.has(l));if(com.length>(dot<-.97?0:1))link(g,h,linesFirst?agree(com.map(l=>lg.get(l)+lh.get(l))):com.reduce((a,l)=>a+lg.get(l)+lh.get(l),0)/com.length,dot<-.97?3:1)}
     // a straight segment (even one with bend points on the straight) carries its shift from one station to the next
     const straight=t=>{const P=t.pts,a=P[0],u=unit(P[P.length-1].x-a.x,P[P.length-1].y-a.y);return P.every(p=>Math.abs((p.x-a.x)*u.y-(p.y-a.y)*u.x)<.5)};
     const byT=new Map();for(const g of groups)for(const o of g.items){if(!straight(o.t))continue;if(!byT.has(o.t))byT.set(o.t,[]);byT.get(o.t).push([g,o])}
@@ -1108,7 +1110,8 @@ function geom(){
         // the root keeps the solved shift (rounded to half units), the rest of its tree follows exactly
         g0.s=Math.round(g0.s*2)/2;done.add(g0);const Q=[g0];while(Q.length){const g=Q.shift();for(const [h,c] of nb.get(g))if(!done.has(h)){h.s=-g.s-c;done.add(h);Q.push(h)}}}}
     // a single straight piece that ends at a bend point moves as a whole, which would break the corner there, so it keeps only its bundle place
-    const wpEnd=o=>o.t.pts.length===2&&(st.get(o.atA?o.t.b:o.t.a)||{}).kind==='waypoint';
+    // (lines first: only a real corner; a bend point that just ends a line can move with it)
+    const wpEnd=o=>{const w=o.atA?o.t.b:o.t.a;return o.t.pts.length===2&&(st.get(w)||{}).kind==='waypoint'&&!(linesFirst&&(segsAt.get(w)||[]).length<2)};
     for(const g of groups)for(const o of g.items){const v=wpEnd(o)?(g.items.length>1?o.off:0):o.off+g.s;if(!v&&!o.t.ds&&!o.t.corrB)continue;const ds=o.t.ds||(o.t.ds=new Array(Math.max(2,o.t.pts.length-1)).fill(NaN));if(o.atA)ds[0]=v;else ds[ds.length-1]=-v+(o.t.corrB||0)}
     for(const t of tracks.values())if(t.ds){const ds=t.ds,P=t.pts;delete t.ds;
       if(P.length>2){t.pts=shiftPoly(P,ds.map(v=>isNaN(v)?0:v));continue}
@@ -1304,10 +1307,15 @@ function shapeSVG(shape,p,q,fill,stroke,size,sw,dir,E){
 // a line can pass through a station without stopping (line.skip: station ids): it shares the tracks and lanes there and can be
 // reordered at the station, but gets no stop mark and doesn't make the station an interchange
 const passesAt=(lid,sid)=>{const L=lnOf(lid);return!!(L&&L.skip&&L.skip.includes(sid))};
+// where a station's mark is drawn: its own point, or (lines first) the middle of the line ends it covers
+function markAt(s,G){if(M.settings.layout!=='lines'||s.kind==='waypoint'||ciconBox(s))return{x:s.x,y:s.y};const E=(G.ends.get(s.id)||[]).filter(e=>!passesAt(e.lid,s.id));if(!E.length)return{x:s.x,y:s.y};
+  const [p,q]=farPair(E,s);return{x:(p.x+q.x)/2,y:(p.y+q.y)/2}}
 function stationSVG(s,G,editor){
   const S=M.settings,E=(G.ends.get(s.id)||[]).filter(e=>!passesAt(e.lid,s.id)),sz=stSize(s),lids=[...new Set(E.map(e=>e.lid))],k=s.kind||'stop';
-  const cb=ciconBox(s),hit=editor&&(k!=='waypoint'||showBends)?`<circle cx="${s.x}" cy="${s.y}" r="${Math.max(sz/2+5,10,cb?Math.max(cb.w,cb.h)/2+3:0)}" fill="transparent"/>`:'';
   const [p,q]=farPair(E,s),one=Math.hypot(p.x-q.x,p.y-q.y)<.5,lineCol=lids.length===1?lnOf(lids[0]).color:S.ink;
+  // lines first: the mark sits where the lines pass, so clicks and the one-way chevron go there too
+  const mc=markAt(s,G),hr=Math.max(sz/2+5,10),cb=ciconBox(s);
+  const hit=editor&&(k!=='waypoint'||showBends)?(M.settings.layout==='lines'&&!one&&k!=='waypoint'&&!cb?`<line x1="${f(p.x)}" y1="${f(p.y)}" x2="${f(q.x)}" y2="${f(q.y)}" stroke="transparent" stroke-width="${f(hr*2)}" stroke-linecap="round"/>`:'')+`<circle cx="${f(mc.x)}" cy="${f(mc.y)}" r="${Math.max(hr,cb?Math.max(cb.w,cb.h)/2+3:0)}" fill="transparent"/>`:'';
   const shape=s.shape||S.stopStyle||'circle';
   const cap=(fill,stroke,size,sw,square)=>{
     if(!square&&shape!=='circle'&&shape!=='tick')return shapeSVG(shape,p,q,fill,stroke,size,sw,E[0]&&E[0].dir,E);
@@ -1338,7 +1346,7 @@ function stationSVG(s,G,editor){
   const xm=s.closed&&k!=='waypoint'?(()=>{const r=Math.max(2.5,sz*.3),w=Math.max(1.4,sz*.13),cx=cb?s.x:(p.x+q.x)/2,cy=cb?s.y:(p.y+q.y)/2;return `<path d="M${f(cx-r)} ${f(cy-r)}L${f(cx+r)} ${f(cy+r)}M${f(cx+r)} ${f(cy-r)}L${f(cx-r)} ${f(cy+r)}" stroke="${S.ink}" stroke-width="${f(w)}" stroke-linecap="round" fill="none"/>`})():'';
   if(cb)g=s.ciconOver?g+ciconSVG(s):ciconSVG(s);
   const ow=G.owStops&&k!=='waypoint'&&k!=='arrow'&&k!=='local'&&!s.closed?G.owStops.get(s.id):null;
-  const om=ow?chevron(s.x,s.y,ow,Math.max(4,sz*.5),S.ink,Math.max(1.3,sz*.13)):'';
+  const om=ow?chevron(mc.x,mc.y,ow,Math.max(4,sz*.5),S.ink,Math.max(1.3,sz*.13)):'';
   return `<g data-kind="station" data-id="${s.id}">${g}${om}${xm}${hit}</g>`;
 }
 const ICONS={
@@ -1372,9 +1380,9 @@ function textW0(str,fs,weight,italic){const S=M.settings,key=[str,fs,weight,ital
   if(measureCache.size>4000)measureCache.clear();measureCache.set(key,w);return w}
 function contrastOn(hex){const [r,g,b]=hexRgb(hex);return(.299*r+.587*g+.114*b)/255>.6?'#1d2226':'#ffffff'}
 function labelBox(s,G,dk,push=0){
-  const S=M.settings,dir=DIRS[dk]||DIRS.e,E=G.ends.get(s.id)||[],cb=ciconBox(s),sz=Math.max(stSize(s),cb?Math.max(cb.w,cb.h):0),bgp=s.lbg?4:0;
-  let ext=0;for(const e of E){ext=Math.max(ext,(e.x-s.x)*dir[0]+(e.y-s.y)*dir[1]);if(s.kind==='arrow'){const L=lnOf(e.lid),len=(L?lw(L):S.lineWidth)*1.9;ext=Math.max(ext,(e.x-e.dir.x*len-s.x)*dir[0]+(e.y-e.dir.y*len-s.y)*dir[1]-sz/2+2)}}
-  const gap=sz/2+ext+5+push+bgp,x0=s.x+dir[0]*gap+(s.ldx||0),y0=s.y+dir[1]*gap+(s.ldy||0);
+  const S=M.settings,dir=DIRS[dk]||DIRS.e,E=G.ends.get(s.id)||[],cb=ciconBox(s),sz=Math.max(stSize(s),cb?Math.max(cb.w,cb.h):0),bgp=s.lbg?4:0,o=markAt(s,G);
+  let ext=0;for(const e of E){ext=Math.max(ext,(e.x-o.x)*dir[0]+(e.y-o.y)*dir[1]);if(s.kind==='arrow'){const L=lnOf(e.lid),len=(L?lw(L):S.lineWidth)*1.9;ext=Math.max(ext,(e.x-e.dir.x*len-o.x)*dir[0]+(e.y-e.dir.y*len-o.y)*dir[1]-sz/2+2)}}
+  const gap=sz/2+ext+5+push+bgp,x0=o.x+dir[0]*gap+(s.ldx||0),y0=o.y+dir[1]*gap+(s.ldy||0);
   const fs=s.fs||(s.kind==='hub'?Math.round(S.labelSize*1.15):S.labelSize),rows=String(s.name).split('\n'),rsz=rows.map(r=>cjkFs([r],fs)),fe=rsz[0],dys=rows.map((r,i)=>i?rsz[i-1]*.3+rsz[i]*.85:0),h=rsz.reduce((a,v)=>a+v*1.15,0);
   const subRows=s.sub?String(s.sub).split('\n'):[],sfs=Math.round(fs*.8*10)/10,ssz=subRows.map(r=>cjkFs([r],sfs)),sfe=ssz[0]||sfs,sdys=subRows.map((r,i)=>i?ssz[i-1]*.35+ssz[i]*.85:0),sh=subRows.length?ssz.reduce((a,v)=>a+v*1.2,0)+fs*.1:0,H=h+sh;
   const anchor=dir[0]>.3?'start':dir[0]<-.3?'end':'middle';
