@@ -3,7 +3,10 @@
 //  - compares the drawing with the saved baseline (test-maps/baseline/<map>.svg) and says which lines changed and where
 //  - counts sideways jumps (a line's two pieces at a station that neither meet nor turn into one corner)
 //  - draws random variations of each map (moved stations, other bend styles, hand-set line orders) and checks nothing breaks
-// usage: node tools/layout-check.mjs [--save] [--runs N] [--src path/to/sndt.html]
+//  - measures how clean the lanes are: steps where a line goes straight through a station or turns there, jogs inside segments,
+//    stretched station marks (wider than their lines need) and how far marks drift from their station points
+// usage: node tools/layout-check.mjs [--save] [--runs N] [--src path/to/sndt.html] [--mode stations|lines] [--only name]
+//   --mode   lane layout to draw with (settings.layout; 'stations' is the default, 'lines' the lines-first layout)
 //   --save   store the current drawings as the new baseline (do this once a change is checked and wanted)
 // Rail Map Painter files in test-maps/ are imported the same way as Import > Rail Map Painter.
 // Needs google-chrome; rsvg-convert is optional (makes PNGs of changed maps in tools/layout-out/).
@@ -11,15 +14,15 @@ import fs from 'node:fs';import path from 'node:path';import os from 'node:os';i
 
 const root=path.resolve(path.dirname(new URL(import.meta.url).pathname),'..');
 const arg=(k,d)=>{const i=process.argv.indexOf(k);return i<0?d:process.argv[i+1]};
-const save=process.argv.includes('--save'),runs=+arg('--runs',100),src=path.resolve(arg('--src',path.join(root,'src/sndt.html')));
-const maps=fs.readdirSync(path.join(root,'test-maps')).filter(f=>f.endsWith('.json')).sort();
-const baseDir=path.join(root,'test-maps/baseline'),outDir=path.join(root,'tools/layout-out');
+const save=process.argv.includes('--save'),runs=+arg('--runs',100),src=path.resolve(arg('--src',path.join(root,'src/sndt.html'))),mode=arg('--mode','stations'),only=arg('--only','');
+const maps=fs.readdirSync(path.join(root,'test-maps')).filter(f=>f.endsWith('.json')&&f.includes(only)).sort();
+const baseDir=path.join(root,'test-maps',mode==='stations'?'baseline':'baseline-'+mode),outDir=path.join(root,'tools/layout-out');
 fs.mkdirSync(baseDir,{recursive:true});fs.mkdirSync(outDir,{recursive:true});
 
 // the app is one closure; expose what the check needs on window.__t
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'sndt-layout-'));
 let html=fs.readFileSync(src,'utf8');const end=html.lastIndexOf('\n})();');
-html=html.slice(0,end)+'\nwindow.__t={get M(){return M},set M(v){M=v},normalize,geom,mapSVG,rmpToSndt,pairs,crossings,cornerAt:typeof cornerAt==="function"?cornerAt:()=>null};'+html.slice(end);
+html=html.slice(0,end)+'\nwindow.__t={get M(){return M},set M(v){M=v},normalize,geom,mapSVG,rmpToSndt,pairs,crossings,cornerAt:typeof cornerAt==="function"?cornerAt:()=>null,cornerBack:typeof cornerBack==="function"?cornerBack:()=>null,farPair,stSize};'+html.slice(end);
 fs.writeFileSync(path.join(tmp,'page.html'),html);
 
 const port=9200+Math.floor(Math.random()*700),sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -33,16 +36,34 @@ const run=async expr=>{const r=await send('Runtime.evaluate',{expression:expr,aw
 await send('Page.enable');await send('Page.navigate',{url:'file://'+path.join(tmp,'page.html')});await sleep(2500);
 
 // in the page: load a map, draw it, count jumps and crossings; random variations are seeded so a failure can be repeated
-await run(`window.__chk={
-  load(m){const T=__t;if(!m.graph){T.M=T.normalize(m);return}
+await run(`const uv=(a,b)=>{const x=b.x-a.x,y=b.y-a.y,l=Math.hypot(x,y)||1;return{x:x/l,y:y/l}};window.__chk={
+  mode:${JSON.stringify(mode)},
+  load(m){const T=__t;if(!m.graph){T.M=T.normalize(m);this.setMode();return}
     // an import makes random ids; fix the random numbers so every run draws the same
-    const r=Math.random;let s=1;Math.random=()=>(s=(s*1664525+1013904223)>>>0)/4294967296;try{T.M=T.normalize(T.rmpToSndt(m,'test').map)}finally{Math.random=r}},
-  draw(){const T=__t,{o,G}=T.mapSVG(false);let jumps=[];
+    const r=Math.random;let s=1;Math.random=()=>(s=(s*1664525+1013904223)>>>0)/4294967296;try{T.M=T.normalize(T.rmpToSndt(m,'test').map)}finally{Math.random=r}this.setMode()},
+  setMode(){const S=__t.M.settings;if(this.mode==='stations')delete S.layout;else S.layout=this.mode},
+  draw(){const T=__t,{o,G}=T.mapSVG(false);let jumps=[];const nm=x=>String(x||'').split('\\n')[0];
     for(const L of T.M.lines){if(L.hidden)continue;let prev=null;
       for(const [a,b] of T.pairs(L)){const t=G.tracks.get(a<b?a+'~'+b:b+'~'+a);let p=t&&t.off.get(L.id);if(!p||a===b){prev=null;continue}if(a!==t.a)p=p.slice().reverse();
-        if(prev){const l=prev[prev.length-1],q=p[0],d=Math.hypot(l.x-q.x,l.y-q.y);if(d>.5&&!(prev.length>1&&p.length>1&&T.cornerAt(prev[prev.length-2],l,q,p[1])))jumps.push({line:L.name,at:(G.st.get(a)||{}).name||a,by:Math.round(d*10)/10})}
+        if(prev){const l=prev[prev.length-1],q=p[0],d=Math.hypot(l.x-q.x,l.y-q.y);if(d>.5&&!(prev.length>1&&p.length>1&&(T.cornerAt(prev[prev.length-2],l,q,p[1])||T.cornerBack(prev,p)))){
+          // straight through (the two pieces carry on the same way) or a turn
+          const u=uv(prev[prev.length-2]||l,l),v=uv(q,p[1]||q);jumps.push({line:nm(L.name),at:nm((G.st.get(a)||{}).name||a),by:Math.round(d*10)/10,straight:u.x*v.x+u.y*v.y>.97})}}
         prev=p}}
-    return{svg:o,jumps,gaps:[...T.crossings(G).values()].reduce((n,a)=>n+a.length,0)}},
+    return{svg:o,jumps,gaps:[...T.crossings(G).values()].reduce((n,a)=>n+a.length,0),...this.measure(G)}},
+  // jogs inside segments, stretched marks, marks away from their station points
+  measure(G){const T=__t,sp=T.M.settings.lineWidth+T.M.settings.lineGap,jogs=[],stretched=[];let drift=0,driftN=0,driftMax=0;
+    for(const t of G.tracks.values()){if(t.via)continue;for(const lid of t.lines){const P=(t.off.get(lid)||[]).filter((p,i,A)=>!i||Math.hypot(p.x-A[i-1].x,p.y-A[i-1].y)>.01);
+      // two legs heading the same way, joined by a short stretch that moves the line sideways
+      for(let i=0;i+1<P.length;i++){const di=uv(P[i],P[i+1]);let run=0;
+        for(let j=i+1;j+1<P.length;j++){if(j>i+1)run+=Math.hypot(P[j].x-P[j-1].x,P[j].y-P[j-1].y);if(run>sp*3)break;const dj=uv(P[j],P[j+1]);
+          if(j>i+1&&di.x*dj.x+di.y*dj.y>.999){const lat=Math.abs(di.x*(P[j].y-P[i+1].y)-di.y*(P[j].x-P[i+1].x));if(lat>.5&&lat<=sp*1.5){jogs.push({line:String((T.M.lines.find(L=>L.id===lid)||{}).name).split('\\n')[0],by:Math.round(lat*10)/10,x:Math.round(P[j].x),y:Math.round(P[j].y)});i=j}break}}}}}
+    for(const s of T.M.stations){if(s.kind==='waypoint')continue;const E=G.ends.get(s.id)||[];if(!E.length)continue;const [p,q]=T.farPair(E,s),len=Math.hypot(q.x-p.x,q.y-p.y);
+      const c={x:(p.x+q.x)/2,y:(p.y+q.y)/2},d=Math.hypot(c.x-s.x,c.y-s.y);drift+=d;driftN++;driftMax=Math.max(driftMax,d);
+      if(len<.5)continue;const u={x:(q.x-p.x)/len,y:(q.y-p.y)/len},on=[];
+      // lanes the mark spans: line ends along the mark, merged when closer than half a lane
+      for(const e of E){const k=(e.x-p.x)*u.x+(e.y-p.y)*u.y,off=Math.abs((e.x-p.x)*u.y-(e.y-p.y)*u.x);if(off<sp/2&&!on.some(v=>Math.abs(v-k)<sp/2))on.push(k)}
+      const extra=len-(on.length-1)*sp;if(extra>1)stretched.push({at:String(s.name).split('\\n')[0],by:Math.round(extra*10)/10})}
+    return{jogs,stretched,drift:driftN?Math.round(drift/driftN*10)/10:0,driftMax:Math.round(driftMax*10)/10}},
   vary(m,seed){let s=seed>>>0;const rnd=()=>(s=(s*1664525+1013904223)>>>0)/4294967296;const c=JSON.parse(JSON.stringify(m));this.load(c);const M=__t.M,g=M.settings.grid||20;
     for(const st of M.stations)if(rnd()<.3){st.x+=Math.round((rnd()-.5)*4)*g;st.y+=Math.round((rnd()-.5)*4)*g}
     const routes=['oct1','oct2','straight','l1','l2','curve'];for(const L of M.lines)for(let i=0;i+1<L.stops.length;i++)if(rnd()<.2){const a=L.stops[i],b=L.stops[i+1],k=a<b?a+'~'+b:b+'~'+a;if(!(M.segs[k]&&M.segs[k].route==='custom'))M.segs[k]=Object.assign(M.segs[k]||{},{route:routes[Math.floor(rnd()*routes.length)]})}
@@ -56,10 +77,14 @@ let problems=0;
 for(const f of maps){const name=f.replace(/\.json$/,''),m=JSON.parse(fs.readFileSync(path.join(root,'test-maps',f),'utf8'));
   await run(`__chk.load(${JSON.stringify(m)});true`);const r=await run('__chk.draw()');
   fs.writeFileSync(path.join(outDir,name+'.svg'),r.svg);
+  const nS=r.jumps.filter(j=>j.straight).length;
   console.log(`\n== ${name}: ${r.jumps.length} sideways jump(s), ${r.gaps} crossing gap(s)`);
-  for(const j of r.jumps.slice(0,10))console.log(`   jump: ${j.line} at ${j.at} (${j.by} units)`);
+  console.log(`   lanes: ${nS} step(s) straight through a station, ${r.jumps.length-nS} at turns, ${r.jogs.length} jog(s) inside segments, ${r.stretched.length} stretched mark(s), marks off their point by ${r.drift} on average (max ${r.driftMax})`);
+  for(const j of r.jumps.slice(0,10))console.log(`   jump: ${j.line} at ${j.at} (${j.by} units${j.straight?', straight through':', turning'})`);
+  for(const j of r.jogs.slice(0,6))console.log(`   jog: ${j.line} near ${j.x},${j.y} (${j.by} units)`);
+  for(const j of r.stretched.slice(0,6))console.log(`   stretched: ${j.at} (${j.by} units longer than its lanes)`);
   const bf=path.join(baseDir,name+'.svg'),bmeta=path.join(baseDir,name+'.json');
-  if(save){fs.writeFileSync(bf,r.svg);fs.writeFileSync(bmeta,JSON.stringify({jumps:r.jumps.length,gaps:r.gaps}));console.log('   baseline saved');}
+  if(save){fs.writeFileSync(bf,r.svg);fs.writeFileSync(bmeta,JSON.stringify({jumps:r.jumps.length,gaps:r.gaps,jogs:r.jogs.length,stretched:r.stretched.length}));console.log('   baseline saved');}
   else if(!fs.existsSync(bf))console.log('   no baseline yet (run with --save once the drawing looks right)');
   else{const old=fs.readFileSync(bf,'utf8'),meta=JSON.parse(fs.readFileSync(bmeta,'utf8'));
     if(old===r.svg)console.log('   same as baseline');
