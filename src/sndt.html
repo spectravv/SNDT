@@ -513,6 +513,7 @@ input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}
       <div class="cursor" id="cursor">x 0 · y 0</div>
       <div class="ilvf" id="ilvf" hidden><div class="ilvf-grip" id="ilvfGrip" title="Drag to resize" aria-label="Resize"><i></i></div><div class="ilvf-bar"><b>Isolated line view</b><button class="btn" data-act="ilvf-pick">Lines…</button>
         <div class="opts" id="ilvfNames"><button class="opt" data-act="ilvf-names:auto">Auto</button><button class="opt" data-act="ilvf-names:straight">Straight</button><button class="opt" data-act="ilvf-names:angled">Angled</button></div>
+        <button class="opt" id="ilvfFacBtn" data-act="ilvf-fac" aria-pressed="false">Facilities</button>
         <span class="spacer"></span><button class="btn" data-act="ilvf-exp:png">PNG</button><button class="btn" data-act="ilvf-exp:svg">SVG</button><button class="btn" data-act="ilvf-close" aria-label="Close">×</button></div><div class="ilvf-body" id="ilvfBody"></div><input type="range" class="ilvf-x" id="ilvfX" min="0" max="1000" value="0" aria-label="Scroll the strip"></div>
       <div class="zoom"><button id="bendsBtn" data-act="bends" aria-pressed="true" title="Show or hide bend points (B)">Bends</button><button data-act="zoom-out" aria-label="Zoom out">−</button><span id="zoomVal">100%</span><button data-act="zoom-in" aria-label="Zoom in">+</button><button data-act="fit" title="Fit map (F)">Fit</button></div>
     </div>
@@ -2280,6 +2281,7 @@ function act(name,arg,el){
     case 'ilvf-show':{const ids=[...document.querySelectorAll('#ilvfPick input:checked')].map(e=>e.dataset.lid);closeModal();if(ids.length){ilvfLines=ids;ilvfOpen(true)}else ilvfOpen(false);break}
     case 'ilvf-close':ilvfOpen(false);break;
     case 'ilvf-names':ilvfNames=arg;lsSet('sndt:ilvfNames',arg);ilvfDraw();break;
+    case 'ilvf-fac':ilvfFac=!ilvfFac;lsSet('sndt:ilvfFac',ilvfFac?'1':'0');ilvfDraw();break;
     case 'ilvf-exp':ilvfExport(arg);break;
     case 'clean-map':closePop();cleanModal();break;
     case 'clean-go':{const pick=[...document.querySelectorAll('#cleanModal input[data-clean]:checked')].map(e=>{const [t,id]=e.dataset.clean.split(':');return{t,id}}),wb=$('#cleanWps');if(wb&&wb.checked)for(const id of wb.dataset.ids.split(','))pick.push({t:'station',id});closeModal();if(!pick.length)break;sel=pick;deleteSel();toast(tr('Removed')+' '+pick.length);break}
@@ -2765,7 +2767,7 @@ function toast(t){document.querySelectorAll('.toast').forEach(o=>o.remove());con
 // isolated line view, "ILVF" (idea by Paddy): chosen lines drawn as straight strips for platform displays and station signs.
 // Stations evenly spaced, names above (angled when they don't fit), interchanges as ringed dots with short stubs in the other
 // lines' colours; shown in a panel at the bottom of the map, with its own PNG/SVG export
-let ilvfOn=false,ilvfLines=[],ilvfNames=lsGet('sndt:ilvfNames')||'auto';
+let ilvfOn=false,ilvfLines=[],ilvfNames=lsGet('sndt:ilvfNames')||'auto',ilvfFac=lsGet('sndt:ilvfFac')==='1';
 function ilvfPick(){const ls=linesAZ(M.lines.filter(L=>!L.hidden&&L.stops.length>1));if(!ls.length){toast(tr('Draw a line first.'));return}
   const pre=new Set(ilvfOn?ilvfLines:sel.filter(x=>x.t==='line').map(x=>x.id));
   modal(`<div id="ilvfPick" style="display:flex;flex-direction:column;gap:12px"><h2>${tr('Isolated line view')}</h2><p class="sub">${tr('Pick the lines to show as straight strips, for platform displays and station signs.')}</p>
@@ -2773,7 +2775,7 @@ function ilvfPick(){const ls=linesAZ(M.lines.filter(L=>!L.hidden&&L.stops.length
    <div class="btns"><button class="btn acc" data-act="ilvf-show">${tr('Show strip')}</button><button class="btn" data-act="close-modal">${tr('Cancel')}</button></div></div>`)}
 function ilvfOpen(on){ilvfOn=on;$('#ilvf').hidden=!on;$('#stage').classList.toggle('ilvf-on',on);if(on)ilvfDraw()}
 function ilvfDraw(){if(!ilvfOn)return;ilvfLines=ilvfLines.filter(id=>{const L=lnOf(id);return L&&L.stops.length>1});if(!ilvfLines.length){ilvfOpen(false);return}
-  document.querySelectorAll('#ilvfNames .opt').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.act==='ilvf-names:'+ilvfNames)));
+  document.querySelectorAll('#ilvfNames .opt').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.act==='ilvf-names:'+ilvfNames)));$('#ilvfFacBtn').setAttribute('aria-pressed',String(ilvfFac));
   $('#ilvfBody').innerHTML=ilvfSVG(ilvfLines,ilvfNames).svg;ilvfSync()}
 // the slider under the strip follows the panel's sideways scroll and moves it; the strip can also be dragged with the mouse
 function ilvfSync(){const b=$('#ilvfBody'),r=$('#ilvfX'),max=b.scrollWidth-b.clientWidth;r.hidden=max<2;if(max>=2)r.value=String(Math.round(b.scrollLeft/max*1000))}
@@ -2815,6 +2817,9 @@ function ilvfSVG(lids,mode,font){const S=M.settings,fs=Math.max(11,S.labelSize||
         o+=`<circle cx="${f(x)}" cy="${f(bar)}" r="9" fill="${S.stFill}" stroke="${S.ink}" stroke-width="3"/>`}
       else o+=`<circle cx="${f(x)}" cy="${f(bar)}" r="4.2" fill="${S.stFill}"/>`;
       if(st.closed)o+=`<path d="M${f(x-4)} ${f(bar-4)}L${f(x+4)} ${f(bar+4)}M${f(x+4)} ${f(bar-4)}L${f(x-4)} ${f(bar+4)}" stroke="${S.ink}" stroke-width="1.6"/>`;
+      // facilities (the switch in the strip's bar, idea by Curt): under the station, below any transfer badges, wrapped to fit between stations
+      const fi=ilvfFac?(st.icons||[]).filter(k=>ICONS[k]):[];if(fi.length){const z=Math.round(fs*1.1),cols=Math.max(1,Math.min(fi.length,Math.floor((gap-10)/(z+3)))),t0=(oth.length?bar+32+oth.length*(fs*.62+6):bar+lw)+6;
+        fi.forEach((k,j)=>{const c=j%cols,r=Math.floor(j/cols),n=Math.min(cols,fi.length-r*cols);o+=iconSVG(k,x-(n*(z+3)-3)/2+c*(z+3),t0+r*(z+3),z)});low=Math.max(low,t0+Math.ceil(fi.length/cols)*(z+3))}
       const [a,b]=rowsOf(st),wt=end?800:600,ty=bar-18;
       if(angled)o+=`<g transform="rotate(-40 ${f(x+2)} ${f(ty)})"><text x="${f(x+2)}" y="${f(ty)}" font-size="${fs}" font-weight="${wt}" fill="${dim}">${esc(a)}${b?`<tspan font-size="${f(fs2)}" font-weight="400" font-style="italic" dx="6">${esc(b)}</tspan>`:''}</text></g>`;
       else o+=`<text x="${f(x)}" y="${f(b?ty-fs2*1.3:ty)}" text-anchor="middle" font-size="${fs}" font-weight="${wt}" fill="${dim}">${esc(a)}</text>`+(b?`<text x="${f(x)}" y="${f(ty)}" text-anchor="middle" font-size="${f(fs2)}" font-style="italic" fill="${mix(dim,S.bg,.3)}">${esc(b)}</text>`:'')});
