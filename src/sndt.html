@@ -1340,11 +1340,16 @@ function numBox(s,G){if(M.settings.stNums!=='marks'||s.kind==='waypoint')return 
   const h=s.numH>0?s.numH:s.numSize>0?s.numSize:M.settings.numSize>0?M.settings.numSize:Math.max(12,stSize(s)*1.05),fs0=h*.62,pad=h*.32,tw=B.map(b=>textW(b.text,fs0,700));
   let ws=tw.map(t=>t+pad*2);const W0=ws.reduce((a,v)=>a+v,0),W=s.numW>0?s.numW:W0;
   // a box sized by hand (drag its handles): the badges share its width, and the text shrinks if it no longer fits
-  if(W!==W0)ws=ws.map(v=>v*W/W0);const fs=Math.min(fs0,...tw.map((t,i)=>t>0?fs0*(ws[i]-Math.min(pad,ws[i]*.15)*2)/t:fs0));return{B,h,fs,ws,W}}
+  if(W!==W0)ws=ws.map(v=>v*W/W0);
+  // each badge: the code on one line, or (narrow but tall enough) the letters above the number, whichever lets the text be bigger
+  const rows=[],fss=[];B.forEach((b,i)=>{const av=ws[i]-Math.min(pad,ws[i]*.15)*2,one=tw[i]>0?Math.min(fs0,fs0*av/tw[i]):fs0,m=String(b.text).match(/^(.*?[^\d\s])\s*(\d.*)$/);
+    let two=0;if(m){const a=textW(m[1],fs0,700),c=textW(m[2],fs0,700);two=Math.min(h*.44,fs0*av/Math.max(a,c,1))}
+    if(m&&two>one*1.15){rows.push([m[1],m[2]]);fss.push(two)}else{rows.push([b.text]);fss.push(one)}});
+  return{B,h,fs:Math.min(...fss),fss,rows,ws,W}}
 // a slider and a number box for the same size (empty number = automatic / follow the map)
 function sizePair(o,id,p,v,auto){return `<div class="sizepair"><input type="range" data-obj="${o}" data-id="${id}" data-prop="${p}" data-type="numnull" min="6" max="60" step="1" value="${v>0?v:auto}" aria-label="Size"><input type="number" id="${fid(o,p)}" data-obj="${o}" data-id="${id}" data-prop="${p}" data-type="numnull" min="4" max="200" step="0.5" value="${v>0?v:''}" placeholder="${f(auto)}"></div>`}
 function numBadgesSVG(s,nb,c){const S=M.settings,x0=c.x-nb.W/2,y0=c.y-nb.h/2,r=nb.h*.3,id='nb'+s.id;let x=x0,o='',tx='';
-  nb.B.forEach((b,i)=>{o+=`<rect x="${f(x)}" y="${f(y0)}" width="${f(nb.ws[i]+.5)}" height="${f(nb.h)}" fill="${esc(b.color)}"/>`;tx+=`<text x="${f(x+nb.ws[i]/2)}" y="${f(c.y+nb.fs*.36)}" text-anchor="middle" font-size="${f(nb.fs)}" font-weight="700" fill="${contrastOn(b.color)}"${s.closed?` stroke="${esc(b.color)}" stroke-width="${f(nb.fs*.22)}" paint-order="stroke"`:''}>${esc(b.text)}</text>`;x+=nb.ws[i]});
+  nb.B.forEach((b,i)=>{o+=`<rect x="${f(x)}" y="${f(y0)}" width="${f(nb.ws[i]+.5)}" height="${f(nb.h)}" fill="${esc(b.color)}"/>`;const fz=nb.fss?nb.fss[i]:nb.fs,rw=nb.rows?nb.rows[i]:[b.text];tx+=`<text x="${f(x+nb.ws[i]/2)}" y="${f(rw.length>1?c.y-fz*.18:c.y+fz*.36)}" text-anchor="middle" font-size="${f(fz)}" font-weight="700" fill="${contrastOn(b.color)}"${s.closed?` stroke="${esc(b.color)}" stroke-width="${f(nb.fs*.22)}" paint-order="stroke"`:''}>${rw.length>1?`<tspan x="${f(x+nb.ws[i]/2)}">${esc(rw[0])}</tspan><tspan x="${f(x+nb.ws[i]/2)}" dy="${f(fz*1.02)}">${esc(rw[1])}</tspan>`:esc(b.text)}</text>`;x+=nb.ws[i]});
   // not in service: diagonal stripes in the background colour across the badges, under the codes
   if(s.closed){const g=nb.h*.34,w=g*.45;let st='';for(let k=-nb.h;k<nb.W+nb.h;k+=g)st+=`M${f(x0+k)} ${f(y0+nb.h)}L${f(x0+k+nb.h)} ${f(y0)}`;o+=`<path d="${st}" stroke="${S.bg}" stroke-width="${f(w)}" stroke-opacity=".75" fill="none"/>`}
   o+=tx;
