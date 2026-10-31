@@ -353,6 +353,8 @@ body:not(.adv) .adv-only{display:none!important}
 .ilvf-grip{flex:none;height:12px;margin-top:-3px;display:flex;align-items:center;justify-content:center;cursor:row-resize;touch-action:none;background:var(--paper)}.ilvf-grip i{width:44px;height:4px;background:var(--ink)}
 @media (hover:hover){.ilvf-grip:hover i{background:var(--red)}}@media (pointer:coarse){.ilvf-grip{height:22px}}
 .ilvf-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 10px;border-bottom:1px solid var(--hair)}.ilvf-bar b{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;margin-right:4px}.ilvf-bar .opts{flex:none}
+.fac-tog{display:inline-flex;align-items:center;gap:6px}.fac-tog i{width:10px;height:10px;border:1.5px solid currentColor;display:inline-block;position:relative}
+.fac-tog[aria-pressed="true"] i::after{content:"";position:absolute;left:2px;top:-1px;width:3px;height:6px;border:solid currentColor;border-width:0 2px 2px 0;transform:rotate(45deg)}
 .ilvf-body{flex:1;overflow:auto;padding:12px;background:var(--paper-2);cursor:grab}.ilvf-body.drag{cursor:grabbing;user-select:none}
 .ilvf-x{flex:none;margin:0;padding:0 10px;height:30px;accent-color:var(--red);border-top:1px solid var(--hair);background:var(--paper)}.ilvf-x[hidden]{display:none}.ilvf-body svg{display:block;border:2px solid var(--ink);box-shadow:var(--hard)}
 #stage.ilvf-on .zoom,#stage.ilvf-on .cursor{display:none}
@@ -515,7 +517,7 @@ input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}
       <div class="cursor" id="cursor">x 0 · y 0</div>
       <div class="ilvf" id="ilvf" hidden><div class="ilvf-grip" id="ilvfGrip" title="Drag to resize" aria-label="Resize"><i></i></div><div class="ilvf-bar"><b>Isolated line view</b><button class="btn" data-act="ilvf-pick">Lines…</button>
         <div class="opts" id="ilvfNames"><button class="opt" data-act="ilvf-names:auto">Auto</button><button class="opt" data-act="ilvf-names:straight">Straight</button><button class="opt" data-act="ilvf-names:angled">Angled</button></div>
-        <button class="opt" id="ilvfFacBtn" data-act="ilvf-fac" aria-pressed="false">Facilities</button>
+        <div class="opts"><button class="opt fac-tog" id="ilvfFacBtn" data-act="ilvf-fac" aria-pressed="false" title="Show each station's facility icons under it"><i aria-hidden="true"></i><svg viewBox="0 0 14 14" width="13" height="13" aria-hidden="true"><path d="M7 1.5l1.65 3.6 3.9.4-2.9 2.6.85 3.85L7 9.9l-3.5 2.05.85-3.85-2.9-2.6 3.9-.4z" fill="currentColor"/></svg>Facilities</button></div>
         <span class="spacer"></span><button class="btn" data-act="ilvf-exp:png">PNG</button><button class="btn" data-act="ilvf-exp:svg">SVG</button><button class="btn" data-act="ilvf-close" aria-label="Close">×</button></div><div class="ilvf-body" id="ilvfBody"></div><input type="range" class="ilvf-x" id="ilvfX" min="0" max="1000" value="0" aria-label="Scroll the strip"></div>
       <div class="zoom"><button id="bendsBtn" data-act="bends" aria-pressed="true" title="Show or hide bend points (B)">Bends</button><button data-act="zoom-out" aria-label="Zoom out">−</button><span id="zoomVal">100%</span><button data-act="zoom-in" aria-label="Zoom in">+</button><button data-act="fit" title="Fit map (F)">Fit</button></div>
     </div>
