@@ -147,7 +147,10 @@ aside{background:var(--paper);overflow-y:auto;min-height:0}
 @media (hover:hover){.hsearch:hover{background:var(--paper);color:var(--ink)}}
 @media (max-width:1250px){.hsearch kbd{display:none}header #status{display:none}}
 @media (max-width:1499px){header #status{font-size:0;gap:0}}
-@media (max-width:1199px){header .seg.place{display:none}}
+@media (max-width:1199px){header .seg.place:not(.lay){display:none}}
+@media (max-width:1099px){header .seg.lay{display:none}}
+@media (max-width:1399px) and (min-width:901px){header .seg button{padding:0 7px}}
+@media (max-width:1299px) and (min-width:901px){header .mapname{max-width:110px}header #langSel{width:56px}header .hbtn{margin-left:3px}}
 @media (max-width:1100px) and (min-width:901px){header .seg button{padding:0 7px}header .hbtn{margin-left:4px}.logo{padding-right:10px;margin-right:6px}.mapname{max-width:140px}}
 #navMenu .hsearch input,#navMenu .hsearch kbd{display:none}#navMenu .hsearch{cursor:pointer;flex:none}
 .cmdk-drop{position:fixed;z-index:45;background:var(--paper);border:2px solid var(--ink);box-shadow:var(--hard);max-height:min(60vh,460px);display:flex;flex-direction:column}
@@ -465,6 +468,7 @@ input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}
     <button class="hbtn icon" id="undoBtn" data-act="undo" aria-label="Undo" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/></svg></button>
     <button class="hbtn icon" id="redoBtn" data-act="redo" aria-label="Redo" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 000 11H13"/></svg></button>
     <div class="seg place hide-narrow" role="group" aria-label="Placement" title="Grid: stations snap to the grid. Free: place precisely, snapping into line with other stations"><button id="plGrid" data-act="place:grid" aria-pressed="true">Grid</button><button id="plFree" data-act="place:free" aria-pressed="false">Free</button></div>
+    <div class="seg place lay hide-narrow" role="group" aria-label="Lane layout" title="Lines first: lines stay straight in their lanes and stations sit where their lines pass. Stations first: each station stays on its point and the lines fit around it"><button id="lyLines" data-act="mlayout:lines" aria-pressed="true">Lines</button><button id="lyStations" data-act="mlayout:stations" aria-pressed="false">Stations</button></div>
     <div class="seg" role="group" aria-label="Section"><button id="secMap" data-act="section:map" aria-pressed="true">Map</button><button id="secTl" data-act="section:timeline" aria-pressed="false">Timeline</button></div>
     <div class="seg ctl" role="group" aria-label="Control level">
       <button id="mSimple" data-act="mode:simple" aria-pressed="true">Simple</button>
@@ -1737,7 +1741,7 @@ function natureAt(w){const A=M.nature||[];for(let i=A.length-1;i>=0;i--){const P
 function finishNature(){const d=natureDraft;if(!d)return;natureDraft=null;if(d.pts.length<3)M.nature=M.nature.filter(x=>x!==d);else sel=[{t:'nature',id:d.id}];updHint();changed()}
 function cancelNature(){if(!natureDraft)return;natureDraft=null;if(undoS.length){M=liveKeep(JSON.parse(undoS.pop()),undoQ.pop());updUndo()}updHint();render();renderInspector()}
 function renderWater(){const S=M.settings,key=JSON.stringify([M.water,S.water,S.shapeR]);if(key===waterKey)return;waterKey=key;$('#waterL').innerHTML=waterSVG()}
-function render(){if(drawTip&&drawLine!==drawTip.line)dropTip(true);draftClass();{const fr=freePlace(),a=document.getElementById('plGrid'),b=document.getElementById('plFree');if(a){a.setAttribute('aria-pressed',String(!fr));b.setAttribute('aria-pressed',String(fr))}}document.body.classList.toggle('has-sel',sel.length>0);sheetSync();
+function render(){if(drawTip&&drawLine!==drawTip.line)dropTip(true);draftClass();{const ln=M.settings.layout==='lines',a=document.getElementById('lyLines'),b=document.getElementById('lyStations');if(a){a.setAttribute('aria-pressed',String(ln));b.setAttribute('aria-pressed',String(!ln))}}{const fr=freePlace(),a=document.getElementById('plGrid'),b=document.getElementById('plFree');if(a){a.setAttribute('aria-pressed',String(!fr));b.setAttribute('aria-pressed',String(fr))}}document.body.classList.toggle('has-sel',sel.length>0);sheetSync();
   const S=M.settings;ensureLayers();
   selColor=getComputedStyle(document.documentElement).getPropertyValue('--sel').trim()||'#e8590c';
   const {o,G}=mapSVG(true);lastG=G;
@@ -2223,7 +2227,7 @@ function act(name,arg,el){
     case 'mixroute':{const m=routeMix(),on=m.includes(arg);if(on&&m.length<=2){toast(tr('Keep at least two types ticked, or switch to One type.'));break}pushUndo();M.settings.routeMix=on?m.filter(k=>k!==arg):m.concat([arg]);M.settings.route=routeMix()[0];changed();break}
     case 'mcorner':pushUndo();M.settings.cornerR=+arg;changed();break;
     case 'mgap':pushUndo();M.settings.crossGap=+arg;changed();break;
-    case 'mlayout':pushUndo();M.settings.layout=arg==='lines'?'lines':'stations';changed();break;
+    case 'mlayout':{const v=arg==='lines'?'lines':'stations';if(M.settings.layout===v)break;pushUndo();M.settings.layout=v;changed();toast(tr(v==='lines'?'Lines first: lines stay straight in their lanes, and each station sits where its lines pass.':'Stations first: each station stays on its point, and the lines fit around it.'));break}
     case 'arc-angle':case 'arc-flip':if(one&&one.seg){pushUndo();const sg=M.segs[one.seg]||(M.segs[one.seg]={});if(!sg.route)sg.route='arc';if(name==='arc-flip')sg.flip=!sg.flip;else{sg.arc=+arg;sg.fit=false}changed()}break;
     case 'arc-fit':case 'arc-manual':if(one&&one.seg){pushUndo();const sg=M.segs[one.seg]||(M.segs[one.seg]={});if(!sg.route)sg.route='arc';sg.fit=name==='arc-fit';if(!sg.fit&&sg.arc==null)sg.arc=90;changed()}break;
     case 'lstatus':if(curL){pushUndo();if(arg)curL.status=arg;else delete curL.status;changed()}break;
