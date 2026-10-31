@@ -2645,7 +2645,7 @@ function closePop(){if(popEl){popEl.remove();popEl=null}}
 function openPop(anchor,html){closePop();popEl=document.createElement('div');popEl.className='pop';popEl.innerHTML=html;document.body.appendChild(popEl);
   const r=anchor.getBoundingClientRect(),pw=popEl.offsetWidth;let x=Math.min(r.left,window.innerWidth-pw-12);x=Math.max(12,x);popEl.style.left=x+'px';popEl.style.top=(r.bottom+6)+'px'}
 document.addEventListener('pointerdown',e=>{if(popEl&&!popEl.contains(e.target)&&!e.target.closest('[data-act="maps-menu"],[data-act="export-menu"],[data-act="toolgroup"],[data-act="help"]'))closePop()},true);
-function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),2600)}
+function toast(t){document.querySelectorAll('.toast').forEach(o=>o.remove());const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),2600)}
 // isolated line view, "ILVF" (idea by Paddy): chosen lines drawn as straight strips for platform displays and station signs.
 // Stations evenly spaced, names above (angled when they don't fit), interchanges as ringed dots with short stubs in the other
 // lines' colours; shown in a panel at the bottom of the map, with its own PNG/SVG export
