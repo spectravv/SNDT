@@ -1499,17 +1499,24 @@ function legendSVG(){
   const ex=legendExtraRows(lg,ls,grouped);rows.push(...ex);
   const dsc=l=>String(l.legendDesc||'').trim(),xw=(t,d)=>textW(t,fs,600)+(d?fs*.5+textW(d,fs,400,true):0),wName=Math.max(...ls.map(l=>xw(l.legend||l.name||'',dsc(l))),...ex.filter(r=>!r.h).map(r=>{const k=legKey(r);return xw(legTxt(lg,k),legDsc(lg,k))})),wHead=grouped?Math.max(...rows.filter(r=>r.h).map(r=>r.h.length))*fs*.72*.72:0;
   const W=Math.round(Math.max(70+wName,28+wHead)+16);
-  let y=titleH,body='';
-  for(const r of rows){
+  let y=titleH,body='';const items=[];
+  // each row is drawn from 0 down, then the rows are laid out in columns of "items per column" (idea by Curt)
+  for(const r of rows){const b0=body.length;y=0;
     if(r.h){y+=4;body+=`<text x="14" y="${f(y+fs*.95)}" font-size="${f(fs*.72)}" font-weight="800" letter-spacing=".12em" fill="${S.ink}" fill-opacity=".55">${esc(r.h.toUpperCase())}</text>`;y+=fs*1.3}
     else if(r.nis){const cy=y+rowH/2,rr=Math.max(4,S.stationSize/2);body+=`<circle cx="33" cy="${f(cy)}" r="${f(rr)}" fill="${S.stFill}" stroke="${S.ink}" stroke-width="2"/><path d="M${f(33-rr*.6)} ${f(cy-rr*.6)}L${f(33+rr*.6)} ${f(cy+rr*.6)}M${f(33+rr*.6)} ${f(cy-rr*.6)}L${f(33-rr*.6)} ${f(cy+rr*.6)}" stroke="${S.ink}" stroke-width="1.6" stroke-linecap="round"/>${legRowText(lg,r,fs,S,cy)}`;y+=rowH}
     else if(r.fac){const cy=y+rowH/2,z=Math.max(14,fs*1.25);body+=iconSVG(r.fac,33-z/2,cy-z/2,z)+legRowText(lg,r,fs,S,cy);y+=rowH}
     else if(r.xf){const cy=y+rowH/2;body+=xferPaths(`M14 ${f(cy)}L52 ${f(cy)}`,r.xf,xferW())+`${legRowText(lg,r,fs,S,cy)}`;y+=rowH}
     else if(r.st){const cy=y+rowH/2;body+=strokeFor(`M14 ${f(cy)}L52 ${f(cy)}`,{color:mix(S.ink,S.bg,.45),style:r.st==='planned'?'dashed':'striped'},S.lineWidth)+`${legRowText(lg,r,fs,S,cy)}`;y+=rowH}
     else{const cy=y+rowH/2;body+=strokeFor(`M14 ${f(cy)}L52 ${f(cy)}`,r.l,lw(r.l))+`<text x="64" y="${f(cy+fs*.36)}" font-size="${fs}" font-weight="600" fill="${S.ink}">${cjkT(r.l.legend||r.l.name)}${dsc(r.l)?`<tspan dx="${f(fs*.5)}" font-weight="400" font-style="italic" fill-opacity=".55">${cjkT(dsc(r.l))}</tspan>`:''}</text>`;y+=rowH}
-  }
+    items.push({s:body.slice(b0),h:y,head:!!r.h});body=body.slice(0,b0)}
+  const per=lg.perCol>0?Math.round(lg.perCol):Infinity,cols=[[]];let n=0;
+  items.forEach((it,i)=>{const c=cols[cols.length-1];
+    // start a new column once it holds "per" rows, and never leave a heading at the bottom of a column
+    if(c.length&&(it.head?n+1>per-1||items.slice(i+1).findIndex(x=>x.head)===0:n>=per)){cols.push([]);n=0}cols[cols.length-1].push(it);if(!it.head)n++});
+  let colH=0;cols.forEach((c,ci)=>{let yy=titleH;for(const it of c){body+=`<g transform="translate(${ci*W} ${f(yy)})">${it.s}</g>`;yy+=it.h}colH=Math.max(colH,yy)});
+  y=colH;const WW=W*cols.length;
   const H=Math.round(y+8);
-  return `<g data-kind="legend" transform="translate(${lg.x} ${lg.y})"><rect width="${W}" height="${H}" rx="8" fill="${S.bg}" stroke="${S.ink}" stroke-opacity=".35" stroke-width="1.2"/>${lg.title?`<text x="14" y="${fs+8}" font-size="${f(fs*.82)}" font-weight="800" letter-spacing=".1em" fill="${S.ink}" fill-opacity=".7">${esc(String(lg.title).toUpperCase())}</text>`:''}${body}</g>`;
+  return `<g data-kind="legend" transform="translate(${lg.x} ${lg.y})"><rect width="${WW}" height="${H}" rx="8" fill="${S.bg}" stroke="${S.ink}" stroke-opacity=".35" stroke-width="1.2"/>${lg.title?`<text x="14" y="${fs+8}" font-size="${f(fs*.82)}" font-weight="800" letter-spacing=".1em" fill="${S.ink}" fill-opacity=".7">${esc(String(lg.title).toUpperCase())}</text>`:''}${body}</g>`;
 }
 function hexRgb(h){h=String(h||'#000').replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h.slice(0,6),16)||0;return[n>>16&255,n>>8&255,n&255]}
 function mix(a,b,t){const A=hexRgb(a),B=hexRgb(b);return'#'+A.map((v,i)=>Math.round(v+(B[i]-v)*t).toString(16).padStart(2,'0')).join('')}
@@ -2035,6 +2042,7 @@ function inspRegion(r){if(!r)return inspMap();return `<div class="pane"><h3>Area
   <div class="btns"><button class="btn" data-act="dup">Duplicate</button><button class="btn warn" data-act="del-sel" data-confirm="1">Delete area</button></div></div>`}
 function inspLegend(){const lg=M.settings.legend;return `<div class="pane"><h3>Legend</h3>${fld('Heading',inp('settings','s','legend.title',lg.title,'text','placeholder="No heading"'))}
   <p class="sub">The legend lists every visible line. Hide a line from it in the line's Advanced settings.</p>
+  ${fld('Items per column (0 = one column)',inp('settings','s','legend.perCol',lg.perCol||0,'num','min="0" max="99"'))}
   <div class="fld"><span>Also show</span>${chk('settings','s','legend.showStatus',lg.showStatus!==false,'Planned and under construction')}${chk('settings','s','legend.showXfer',lg.showXfer!==false,'Out-of-station interchange')}${chk('settings','s','legend.showNis',lg.showNis!==false,'Not in service')}</div>
   ${fld('Facilities',selectF('settings','s','legend.fac',lg.fac||'none',[['none','None'],['used','The ones used on this map'],['all','All'],['pick','Choose…']]))}
   ${lg.fac==='pick'?`<div class="chips">${Object.keys(ICONS).map(k=>`<button class="chip" data-act="leg-fac:${k}" aria-pressed="${!!(lg.facPick||{})[k]}"><svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true"><rect width="14" height="14" rx="2.5" fill="#0b0b0b"/>${iconGlyph(k,'#ffffff','#0b0b0b')}</svg>${tr(ICONS[k][0])}</button>`).join('')}</div>`:''}
