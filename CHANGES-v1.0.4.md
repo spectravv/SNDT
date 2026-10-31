@@ -22,3 +22,4 @@ Bug fixes and small features after v1.0.3 (v1.1 shelved meanwhile).
   - a straight piece that ends at a bend point which only ends a line can move with its lanes (rmp-older 花木路: no more step and stretched mark);
   - labels, click areas and the one-way chevron follow the drawn mark (markAt) instead of the station point.
   - Layout check now leaves curved, arc, ring and hand-drawn segments out of the jog count.
+- Lines first is the default for NEW maps (blank, example, Rail Map Painter and MTR imports; user decision 2026-10-31). Maps saved before it existed load as Stations first (normalize marks a missing settings.layout as 'stations'), and the switch now stores 'stations' explicitly. Layout check: lines-first baselines saved in test-maps/baseline-lines, and --mode lines is now its default. New UI strings ("Lane layout", "Stations first", "Lines first (beta)", the explanation) are not on Crowdin yet.

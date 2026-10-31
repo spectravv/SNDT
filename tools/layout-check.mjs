@@ -7,7 +7,7 @@
 //    (not counting curved, arc, ring or hand-drawn segments, whose S-bends are wanted),
 //    stretched station marks (wider than their lines need) and how far marks drift from their station points
 // usage: node tools/layout-check.mjs [--save] [--runs N] [--src path/to/sndt.html] [--mode stations|lines] [--only name]
-//   --mode   lane layout to draw with (settings.layout; 'stations' is the default, 'lines' the lines-first layout)
+//   --mode   lane layout to draw with: 'lines' (lines first, the default for new maps; baseline in test-maps/baseline-lines) or 'stations' (test-maps/baseline)
 //   --save   store the current drawings as the new baseline (do this once a change is checked and wanted)
 // Rail Map Painter files in test-maps/ are imported the same way as Import > Rail Map Painter.
 // Needs google-chrome; rsvg-convert is optional (makes PNGs of changed maps in tools/layout-out/).
@@ -15,7 +15,7 @@ import fs from 'node:fs';import path from 'node:path';import os from 'node:os';i
 
 const root=path.resolve(path.dirname(new URL(import.meta.url).pathname),'..');
 const arg=(k,d)=>{const i=process.argv.indexOf(k);return i<0?d:process.argv[i+1]};
-const save=process.argv.includes('--save'),runs=+arg('--runs',100),src=path.resolve(arg('--src',path.join(root,'src/sndt.html'))),mode=arg('--mode','stations'),only=arg('--only','');
+const save=process.argv.includes('--save'),runs=+arg('--runs',100),src=path.resolve(arg('--src',path.join(root,'src/sndt.html'))),mode=arg('--mode','lines'),only=arg('--only','');
 const maps=fs.readdirSync(path.join(root,'test-maps')).filter(f=>f.endsWith('.json')&&f.includes(only)).sort();
 const baseDir=path.join(root,'test-maps',mode==='stations'?'baseline':'baseline-'+mode),outDir=path.join(root,'tools/layout-out');
 fs.mkdirSync(baseDir,{recursive:true});fs.mkdirSync(outDir,{recursive:true});

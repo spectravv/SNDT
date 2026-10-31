@@ -714,7 +714,7 @@ function setLang(l){LANG=LANGS[l]?l:'en';lsSet('sndt:lang',LANG);document.docume
   renderLists();renderInspector();updHint();i18nBusy=true;i18nTree(document.body);i18nBusy=false;render();if(tourI>=0)tourShow()}
 
 /* ---------- model ---------- */
-function defaults(){return{grid:5,snap:true,showGrid:true,bg:'#fbfcfa',ink:'#1d2226',stFill:'#ffffff',lineWidth:8,lineGap:2,stationSize:14,labelSize:13,labelFont:'Overpass',cjkBig:false,cjkScale:1.25,route:'oct1',cornerR:16,shapeR:10,regionGap:6,stopStyle:'circle',water:'#9fcbe8',halo:true,boldInter:true,mcScale:25,nether8:true,legend:{show:true,x:60,y:600,title:'Lines',showStatus:true,showXfer:true,showNis:true}}}
+function defaults(){return{layout:'lines',grid:5,snap:true,showGrid:true,bg:'#fbfcfa',ink:'#1d2226',stFill:'#ffffff',lineWidth:8,lineGap:2,stationSize:14,labelSize:13,labelFont:'Overpass',cjkBig:false,cjkScale:1.25,route:'oct1',cornerR:16,shapeR:10,regionGap:6,stopStyle:'circle',water:'#9fcbe8',halo:true,boldInter:true,mcScale:25,nether8:true,legend:{show:true,x:60,y:600,title:'Lines',showStatus:true,showXfer:true,showNis:true}}}
 function blankMap(){return{v:1,name:'Untitled network',settings:defaults(),stations:[],lines:[],texts:[{id:uid(),x:60,y:60,text:'My network',size:28,bold:true}],regions:[],segs:{}}}
 function sampleMap(){
   const S=(id,name,x,y,kind,label,mc,dim)=>({id,name,x,y,kind,label,mc:mc?{x:mc[0],y:mc[1],z:mc[2]}:null,dim:dim||'overworld',notes:''});
@@ -749,6 +749,8 @@ function sampleMap(){
   segs:{}};
 }
 function normalize(m){
+  // maps made before the lines-first layout existed keep the station-first layout; new maps get lines first (user decision 2026-10-31)
+  if(!m.settings||!('layout' in m.settings))(m.settings=m.settings||{}).layout='stations';
   m.settings=Object.assign(defaults(),m.settings||{});
   m.settings.legend=Object.assign(defaults().legend,m.settings.legend||{});
   m.stations=m.stations||[];m.lines=m.lines||[];m.texts=m.texts||[];m.regions=m.regions||[];m.segs=m.segs||{};m.water=Array.isArray(m.water)?m.water:[];m.images=Array.isArray(m.images)?m.images:[];m.icons=Array.isArray(m.icons)?m.icons:[];m.nature=Array.isArray(m.nature)?m.nature:[];m.transfers=(Array.isArray(m.transfers)?m.transfers:[]).map(x=>Object.assign(x,{sts:Array.isArray(x.sts)?x.sts:[x.a,x.b].filter(Boolean)})).filter(x=>x.sts.length>1);
@@ -2221,7 +2223,7 @@ function act(name,arg,el){
     case 'mixroute':{const m=routeMix(),on=m.includes(arg);if(on&&m.length<=2){toast(tr('Keep at least two types ticked, or switch to One type.'));break}pushUndo();M.settings.routeMix=on?m.filter(k=>k!==arg):m.concat([arg]);M.settings.route=routeMix()[0];changed();break}
     case 'mcorner':pushUndo();M.settings.cornerR=+arg;changed();break;
     case 'mgap':pushUndo();M.settings.crossGap=+arg;changed();break;
-    case 'mlayout':pushUndo();if(arg==='lines')M.settings.layout='lines';else delete M.settings.layout;changed();break;
+    case 'mlayout':pushUndo();M.settings.layout=arg==='lines'?'lines':'stations';changed();break;
     case 'arc-angle':case 'arc-flip':if(one&&one.seg){pushUndo();const sg=M.segs[one.seg]||(M.segs[one.seg]={});if(!sg.route)sg.route='arc';if(name==='arc-flip')sg.flip=!sg.flip;else{sg.arc=+arg;sg.fit=false}changed()}break;
     case 'arc-fit':case 'arc-manual':if(one&&one.seg){pushUndo();const sg=M.segs[one.seg]||(M.segs[one.seg]={});if(!sg.route)sg.route='arc';sg.fit=name==='arc-fit';if(!sg.fit&&sg.arc==null)sg.arc=90;changed()}break;
     case 'lstatus':if(curL){pushUndo();if(arg)curL.status=arg;else delete curL.status;changed()}break;
