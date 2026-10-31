@@ -1324,6 +1324,20 @@ function shapeSVG(shape,p,q,fill,stroke,size,sw,dir,E){
 // a line can pass through a station without stopping (line.skip: station ids): it shares the tracks and lanes there and can be
 // reordered at the station, but gets no stop mark and doesn't make the station an interchange
 const passesAt=(lid,sid)=>{const L=lnOf(lid);return!!(L&&L.skip&&L.skip.includes(sid))};
+// station numbers (idea by Aquaqua, drawn like Singapore's MRT codes): a line with a code (line.numPrefix, e.g. NS) numbers its
+// stations along the line from numStart (or from the other end, numRev); station.nums[lineId] overrides a station's number.
+// With settings.stNums 'marks' each numbered station is drawn as its codes in the lines' colours, side by side at interchanges
+function stNums(G){if(G.nums)return G.nums;const out=new Map();
+  for(const L of M.lines){const pre=String(L.numPrefix||'').trim();if(L.hidden||!pre)continue;const seen=new Set(),seq=[];
+    for(const id of L.stops){const st=stOf(id);if(!st||st.kind==='waypoint'||(L.skip||[]).includes(id)||seen.has(id))continue;seen.add(id);seq.push(st)}
+    if(L.numRev)seq.reverse();const n0=Number.isFinite(+L.numStart)&&L.numStart!==''&&L.numStart!=null?+L.numStart:1;
+    seq.forEach((st,i)=>{const own=st.nums&&String(st.nums[L.id]||'').trim();if(!out.has(st.id))out.set(st.id,[]);out.get(st.id).push({lid:L.id,text:own||pre+'\u2009'+(n0+i),color:L.color||'#888'})})}
+  return G.nums=out}
+function numBox(s,G){if(M.settings.stNums!=='marks'||s.kind==='waypoint')return null;const B=stNums(G).get(s.id);if(!B||!B.length)return null;
+  const h=Math.max(12,stSize(s)*1.05),fs=h*.62,pad=h*.32,ws=B.map(b=>textW(b.text,fs,700)+pad*2);return{B,h,fs,ws,W:ws.reduce((a,v)=>a+v,0)}}
+function numBadgesSVG(s,nb,c){const S=M.settings,x0=c.x-nb.W/2,y0=c.y-nb.h/2,r=nb.h*.3,id='nb'+s.id;let x=x0,o='';
+  nb.B.forEach((b,i)=>{o+=`<rect x="${f(x)}" y="${f(y0)}" width="${f(nb.ws[i]+.5)}" height="${f(nb.h)}" fill="${esc(b.color)}"/><text x="${f(x+nb.ws[i]/2)}" y="${f(c.y+nb.fs*.36)}" text-anchor="middle" font-size="${f(nb.fs)}" font-weight="700" fill="${contrastOn(b.color)}">${esc(b.text)}</text>`;x+=nb.ws[i]});
+  return `<clipPath id="${id}"><rect x="${f(x0)}" y="${f(y0)}" width="${f(nb.W)}" height="${f(nb.h)}" rx="${f(r)}"/></clipPath><rect x="${f(x0-1)}" y="${f(y0-1)}" width="${f(nb.W+2)}" height="${f(nb.h+2)}" rx="${f(r+1)}" fill="${S.bg}"/><g clip-path="url(#${id})">${o}</g>`}
 // where a station's mark is drawn: its own point, or (lines first) the middle of the line ends it covers
 function markAt(s,G){if(M.settings.layout!=='lines'||s.kind==='waypoint'||ciconBox(s))return{x:s.x,y:s.y};const E=(G.ends.get(s.id)||[]).filter(e=>!passesAt(e.lid,s.id));if(!E.length)return{x:s.x,y:s.y};
   const [p,q]=farPair(E,s);return{x:(p.x+q.x)/2,y:(p.y+q.y)/2}}
@@ -1362,9 +1376,12 @@ function stationSVG(s,G,editor){
   }
   const xm=s.closed&&k!=='waypoint'?(()=>{const r=Math.max(2.5,sz*.3),w=Math.max(1.4,sz*.13),cx=cb?s.x:(p.x+q.x)/2,cy=cb?s.y:(p.y+q.y)/2;return `<path d="M${f(cx-r)} ${f(cy-r)}L${f(cx+r)} ${f(cy+r)}M${f(cx+r)} ${f(cy-r)}L${f(cx-r)} ${f(cy+r)}" stroke="${S.ink}" stroke-width="${f(w)}" stroke-linecap="round" fill="none"/>`})():'';
   if(cb)g=s.ciconOver?g+ciconSVG(s):ciconSVG(s);
+  // codes as the mark: a station not in service shows them faded instead of crossed out (the X would hide the codes)
+  const nb=!cb&&numBox(s,G);if(nb)g=s.closed?`<g opacity=".45">${numBadgesSVG(s,nb,{x:(p.x+q.x)/2,y:(p.y+q.y)/2})}</g>`:numBadgesSVG(s,nb,{x:(p.x+q.x)/2,y:(p.y+q.y)/2});
+  const nbHit=nb&&editor?`<rect x="${f((p.x+q.x)/2-nb.W/2)}" y="${f((p.y+q.y)/2-nb.h/2)}" width="${f(nb.W)}" height="${f(nb.h)}" fill="transparent"/>`:'';
   const ow=G.owStops&&k!=='waypoint'&&k!=='arrow'&&k!=='local'&&!s.closed?G.owStops.get(s.id):null;
   const om=ow?chevron(mc.x,mc.y,ow,Math.max(4,sz*.5),S.ink,Math.max(1.3,sz*.13)):'';
-  return `<g data-kind="station" data-id="${s.id}">${g}${om}${xm}${hit}</g>`;
+  return `<g data-kind="station" data-id="${s.id}">${g}${om}${nb?'':xm}${hit}${nbHit}</g>`;
 }
 const ICONS={
   airport:['Airport','<path d="M7 1.6c.5 0 .8.4.8.9v3.3l4.6 2.7v1.2L7.8 8.4v2.8l1.4 1v.9L7 12.5l-2.2.6v-.9l1.4-1V8.4L1.6 9.7V8.5l4.6-2.7V2.5c0-.5.3-.9.8-.9z" fill="FG"/>'],
@@ -1398,7 +1415,8 @@ function textW0(str,fs,weight,italic){const S=M.settings,key=[str,fs,weight,ital
 function contrastOn(hex){const [r,g,b]=hexRgb(hex);return(.299*r+.587*g+.114*b)/255>.6?'#1d2226':'#ffffff'}
 function labelBox(s,G,dk,push=0){
   const S=M.settings,dir=DIRS[dk]||DIRS.e,E=G.ends.get(s.id)||[],cb=ciconBox(s),sz=Math.max(stSize(s),cb?Math.max(cb.w,cb.h):0),bgp=s.lbg?4:0,o=markAt(s,G);
-  let ext=0;for(const e of E){ext=Math.max(ext,(e.x-o.x)*dir[0]+(e.y-o.y)*dir[1]);if(s.kind==='arrow'){const L=lnOf(e.lid),len=(L?lw(L):S.lineWidth)*1.9;ext=Math.max(ext,(e.x-e.dir.x*len-o.x)*dir[0]+(e.y-e.dir.y*len-o.y)*dir[1]-sz/2+2)}}
+  let ext=0;const nb=numBox(s,G);if(nb)ext=Math.abs(dir[0])*nb.W/2+Math.abs(dir[1])*nb.h/2-sz/2;
+  for(const e of E){ext=Math.max(ext,(e.x-o.x)*dir[0]+(e.y-o.y)*dir[1]);if(s.kind==='arrow'){const L=lnOf(e.lid),len=(L?lw(L):S.lineWidth)*1.9;ext=Math.max(ext,(e.x-e.dir.x*len-o.x)*dir[0]+(e.y-e.dir.y*len-o.y)*dir[1]-sz/2+2)}}
   const gap=sz/2+ext+5+push+bgp,x0=o.x+dir[0]*gap+(s.ldx||0),y0=o.y+dir[1]*gap+(s.ldy||0);
   const fs=s.fs||(s.kind==='hub'?Math.round(S.labelSize*1.15):S.labelSize),rows=String(s.name).split('\n'),rsz=rows.map(r=>cjkFs([r],fs)),fe=rsz[0],dys=rows.map((r,i)=>i?rsz[i-1]*.3+rsz[i]*.85:0),h=rsz.reduce((a,v)=>a+v*1.15,0);
   const subRows=s.sub?String(s.sub).split('\n'):[],sfs=Math.round(fs*.8*10)/10,ssz=subRows.map(r=>cjkFs([r],sfs)),sfe=ssz[0]||sfs,sdys=subRows.map((r,i)=>i?ssz[i-1]*.35+ssz[i]*.85:0),sh=subRows.length?ssz.reduce((a,v)=>a+v*1.2,0)+fs*.1:0,H=h+sh;
@@ -1856,6 +1874,8 @@ function inspMap(){
    <div class="grid2">${fld('Line width',inp('settings','s','lineWidth',S.lineWidth,'num','min="1" max="40"'))}${fld('Gap between lines',inp('settings','s','lineGap',S.lineGap,'num','min="0" max="30"'))}</div></div></div>
   <div class="pane"><h3>Stations</h3>
    ${fld('Single-line stops',selectF('settings','s','stopStyle',S.stopStyle,SHAPES))}
+   ${fld('Station numbers',selectF('settings','s','stNums',S.stNums||'off',[['off','Off'],['marks','Codes as station marks']]))}
+   <p class="sub">Give a line a station code (like NS) in its panel and its stations are numbered along it: NS 1, NS 2… An interchange shows the codes of all its numbered lines side by side.</p>
    <div class="adv-only">${fld('Station size',inp('settings','s','stationSize',S.stationSize,'num','min="4" max="60"'))}</div></div>
   <div class="pane"><h3>Labels</h3>
    ${chk('settings','s','halo',S.halo,'Label halo')}
@@ -1896,6 +1916,8 @@ function inspStation(s){
    ${fld('Name',adv()?area('station',s.id,'name',s.name,'rows="2" data-relist="1"'):inp('station',s.id,'name',s.name,'text','data-relist="1"'))}
    ${adv()?'<p class="sub" style="margin-top:-4px">Press Enter for a second line.</p>':''}
    <div class="fld"><span>Type</span>${kindPicker(s.kind||'stop')}</div>
+   ${(()=>{if(s.kind==='waypoint')return'';const G=lastG||geom(),B=stNums(G).get(s.id)||[],ls=lines.filter(L=>String(L.numPrefix||'').trim());if(!ls.length)return'';
+     return `<div class="grid2">${ls.map(L=>{const auto=(B.find(b=>b.lid===L.id)||{}).text||'';return fld(tr('Number on')+' '+String(L.name).split('\n')[0],inp('station',s.id,'nums.'+L.id,(s.nums||{})[L.id]||'','text','placeholder="'+esc(auto)+'" maxlength="10"'))}).join('')}</div>`})()}
    ${['stop','interchange','terminus','hub'].includes(s.kind||'stop')?fld('Shape',selectF('station',s.id,'shape',s.shape||'',[['',tr('Same as map')+' ('+tr((SHAPES.find(x=>x[0]===(M.settings.stopStyle||'circle'))||SHAPES[0])[1])+')']].concat(SHAPES))):''}
    ${s.kind==='waypoint'?fld('Corner radius at this bend point',inp('station',s.id,'radius',s.radius??'','numnull','min="0" max="400" placeholder="'+(M.settings.cornerR??16)+' (map default)"')):''}
    <div class="fld"><span>Label position</span><div class="opts" style="width:fit-content"><button class="opt" data-act="label:auto" aria-pressed="${s.label==='auto'}">Auto: find free space</button></div><div class="compass">${comp}</div></div>
@@ -1975,6 +1997,8 @@ function inspLine(L,segK){
    ${fld('Legend text',inp('line',L.id,'legend',L.legend||'','text','placeholder="'+esc(L.name)+'"'))}
    ${fld('Legend description',inp('line',L.id,'legendDesc',L.legendDesc||'','text','placeholder="'+esc(tr('Optional, shown muted after the name'))+'"'))}
    ${chk('line',L.id,'noLegend',!!L.noLegend,'Leave out of the legend')}
+   <div class="grid2">${fld('Station code',inp('line',L.id,'numPrefix',L.numPrefix||'','text','placeholder="e.g. NS" maxlength="6"'))}${fld('First number',inp('line',L.id,'numStart',L.numStart??1,'num','min="0"'))}</div>
+   ${L.numPrefix?chk('line',L.id,'numRev',!!L.numRev,'Number from the other end')+(M.settings.stNums!=='marks'?'<p class="sub">Turn on Station numbers in This map › Stations to show them.</p>':''):''}
    <div class="fld"><span>Colour · Minecraft dyes</span><div class="dyes">${DYES.map(([n,c])=>`<button data-act="color:${c}" style="background:${c}" title="${n} dye" aria-label="${n} dye" aria-pressed="${L.color.toLowerCase()===c.toLowerCase()}"></button>`).join('')}</div></div>
    ${fld('Custom colour',inp('line',L.id,'color',L.color,'color','data-relist="1"'))}
    <div class="grid2">${fld('Line type',modeSelect(L))}${fld('Line style',selectF('line',L.id,'style',L.style||'solid',Object.entries(STYLES)))}</div>
