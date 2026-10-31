@@ -1027,21 +1027,29 @@ function geom(){
     const byX=new Map();for(const g of groups){if(!byX.has(g.X))byX.set(g.X,[]);byX.get(g.X).push(g)}
     // lines running straight through a station keep the same order on both sides: where the two sides disagree, the side
     // that needs fewer lines to cross over is reordered to match, so lines cross where they split instead of inside the station
+    // two bundles carry on straight across the station if they leave it in opposite directions, or are heading that way a little further on
+    const across=(g,h)=>Math.min(g.d.x*h.d.x+g.d.y*h.d.y,g.dl.x*h.dl.x+g.dl.y*h.dl.y);
     const lane=g=>{const m=new Map();let n0=0;for(const o of g.items){const n=o.t.lines.length;o.t.lines.forEach((l,k)=>m.set(l,n0+(o.atA?k:n-1-k)));n0+=n}return m};
+    // pairs of lines on both sides whose order flips across the station (seen from either side, a straight-through bundle is mirrored)
+    const crossed=(g,h)=>{const a=lane(g),b=lane(h),c=[...a.keys()].filter(l=>b.has(l));let n=0;
+      for(let i=0;i<c.length;i++)for(let j=i+1;j<c.length;j++)if((a.get(c[i])-a.get(c[j]))*(b.get(c[i])-b.get(c[j]))>0)n++;return n};
     const reorder=(g,ref)=>{const pr=lane(ref),slots=[],its=[];
       g.items.forEach((o,i)=>{const c=o.t.lines.filter(l=>pr.has(l));if(c.length){slots.push(i);its.push({o,k:-c.reduce((a,l)=>a+pr.get(l),0)/c.length})}});
       const nw=its.slice().sort((p,q)=>p.k-q.k);let cost=0;
       for(let i=0;i<its.length;i++)for(let j=i+1;j<its.length;j++)if(nw.indexOf(its[i])>nw.indexOf(its[j]))cost+=its[i].o.t.lines.length*its[j].o.t.lines.length;
       return{cost,apply:()=>slots.forEach((s,i)=>g.items[s]=nw[i].o)}};
-    for(const [X,gs] of byX)if(!lo.has(X))for(let i=0;i<gs.length;i++)for(let j=i+1;j<gs.length;j++){const g=gs[i],h=gs[j];if(g.dl.x*h.dl.x+g.dl.y*h.dl.y>-.97)continue;
-      const A=reorder(h,g),B=reorder(g,h);if(!A.cost&&!B.cost)continue;(A.cost<B.cost||(A.cost===B.cost&&h.total<=g.total)?A:B).apply()}
+    for(const [X,gs] of byX)if(!lo.has(X))for(let i=0;i<gs.length;i++)for(let j=i+1;j<gs.length;j++){const g=gs[i],h=gs[j];if(across(g,h)>-.97)continue;
+      if(!crossed(g,h))continue;
+      // try reordering each side; keep the one that leaves fewer lines crossed (a side that is one segment can't be reordered at all)
+      const tryIt=(x,y)=>{const keep=x.items.slice(),r=reorder(x,y);r.apply();r.left=crossed(g,h);x.items=keep;return r},A=tryIt(h,g),B=tryIt(g,h);
+      (A.left<B.left||(A.left===B.left&&(A.cost<B.cost||(A.cost===B.cost&&h.total<=g.total)))?A:B).apply()}
     for(const g of groups){let n0=0;for(const o of g.items){const c=o.t.lines.length;o.off=(n0+(c-1)/2-(g.total-1)/2)*sp;n0+=c}}
     // sideways position of each line in a bundle, measured across the direction the bundle leaves the station
     // (a line that branches into two segments of the same bundle has no single lane, so it is left out)
     const lat=g=>{const m=new Map(),twice=new Set();for(const o of g.items){const n=o.t.lines.length;o.t.lines.forEach((l,k)=>{if(m.has(l))twice.add(l);m.set(l,o.off+(k-(n-1)/2)*sp*(o.atA?1:-1))})}twice.forEach(l=>m.delete(l));return m};
     const links=[],link=(g,h,c,w)=>links.push({g,h,c,w});
     // bundles across a station, straight or (two or more lines) turning there: line the shared lines up (shift of one side = -shift of the other - c)
-    for(const gs of byX.values())for(let i=0;i<gs.length;i++)for(let j=i+1;j<gs.length;j++){const g=gs[i],h=gs[j],dot=g.dl.x*h.dl.x+g.dl.y*h.dl.y;if(dot>.1)continue;
+    for(const gs of byX.values())for(let i=0;i<gs.length;i++)for(let j=i+1;j<gs.length;j++){const g=gs[i],h=gs[j],dot=across(g,h);if(dot>.1)continue;
       const lg=lat(g),lh=lat(h),com=[...lg.keys()].filter(l=>lh.has(l));if(com.length>(dot<-.97?0:1))link(g,h,com.reduce((a,l)=>a+lg.get(l)+lh.get(l),0)/com.length,dot<-.97?3:1)}
     // a straight segment (even one with bend points on the straight) carries its shift from one station to the next
     const straight=t=>{const P=t.pts,a=P[0],u=unit(P[P.length-1].x-a.x,P[P.length-1].y-a.y);return P.every(p=>Math.abs((p.x-a.x)*u.y-(p.y-a.y)*u.x)<.5)};
