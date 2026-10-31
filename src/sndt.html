@@ -4,6 +4,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Overpass:wght@400;500;600;700;800&family=Pixelify+Sans:wght@500;700&display=swap">
 <style>
+/* fonts shipped with SNDT itself (site/fonts, licence files next to them); fetched only when a map uses them */
+@font-face{font-family:'Cianan Ur';src:url('fonts/cianan-ur.otf') format('opentype');font-display:swap}
 /* Layout: one-screen editor on a strict grid. Header strip, lists left, canvas centre, inspector right; panels become drawers on phones.
    Direction: Swiss industrial print. Paper substrate, carbon ink, hazard red as the only accent, 90° corners, visible rules. */
 :root{
@@ -573,7 +575,14 @@ const ROUTES=[['oct1','Straight, then 45°'],['oct2','45°, then straight'],['st
 const KINDS=[['stop','Station'],['local','Local stop'],['interchange','Interchange'],['hub','Hub'],['terminus','Terminus'],['train','Rail station'],['hsr','HSR station'],['tram','Tram stop'],['bus','Bus stop'],['arrow','To another city'],['waypoint','Bend point']];
 const KN=Object.fromEntries(KINDS);
 const DIRS={n:[0,-1],ne:[.7071,-.7071],e:[1,0],se:[.7071,.7071],s:[0,1],sw:[-.7071,.7071],w:[-1,0],nw:[-.7071,-.7071]};
-const FONTS=['Overpass','Figtree','Pixelify Sans','Arial','Georgia','Courier New'];
+const FONTS=['Overpass','Figtree','Pixelify Sans','Arial','Georgia','Courier New','Cianan Ur'];
+// fonts that come with SNDT rather than Google Fonts (Cianán Ùr by Feòrag, SIL Open Font License 1.1, requested by Paddy)
+const LOCAL_FONTS={'Cianan Ur':['fonts/cianan-ur.otf','font/otf']},localFontCache=new Map();
+// @font-face rules with the font file inside, so exported SVG/PNG/video show the font without SNDT around
+async function localFontCSS(names){let out='';for(const n of new Set(names)){const lf=LOCAL_FONTS[n];if(!lf)continue;let css=localFontCache.get(n);
+    if(css==null){css='';try{const u8=new Uint8Array(await(await fetch(lf[0])).arrayBuffer());let bin='';for(let i=0;i<u8.length;i+=8192)bin+=String.fromCharCode.apply(null,u8.subarray(i,i+8192));
+      css=`@font-face{font-family:'${n}';src:url(data:${lf[1]};base64,${btoa(bin)})}`}catch(e){}localFontCache.set(n,css)}out+=css}return out}
+function usedFonts(){return[M.settings.labelFont,...M.texts.map(t=>t.font).filter(Boolean)]}
 const PORTAL='#6a2fb0';
 const TOOLS=[
  ['select','V','Select and move','<path d="M5 3l13 7.5-5.6 1.6L9.5 18z"/>'],
@@ -2826,9 +2835,9 @@ function ilvfSVG(lids,mode,font){const S=M.settings,fs=Math.max(11,S.labelSize||
     W=Math.max(W,angled?Math.max(...P.map((st,i)=>xs[i]+2+aOf(st)*Math.cos(ang)+fs*Math.sin(ang)))+pad:xs[xs.length-1]+gap/2+pad);y=low+pad+8}
   const H=Math.ceil(y),w=Math.ceil(Math.max(W,320)),fam=esc(S.labelFont||'Overpass');
   return{svg:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${H}" width="${w}" height="${H}">${font||''}<rect width="${w}" height="${H}" fill="${S.bg}"/><g font-family="${fam}, Overpass, 'Helvetica Neue', Arial, sans-serif">${o}</g></svg>`,w,h:H}}
-function ilvfExport(kind){const S=M.settings,base=fileBase()+'-strip';
-  if(kind==='svg'){const fam=['Overpass','Figtree','Pixelify Sans'].includes(S.labelFont)?`<style>@import url('https://fonts.googleapis.com/css2?family=${S.labelFont.replace(/ /g,'+')}:wght@400;600;700;800&display=swap');</style>`:'',{svg}=ilvfSVG(ilvfLines,ilvfNames,fam);offer(base+'.svg',svg,()=>showText('SVG code',svg));return}
-  const {svg,w,h}=ilvfSVG(ilvfLines,ilvfNames),sc=2,img=new Image();
+async function ilvfExport(kind){const S=M.settings,base=fileBase()+'-strip',lfc=await localFontCSS([S.labelFont]),lst=lfc?`<style>${lfc}</style>`:'';
+  if(kind==='svg'){const fam=lst+['Overpass','Figtree','Pixelify Sans'].includes(S.labelFont)?`<style>@import url('https://fonts.googleapis.com/css2?family=${S.labelFont.replace(/ /g,'+')}:wght@400;600;700;800&display=swap');</style>`:'',{svg}=ilvfSVG(ilvfLines,ilvfNames,fam);offer(base+'.svg',svg,()=>showText('SVG code',svg));return}
+  const {svg,w,h}=ilvfSVG(ilvfLines,ilvfNames,lst),sc=2,img=new Image();
   img.onload=()=>{const c=document.createElement('canvas');c.width=w*sc;c.height=h*sc;const x=c.getContext('2d');x.scale(sc,sc);x.drawImage(img,0,0);
     c.toBlob(b=>{if(!b){toast('Could not render the image.');return}offer(base+'.png',b,()=>{const u=URL.createObjectURL(b);modal(`<h2>PNG image</h2><p class="sub">Right-click or long-press the image and choose Save image.</p><img src="${u}" alt="Strip image"><div class="btns"><button class="btn" data-act="close-modal">Close</button></div>`)})},'image/png')};
   img.onerror=()=>toast('Could not render the image.');img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)}
@@ -2976,13 +2985,13 @@ function openExportMenu(anchor){
 }
 
 /* ---------- export / import ---------- */
-function exportSVG(forImage){
+function exportSVG(forImage,extraCss=''){
   const {o}=mapSVG(false),S=M.settings,ms=$('#measure');
   ms.innerHTML=`<g>${o}</g>`;let b;try{b=ms.firstChild.getBBox()}catch(e){b={x:0,y:0,width:800,height:600}}ms.innerHTML='';
   const p=40,x=Math.floor(b.x-p),y=Math.floor(b.y-p),w=Math.ceil(b.width+p*2),h=Math.ceil(b.height+p*2);
   const fam=[S.labelFont,...M.texts.map(t=>t.font).filter(Boolean)].filter(n=>['Overpass','Figtree','Pixelify Sans'].includes(n));
   const fontCss=!forImage&&fam.length?`<style>@import url('https://fonts.googleapis.com/css2?${[...new Set(fam)].map(n=>'family='+n.replace(/ /g,'+')+':wght@400;500;600;700;800').join('&')}&display=swap');</style>`:'';
-  return{svg:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${w} ${h}" width="${w}" height="${h}">${fontCss}<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${S.bg}"/>${o.replace(/ data-(kind|id|key)="[^"]*"/g,'')}</svg>`,w,h};
+  return{svg:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${w} ${h}" width="${w}" height="${h}">${fontCss}${extraCss?`<style>${extraCss}</style>`:''}<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${S.bg}"/>${o.replace(/ data-(kind|id|key)="[^"]*"/g,'')}</svg>`,w,h};
 }
 function fileBase(){return (M.name||'network').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-').toLowerCase()||'network'}
 async function offer(filename,data,fallback){
@@ -2993,8 +3002,9 @@ async function offer(filename,data,fallback){
 async function doExport(kind,pngSc){
   if(kind==='json'){const t=JSON.stringify(M,null,1);offer(fileBase()+'.json',t,()=>showText('JSON backup',t));return}
   if(kind==='copy'){const t=JSON.stringify(M);showText('Map JSON',t);return}
-  if(kind==='svg'){const {svg:s}=exportSVG(false);offer(fileBase()+'.svg',s,()=>showText('SVG code',s));return}
-  const scale=kind==='png4'?4:kind==='png'&&pngSc>0?pngSc:2,{svg:s,w,h}=exportSVG(true);
+  const lfc=await localFontCSS(usedFonts());
+  if(kind==='svg'){const {svg:s}=exportSVG(false,lfc);offer(fileBase()+'.svg',s,()=>showText('SVG code',s));return}
+  const scale=kind==='png4'?4:kind==='png'&&pngSc>0?pngSc:2,{svg:s,w,h}=exportSVG(true,lfc);
   const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=w*scale;c.height=h*scale;const x=c.getContext('2d');x.scale(scale,scale);x.drawImage(img,0,0);
     c.toBlob(b=>{if(!b){toast('Could not render the image.');return}offer(fileBase()+'.png',b,()=>{const u=URL.createObjectURL(b);modal(`<h2>PNG image</h2><p class="sub">Right-click or long-press the image and choose Save image.</p><img src="${u}" alt="Map image"><div class="btns"><button class="btn" data-act="close-modal">Close</button></div>`)})},'image/png')};
   img.onerror=()=>toast('Could not render the image.');
@@ -3455,11 +3465,11 @@ function setSection(sc){section=sc==='timeline'?'timeline':'map';document.body.c
   $('#secMap').setAttribute('aria-pressed',section==='map');$('#secTl').setAttribute('aria-pressed',section==='timeline');closePop();
   if(section==='timeline'){if(drawLine)finishDraw();renderTimeline()}else{tlPlay(false);render();requestAnimationFrame(()=>render())}}
 function tlLoadMuxer(){if(window.WebMMuxer)return Promise.resolve();return new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/webm-muxer@5.1.4/build/webm-muxer.js';sc.onload=()=>res();sc.onerror=()=>rej(new Error('muxer'));document.head.appendChild(sc)})}
-async function tlFontCSS(){if(tlFontCache!=null)return tlFontCache;tlFontCache='';const fam=M.settings.labelFont;if(!['Overpass','Figtree','Pixelify Sans'].includes(fam))return'';
+async function tlFontCSS(){if(tlFontCache!=null)return tlFontCache;tlFontCache='';const fam=M.settings.labelFont,loc=await localFontCSS(usedFonts());if(!['Overpass','Figtree','Pixelify Sans'].includes(fam))return tlFontCache=loc;
   try{const css=await(await fetch(`https://fonts.googleapis.com/css2?family=${fam.replace(/ /g,'+')}:wght@400;500;600;700;800&display=swap`)).text(),seen=new Map();let out='';
     for(const blk of css.split('@font-face').slice(1)){if(!/U\+0000-00FF/.test(blk))continue;const m=blk.match(/url\((https:[^)]+)\)/);if(!m)continue;let data=seen.get(m[1]);
       if(!data){const u8=new Uint8Array(await(await fetch(m[1])).arrayBuffer());let bin='';for(let i=0;i<u8.length;i+=8192)bin+=String.fromCharCode.apply(null,u8.subarray(i,i+8192));data='data:font/woff2;base64,'+btoa(bin);seen.set(m[1],data)}
-      out+='@font-face'+blk.replace(m[1],data)}tlFontCache=out}catch(e){tlFontCache=''}return tlFontCache}
+      out+='@font-face'+blk.replace(m[1],data)}tlFontCache=out+loc}catch(e){tlFontCache=loc}return tlFontCache}
 function tlImg(str){return new Promise((res,rej)=>{const img=new Image(),u=URL.createObjectURL(new Blob([str],{type:'image/svg+xml'}));img.onload=()=>{URL.revokeObjectURL(u);res(img)};img.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('frame'))};img.src=u})}
 function tlParseStrokes(html){const out=[],re=/<path ([^>]*?)\/>/g;let m;while((m=re.exec(html))){const a={};m[1].replace(/([\w-]+)="([^"]*)"/g,(_,k,v)=>{a[k]=v});if(!a.d||!a.stroke)continue;
   out.push({p:new Path2D(a.d),op:a.opacity!=null?+a.opacity:1,col:a.stroke,w:+a['stroke-width']||1,cap:a['stroke-linecap']||'butt',join:a['stroke-linejoin']||'miter',dash:a['stroke-dasharray']?a['stroke-dasharray'].split(/[\s,]+/).map(Number).filter(n=>!isNaN(n)):[]})}return out}
