@@ -1166,13 +1166,26 @@ function lineRuns(L,G){
     const lk=segLook(L,t.key),sig=lk?lk.sig:'';
     if(!cur||sig!==curSig){cur=p.slice();cur.look=lk;runs.push(cur);curSig=sig}else{const l=cur[cur.length-1];
       if(Math.hypot(l.x-p[0].x,l.y-p[0].y)<.01)cur.push(...p.slice(1));
-      else{const I=cur.length>1&&p.length>1&&cornerAt(cur[cur.length-2],l,p[0],p[1]);if(I){cur[cur.length-1]=I;cur.push(...p.slice(1))}else cur.push(...p)}}}
+      else{const I=cur.length>1&&p.length>1&&cornerAt(cur[cur.length-2],l,p[0],p[1]);if(I){cur[cur.length-1]=I;cur.push(...p.slice(1))}
+        else{const J=cornerBack(cur,p);if(J){cur.length=J.i+1;cur.push(J.I,...p.slice(J.j+1))}else cur.push(...p)}}}}
   return runs;
 }
 // where a line turns at a station its two pieces end side by side; meet them in one corner instead of a sideways step
 function cornerAt(a,b,c,e){const u=unit(b.x-a.x,b.y-a.y),v=unit(e.x-c.x,e.y-c.y),den=u.x*v.y-u.y*v.x;if(Math.abs(den)<.17)return null;
   const k=((c.x-b.x)*v.y-(c.y-b.y)*v.x)/den,I={x:b.x+u.x*k,y:b.y+u.y*k},m=(I.x-c.x)*v.x+(I.y-c.y)*v.y,lim=(M.settings.lineWidth+M.settings.lineGap)*4;
   if(Math.abs(k)>lim||Math.abs(m)>lim||k<-Math.hypot(b.x-a.x,b.y-a.y)||m>Math.hypot(e.x-c.x,e.y-c.y))return null;return I}
+// the same where a piece ends in a rounded bend (short arc steps): look a little way back along both pieces for where they cross
+function cornerBack(A,B){const lim=(M.settings.lineWidth+M.settings.lineGap)*4,n=A.length;let best=null;
+  // only where the line really turns at the station (a line carrying straight on keeps its sideways step)
+  const u0=unit(A[n-1].x-A[n-2].x,A[n-1].y-A[n-2].y),v0=unit(B[1].x-B[0].x,B[1].y-B[0].y);if(Math.abs(u0.x*v0.y-u0.y*v0.x)<.17)return null;
+  for(let i=n-2,ra=0;i>=0&&ra<lim;ra+=Math.hypot(A[i+1].x-A[i].x,A[i+1].y-A[i].y),i--){const a=A[i],b=A[i+1],ux=b.x-a.x,uy=b.y-a.y,la=Math.hypot(ux,uy);if(la<1e-6)continue;
+    for(let j=0,rb=0;j<B.length-1&&rb<lim;rb+=Math.hypot(B[j+1].x-B[j].x,B[j+1].y-B[j].y),j++){const c=B[j],e=B[j+1],vx=e.x-c.x,vy=e.y-c.y,lb=Math.hypot(vx,vy);if(lb<1e-6)continue;
+      const den=ux*vy-uy*vx;if(Math.abs(den)<.17*la*lb)continue;
+      const k=((c.x-a.x)*vy-(c.y-a.y)*vx)/den,m=((c.x-a.x)*uy-(c.y-a.y)*ux)/den;
+      // inside both steps, or past the very end of A / before the very start of B (up to the limit)
+      if(k<0||m>1||(k>1&&(i<n-2||(k-1)*la>lim))||(m<0&&(j>0||-m*lb>lim)))continue;
+      const cost=ra+rb;if(!best||cost<best.cost)best={i,j,cost,I:{x:a.x+ux*k,y:a.y+uy*k}}}}
+  return best}
 const dOf=pts=>'M'+pts.map(p=>f(p.x)+' '+f(p.y)).join('L');
 
 /* ---------- rendering ---------- */
