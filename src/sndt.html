@@ -944,6 +944,22 @@ function geom(){
   M.lines.forEach(L=>{if(L.hidden||!L.loop||!L.circle)return;const c=ringFit(L);if(!c)return;const dir=ringDir(L,c);for(const [a,b] of pairs(L))if(a!==b)rings.set(segKey(a,b),{c,dir,from:a})});
   // which way each segment heads from each of its stations (straight towards the other station), for laneStep
   const segsAt=new Map();for(const t of tracks.values())for(const [X,Y] of [[t.a,t.b],[t.b,t.a]]){const p=st.get(X),q=st.get(Y);if(!p||!q)continue;if(!segsAt.has(X))segsAt.set(X,[]);segsAt.get(X).push({key:t.key,d:unit(q.x-p.x,q.y-p.y)})}
+  // stations slightly out of line (up to one lane sideways): the segment runs dead straight along its axis from the station that
+  // lines up with its other neighbours, and the odd one's end of it lands beside its point (its mark slides onto the lines)
+  const nbs=new Map();for(const t of tracks.values())for(const [X,Y] of [[t.a,t.b],[t.b,t.a]]){if(!nbs.has(X))nbs.set(X,[]);nbs.get(X).push(Y)}
+  const AXES=[{x:1,y:0},{x:0,y:1},{x:Math.SQRT1_2,y:Math.SQRT1_2},{x:Math.SQRT1_2,y:-Math.SQRT1_2}];
+  const axis=(A,B)=>{const dx=B.x-A.x,dy=B.y-A.y;let u=AXES[0],al=0;for(const v of AXES){const k=dx*v.x+dy*v.y;if(Math.abs(k)>Math.abs(al)){al=k;u=v}}if(al<0){u={x:-u.x,y:-u.y};al=-al}return{u,along:al,perp:dx*-u.y+dy*u.x}};
+  const inLine=(X,Y)=>{const A=st.get(X),B=st.get(Y);return A&&B&&Math.abs(axis(A,B).perp)<.5};
+  const busy=X=>M.lines.filter(L=>!L.hidden&&L.stops.includes(X)).length;
+  const leanOf=(t,P)=>{const A=st.get(t.a),B=st.get(t.b);if(!A||!B||A.kind==='waypoint'||B.kind==='waypoint')return null;const {u:u0,perp,along}=axis(A,B);
+    if(Math.abs(perp)<=.5||Math.abs(perp)>sp||along<sp*2)return null;
+    // only a segment that already runs along that axis apart from a small jog (not an L or a turn onto a diagonal)
+    let par=0;for(let i=0;i+1<P.length;i++){const vx=P[i+1].x-P[i].x,vy=P[i+1].y-P[i].y,l=Math.hypot(vx,vy);if(l&&Math.abs(vx*u0.y-vy*u0.x)/l<.02)par+=l}
+    if(par<along-Math.abs(perp)*1.5-.5)return null;
+    const score=X=>(nbs.get(X)||[]).filter(Y=>Y!==(X===t.a?t.b:t.a)&&inLine(X,Y)).length,sa=score(t.a),sb=score(t.b);
+    const E=sa>sb?B:sb>sa?A:busy(t.a)<busy(t.b)?A:B,F=E===A?B:A,{u,along:l}=axis(F,E),E2={x:F.x+u.x*l,y:F.y+u.y*l};
+    return{pts:E===B?[{x:A.x,y:A.y},E2]:[E2,{x:B.x,y:B.y}],lean:{at:E.id,x:E2.x-E.x,y:E2.y-E.y}}};
+  const LEANS=['oct1','oct2','straight','l1','l2','zigzag'];
   for(const t of tracks.values()){
     const sg=M.segs[t.key]||{};
     if(sg.order){t.lines.sort((x,y)=>{const i=sg.order.indexOf(x),j=sg.order.indexOf(y);return(i<0?99:i)-(j<0?99:j)})}
@@ -951,6 +967,7 @@ function geom(){
     t.fit=t.route==='arc'&&arcFit(sg);
     t.pts=dedupePts(ring?(ring.from===t.a?ringPts(st.get(t.a),st.get(t.b),ring.c,ring.dir):ringPts(st.get(t.b),st.get(t.a),ring.c,ring.dir).reverse()):t.fit?[{x:st.get(t.a).x,y:st.get(t.a).y},{x:st.get(t.b).x,y:st.get(t.b).y}]:routePts(st.get(t.a),st.get(t.b),t.route,sg));
     t.pts0=t.pts;
+    if(!ring&&!t.fit&&LEANS.includes(sg.route||M.settings.route)){const ln=leanOf(t,t.pts);if(ln){t.pts=t.pts0=ln.pts;t.lean=ln.lean;t.route='straight';t.auto=false}}
   }
   if(mix.length>1)autoRoutes(tracks,st,mix);
   // express segments that run along other segments, skipping their stations, share those segments' lanes
@@ -1024,6 +1041,9 @@ function geom(){
         grp.sort((p,q)=>p.turn-q.turn);
         if(lo.has(X)){const r=lo.get(X),k=sideOf(X,grp[0].d);slotSort(grp,o=>{const c=o.t.lines.filter(l=>r.has(l));return c.length?k*c.reduce((a,l)=>a+r.get(l),0)/c.length:null})}
         groups.push({X,d:grp[0].d,dl:grp[0].dl,items:grp,total:grp.reduce((a,o)=>a+o.t.lines.length,0),s:null,adj:[]})}}
+    // a segment drawn straight onto a slightly out-of-line station ends beside it; the rest of its bundle there slides the same way
+    for(const g of groups){const o=g.items.find(o=>o.t.lean&&o.t.lean.at===g.X);if(!o)continue;const L=o.t.lean.x*-g.d.y+o.t.lean.y*g.d.x;
+      for(const q of g.items)q.ex=q.t.lean&&q.t.lean.at===g.X?0:L,q.ln=q.t.lean&&q.t.lean.at===g.X?q.t.lean.x*-g.d.y+q.t.lean.y*g.d.x:L}
     const byX=new Map();for(const g of groups){if(!byX.has(g.X))byX.set(g.X,[]);byX.get(g.X).push(g)}
     // lines running straight through a station keep the same order on both sides: where the two sides disagree, the side
     // that needs fewer lines to cross over is reordered to match, so lines cross where they split instead of inside the station
@@ -1058,7 +1078,7 @@ function geom(){
     for(const g of groups){let n0=0;for(const o of g.items){const c=o.t.lines.length;o.off=(n0+(c-1)/2-(g.total-1)/2)*sp;n0+=c}}
     // sideways position of each line in a bundle, measured across the direction the bundle leaves the station
     // (a line that branches into two segments of the same bundle has no single lane, so it is left out)
-    const lat=g=>{const m=new Map(),twice=new Set();for(const o of g.items){const n=o.t.lines.length;o.t.lines.forEach((l,k)=>{if(m.has(l))twice.add(l);m.set(l,o.off+(k-(n-1)/2)*sp*(o.atA?1:-1))})}twice.forEach(l=>m.delete(l));return m};
+    const lat=g=>{const m=new Map(),twice=new Set();for(const o of g.items){const n=o.t.lines.length;const ln=o.ln||0;o.t.lines.forEach((l,k)=>{if(m.has(l))twice.add(l);m.set(l,ln+o.off+(k-(n-1)/2)*sp*(o.atA?1:-1))})}twice.forEach(l=>m.delete(l));return m};
     const links=[],link=(g,h,c,w)=>links.push({g,h,c,w});
     // bundles across a station, straight or (two or more lines) turning there: line the shared lines up (shift of one side = -shift of the other - c)
     for(const gs of byX.values())for(let i=0;i<gs.length;i++)for(let j=i+1;j<gs.length;j++){const g=gs[i],h=gs[j],dot=across(g,h);if(dot>.1)continue;
@@ -1066,7 +1086,7 @@ function geom(){
     // a straight segment (even one with bend points on the straight) carries its shift from one station to the next
     const straight=t=>{const P=t.pts,a=P[0],u=unit(P[P.length-1].x-a.x,P[P.length-1].y-a.y);return P.every(p=>Math.abs((p.x-a.x)*u.y-(p.y-a.y)*u.x)<.5)};
     const byT=new Map();for(const g of groups)for(const o of g.items){if(!straight(o.t))continue;if(!byT.has(o.t))byT.set(o.t,[]);byT.get(o.t).push([g,o])}
-    for(const ends of byT.values())if(ends.length===2)link(ends[0][0],ends[1][0],ends[0][1].off+ends[1][1].off,2+(ends[0][0].total+ends[1][0].total)/1e3);
+    for(const ends of byT.values())if(ends.length===2)link(ends[0][0],ends[1][0],ends[0][1].off+(ends[0][1].ex||0)+ends[1][1].off+(ends[1][1].ex||0),2+(ends[0][0].total+ends[1][0].total)/1e3);
     // links can disagree around a loop of stations; keep the strongest ones that don't (straight through a station, then along a segment,
     // busiest first so a segment that has to step across lanes is a quiet one, then turns)
     {const par=new Map(groups.map(g=>[g,g])),root=g=>{while(par.get(g)!==g)g=par.get(g);return g};
@@ -1075,7 +1095,7 @@ function geom(){
       while(Q.length){const g=Q.shift();for(const [h,c] of g.adj)if(h.s==null){h.s=-g.s-c;Q.push(h)}}}
     // a single straight piece that ends at a bend point moves as a whole, which would break the corner there, so it keeps only its bundle place
     const wpEnd=o=>o.t.pts.length===2&&(st.get(o.atA?o.t.b:o.t.a)||{}).kind==='waypoint';
-    for(const g of groups)for(const o of g.items){const v=wpEnd(o)?(g.items.length>1?o.off:0):o.off+g.s;if(!v&&!o.t.ds)continue;const ds=o.t.ds||(o.t.ds=new Array(Math.max(2,o.t.pts.length-1)).fill(NaN));if(o.atA)ds[0]=v;else ds[ds.length-1]=-v}
+    for(const g of groups)for(const o of g.items){const v=(o.ex||0)+(wpEnd(o)?(g.items.length>1?o.off:0):o.off+g.s);if(!v&&!o.t.ds)continue;const ds=o.t.ds||(o.t.ds=new Array(Math.max(2,o.t.pts.length-1)).fill(NaN));if(o.atA)ds[0]=v;else ds[ds.length-1]=-v}
     for(const t of tracks.values())if(t.ds){const ds=t.ds,P=t.pts;delete t.ds;
       if(P.length>2){t.pts=shiftPoly(P,ds.map(v=>isNaN(v)?0:v));continue}
       const a=isNaN(ds[0])?ds[1]:ds[0],b=isNaN(ds[1])?ds[0]:ds[1];
