@@ -1451,7 +1451,7 @@ function textSVG(t){
   const S=M.settings,fs=t.size||16,rows=String(t.text||'').split('\n'),lh=cjkFs(rows,fs)*1.2;
   const tr=t.rot?` transform="rotate(${t.rot} ${t.x} ${t.y})"`:'';
   const anchor=t.align==='center'?'middle':t.align==='right'?'end':'start';
-  return `<text data-kind="text" data-id="${t.id}" x="${t.x}" y="${t.y}" font-size="${fs}" font-weight="${t.bold?800:500}" fill="${t.color||S.ink}" text-anchor="${anchor}"${t.font?` font-family="${esc(t.font)}"`:''}${tr}>${rows.map((r,i)=>`<tspan x="${t.x}" dy="${i?f(lh):0}">${cjkT(r)||' '}</tspan>`).join('')}</text>`;
+  return `<text data-kind="text" data-id="${t.id}" x="${t.x}" y="${t.y}" font-size="${fs}" font-weight="${t.bold?800:500}"${t.italic?' font-style="italic"':''} fill="${t.color||S.ink}" text-anchor="${anchor}"${t.font?` font-family="${esc(t.font)}"`:''}${tr}>${rows.map((r,i)=>`<tspan x="${t.x}" dy="${i?f(lh):0}">${cjkT(r)||' '}</tspan>`).join('')}</text>`;
 }
 function regionShapes(r){if(r.pts&&r.pts.length){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const p of r.pts){x0=Math.min(x0,p[0]);y0=Math.min(y0,p[1]);x1=Math.max(x1,p[0]);y1=Math.max(y1,p[1])}r.x=x0;r.y=y0;r.w=x1-x0;r.h=y1-y0;return[{x:x0,y:y0,w:x1-x0,h:y1-y0}]}
   return[{x:r.x,y:r.y,w:r.w,h:r.h}].concat(r.more||[])}
@@ -2014,9 +2014,10 @@ function inspNature(a){if(!a)return inspMap();return `<div class="pane"><h3>Natu
   <p class="sub">Drag the round corners to reshape. Drag a small white handle to add a corner, and double-click a corner to remove it. Drag inside the area to move it.</p>
   <div class="btns"><button class="btn" data-act="nz:up">Bring forward</button><button class="btn" data-act="nz:down">Send back</button><button class="btn warn" data-act="del-sel" data-confirm="1">Delete area</button></div></div>`}
 function inspText(t){if(!t)return inspMap();return `<div class="pane"><h3>Text</h3>${fld('Text',area('text',t.id,'text',t.text,'rows="3"'))}
-  <div class="grid2">${fld('Size',inp('text',t.id,'size',t.size||16,'num','min="6"'))}${fld('Colour',inp('text',t.id,'color',t.color||M.settings.ink,'color'))}</div>${chk('text',t.id,'bold',!!t.bold,'Bold')}
+  <div class="grid2">${fld('Size',inp('text',t.id,'size',t.size||16,'num','min="6"'))}${fld('Colour',inp('text',t.id,'color',t.color||M.settings.ink,'color'))}</div>
+  ${fld('Font',selectF('text',t.id,'font',t.font||'',[['','Same as labels'],...FONTS.map(x=>[x,x])]))}
+  <div class="grid2">${chk('text',t.id,'bold',!!t.bold,'Bold')}${chk('text',t.id,'italic',!!t.italic,'Italic')}</div>
   <div class="grid2 adv-only">${fld('Rotation °',inp('text',t.id,'rot',t.rot||0,'num','step="15"'))}${fld('Align',selectF('text',t.id,'align',t.align||'left',[['left','Left'],['center','Centre'],['right','Right']]))}${fld('X',inp('text',t.id,'x',t.x,'num'))}${fld('Y',inp('text',t.id,'y',t.y,'num'))}</div>
-  <div class="adv-only">${fld('Font',selectF('text',t.id,'font',t.font||'',[['','Same as labels'],...FONTS.map(x=>[x,x])]))}</div>
   <div class="btns"><button class="btn" data-act="dup">Duplicate</button><button class="btn warn" data-act="del-sel" data-confirm="1">Delete text</button></div></div>`}
 function inspRegion(r){if(!r)return inspMap();return `<div class="pane"><h3>Area</h3>${chk('region',r.id,'locked',!!r.locked,'Lock in place')}${r.locked?'<p class="sub">Locked: it cannot be moved, resized or deleted by accident. Dragging on it draws a selection box instead.</p>':''}
   ${fld('Label',inp('region',r.id,'label',r.label,'text'))}
