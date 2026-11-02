@@ -836,7 +836,10 @@ function segView(key,lid,G){G=G||geom();const t=G.tracks.get(key),b=t&&segBase(k
 function cpOff(key,i,G){const v=sel.length===1&&sel[0].t==='line'&&sel[0].seg===key&&segView(key,sel[0].id,G),m=v&&v.ch[i+1],d=v&&v.dv[i+1];return m&&d?{x:d.x-m.x,y:d.y-m.y}:{x:0,y:0}}
 // lines at a station in their order across it (ranks for station.laneOrder), with the point where each meets the station
 function laneNow(sid,G){const X=G.st.get(sid),r=G.ref.get(sid),pos=new Map();if(!X||!r)return[];
-  for(const e of G.ends.get(sid)||[]){const isRef=e.dir.x*r.x+e.dir.y*r.y>.9997,v=(e.x-X.x)*-e.dir.y+(e.y-X.y)*e.dir.x,o=pos.get(e.lid)||{pts:[]};o.pts.push(e);if(isRef||o.v==null)o.v=isRef?v:-v;pos.set(e.lid,o)}
+  // measured on the arm the order is ranked along, or the opposite arm (mirrored); an end on any other arm only when the line has neither,
+  // since sideways on a diagonal arm doesn't compare with the rest
+  for(const e of G.ends.get(sid)||[]){const dt=e.dir.x*r.x+e.dir.y*r.y,pr=dt>.9997?2:dt<-.9997?1:0,v=(e.x-X.x)*-e.dir.y+(e.y-X.y)*e.dir.x,o=pos.get(e.lid)||{pts:[],pr:-1};o.pts.push(e);
+    if(pr>o.pr){o.pr=pr;o.v=pr===2?v:pr===1?-v:(e.x-X.x)*-r.y+(e.y-X.y)*r.x}pos.set(e.lid,o)}
   // the dot sits just outside the station on the line's own track: on the arm the order is measured along (or the opposite
   // arm), so the dots form a row in lane order instead of piling up where lines turn
   const st=stOf(sid),D=(st?stSize(st)/2:7)+M.settings.lineWidth*1.2;
@@ -986,7 +989,9 @@ function geom(){
     if(atA)t.corrA=side;else{t.corrB=-side;P.reverse()}t.pts=P}};
   for(const t of tracks.values()){
     const sg=M.segs[t.key]||{};
-    if(sg.order){t.lines.sort((x,y)=>{const i=sg.order.indexOf(x),j=sg.order.indexOf(y);return(i<0?99:i)-(j<0?99:j)})}
+    // a line order set on the segment by hand counts only while it covers all its lines (one saved before another line was added is stale)
+    t.ord=sg.order&&t.lines.every(l=>sg.order.includes(l))?sg.order:null;
+    if(t.ord){t.lines.sort((x,y)=>{const i=sg.order.indexOf(x),j=sg.order.indexOf(y);return(i<0?99:i)-(j<0?99:j)})}
     const ring=rings.get(t.key);t.route=ring?'ring':sg.route||M.settings.route;if(!ring&&laneStep(st.get(t.a),st.get(t.b),t.route,(X,ax)=>(segsAt.get(X.id)||[]).some(o=>o.key!==t.key&&o.d.x*ax.x+o.d.y*ax.y>.97)))t.route='zigzag';t.auto=!ring&&!sg.route&&mix.length>1;
     t.fit=t.route==='arc'&&arcFit(sg);
     t.pts=dedupePts(ring?(ring.from===t.a?ringPts(st.get(t.a),st.get(t.b),ring.c,ring.dir):ringPts(st.get(t.b),st.get(t.a),ring.c,ring.dir).reverse()):t.fit?[{x:st.get(t.a).x,y:st.get(t.a).y},{x:st.get(t.b).x,y:st.get(t.b).y}]:routePts(st.get(t.a),st.get(t.b),t.route,sg));
@@ -1026,19 +1031,19 @@ function geom(){
     const nxt=(l,prev,node)=>{const E=seqs.get(l)||[];for(let i=0;i+1<E.length;i++){if(E[i]===prev&&E[i+1]===node)return E[i+2]??null;if(E[i]===node&&E[i+1]===prev)return i>0?E[i-1]:null}return null};
     const dirAt=(u,node,leave)=>{const P=u.pts,q=P.length;if(q<2)return null;const atA=u.a===node,p0=atA?P[0]:P[q-1],p1=atA?P[1]:P[q-2];return leave?unit(p1.x-p0.x,p1.y-p0.y):unit(p0.x-p1.x,p0.y-p1.y)};
     const walk=(t,l1,l2,prev,node)=>{for(let g=0;g<600;g++){const u=tracks.get(segKey(prev,node));
-        if(g&&u){const o=(M.segs[u.key]||{}).order;if(o&&o.includes(l1)&&o.includes(l2))return {s:Math.sign(o.indexOf(l1)-o.indexOf(l2))*(u.a===prev?1:-1),w:99,n:u.key}}
+        if(g&&u){const o=u.ord;if(o&&o.includes(l1)&&o.includes(l2))return {s:Math.sign(o.indexOf(l1)-o.indexOf(l2))*(u.a===prev?1:-1),w:99,n:u.key}}
         const n1=nxt(l1,prev,node),n2=nxt(l2,prev,node);if(n1==null||n2==null)return 0;
         if(n1===n2){prev=node;node=n1;continue}
         const d=u&&dirAt(u,node,false),u1=tracks.get(segKey(node,n1)),u2=tracks.get(segKey(node,n2)),e1=u1&&dirAt(u1,node,true),e2=u2&&dirAt(u2,node,true);if(!d||!e1||!e2)return 0;
         const ang=e=>Math.atan2(d.x*e.y-d.y*e.x,d.x*e.x+d.y*e.y),a1=ang(e1),a2=ang(e2);if(Math.abs(a1-a2)>1e-6)return{s:Math.sign(a1-a2),w:Math.abs(a1-a2),n:node};
         // both leave in the same direction: compare where each segment ends up
         const X=st.get(node),far=v=>{const F=st.get(v.a===node?v.b:v.a);return unit(F.x-X.x,F.y-X.y)},f1=ang(far(u1)),f2=ang(far(u2));return Math.abs(f1-f2)<1e-6?0:{s:Math.sign(f1-f2),w:Math.abs(f1-f2),n:node}}return 0};
-    for(const t of tracks.values()){if(t.via||t.lines.length<2||(M.segs[t.key]||{}).order)continue;
+    for(const t of tracks.values()){if(t.via||t.lines.length<2||t.ord)continue;
       // look both ways; if the two ends disagree the lines must cross once, so follow the end where they split more sharply
       // (decided the same way for every segment of the shared run, so the single crossing stays at one end)
       t.lines.sort((x,y)=>{const f=walk(t,x,y,t.a,t.b),b=walk(t,x,y,t.b,t.a);if(!f&&!b)return idx.get(x)-idx.get(y);if(!b)return f.s;if(!f)return -b.s;
         if(f.s===-b.s)return f.s;return f.w>b.w||(f.w===b.w&&String(f.n)<String(b.n))?f.s:-b.s})}}
-  for(const t of tracks.values()){if(t.via||t.lines.length<2||(M.segs[t.key]||{}).order)continue;
+  for(const t of tracks.values()){if(t.via||t.lines.length<2||t.ord)continue;
     const c=[t.a,t.b].filter(X=>lo.has(X)).map(X=>({X,r:lo.get(X),n:t.lines.filter(l=>lo.get(X).has(l)).length})).filter(o=>o.n>1).sort((p,q)=>q.n-p.n)[0];
     if(c){const k=sideOf(c.X,leave(t,c.X))*(c.X===t.a?1:-1);slotSort(t.lines,l=>c.r.has(l)?c.r.get(l)*k:null)}}
   for(const t of tracks.values())if(t.fit)t.pts=fitArc(t,tracks,st);
@@ -1072,7 +1077,7 @@ function geom(){
     for(const L of M.lines){if(L.hidden||!L.skip)continue;
       for(const X of new Set(L.skip)){const r=ref.get(X);if(!r)continue;
         const gs=groups.filter(g=>g.X===X&&g.items.some(o=>o.t.lines.includes(L.id)));if(!groups.some(g=>g.X===X&&g.items.some(o=>o.t.lines.some(l=>!passesAt(l,X)))))continue;
-        if(gs.some(g=>g.items.some(o=>o.t.lines.includes(L.id)&&(o.t.via||(M.segs[o.t.key]||{}).order))))continue;
+        if(gs.some(g=>g.items.some(o=>o.t.lines.includes(L.id)&&(o.t.via||o.t.ord))))continue;
         const sgn=g=>g.d.x*r.x+g.d.y*r.y>=0?1:-1,pos=g=>{let n0=0;for(const o of g.items){const n=o.t.lines.length,k=o.t.lines.indexOf(L.id);if(k>=0)return n0+(o.atA?k:n-1-k);n0+=n}return 0};
         // the side where fewer other lines have to cross over: moving its segment past others in the bundle, then moving it past the
         // other lines on its own segment; a tie goes to the side it is nearer
@@ -1113,7 +1118,7 @@ function geom(){
       const plen=P=>{let l=0;for(let i=1;i<P.length;i++)l+=Math.hypot(P[i].x-P[i-1].x,P[i].y-P[i-1].y);return l};
       const canSwap=t=>!t.via&&!t.over&&[t.a,t.b].every(X=>(st.get(X)||{}).kind!=='waypoint')&&plen(t.pts)>=sp*(t.lines.length+3);
       for(const [g,h] of thru){if(!crossed(g,h))continue;
-        for(const [x,y] of [[g,h],[h,g]])for(const o of x.items){const t=o.t;if(t.lines.length<2||(M.segs[t.key]||{}).order)continue;
+        for(const [x,y] of [[g,h],[h,g]])for(const o of x.items){const t=o.t;if(t.lines.length<2||t.ord)continue;
           const pr=lane(y),was=t.lines.slice(),c0=cost(t);slotSort(t.lines,l=>pr.has(l)?(o.atA?-1:1)*pr.get(l):null);
           if(cost(t)<c0){moved=true;continue}const nw=t.lines.slice();t.lines.splice(0,t.lines.length,...was);
           // the new order suits this station but not the far end: the lines cross once along the segment instead (a clean X between the stations)
@@ -2528,7 +2533,20 @@ function finishDraw(){const L=drawLine&&lnOf(drawLine);drawLine=null;if(L&&L.sto
 function laneDrop(d){const s=stOf(d.sid),G=lastG||geom();if(!s)return;const N=laneNow(d.sid,G),k=view.k;let tgt=null,bd=Infinity;
   for(const n of N){if(n.lid===d.lid)continue;const dd=Math.hypot(n.x-d.at.x,n.y-d.at.y);if(dd<bd){bd=dd;tgt=n}}
   if(!tgt||bd>Math.max(14/k,M.settings.lineWidth+M.settings.lineGap)){toast('Drop the dot on another line’s dot to swap them.');return}
-  const ord=N.map(n=>n.lid),i=ord.indexOf(d.lid),j=ord.indexOf(tgt.lid);pushUndo();ord[i]=tgt.lid;ord[j]=d.lid;s.laneOrder=ord;changed()}
+  const ord=N.map(n=>n.lid),i=ord.indexOf(d.lid),j=ord.indexOf(tgt.lid),was=JSON.stringify(M);pushUndo();ord[i]=tgt.lid;ord[j]=d.lid;s.laneOrder=ord;
+  // the swap holds along the whole stretch the two lines run together: older hand-set orders at the other stations on it swap too,
+  // and line orders set on its segments (the segment panel's arrows) are cleared
+  {const seen=new Set([s.id]),Q=[s.id];while(Q.length){const X=Q.shift();for(const t of G.tracks.values()){if(t.via||(t.a!==X&&t.b!==X)||!t.lines.includes(d.lid)||!t.lines.includes(tgt.lid))continue;
+    const sg=M.segs[t.key];if(sg&&sg.order)delete sg.order;
+    const Y=t.a===X?t.b:t.a;if(seen.has(Y))continue;seen.add(Y);Q.push(Y);const o=(stOf(Y)||{}).laneOrder;if(o){const p=o.indexOf(d.lid),q=o.indexOf(tgt.lid);if(p>=0&&q>=0){o[p]=tgt.lid;o[q]=d.lid}}}}}
+  // a line order set on a segment here (the segment panel's arrows) would keep overriding the dots, so the newer choice clears it
+  for(const [key,sg] of Object.entries(M.segs))if(sg&&sg.order&&key.split('~').includes(s.id)&&(sg.order.includes(d.lid)||sg.order.includes(tgt.lid)))delete sg.order;
+  // the two lines must really trade places; when the layout can't do it (e.g. a line asked to run between two lines that share the
+  // next segment), say so instead of keeping an order that draws something else
+  const N2=laneNow(s.id,geom()).map(n=>n.lid),i2=N2.indexOf(d.lid),j2=N2.indexOf(tgt.lid);
+  if(i2<0||j2<0||Math.sign(i2-j2)===Math.sign(i-j)){M=JSON.parse(was);undoS.pop();undoQ.pop();updUndo();render();
+    toast(`${String(lnOf(d.lid).name).split('\n')[0]} and ${String(lnOf(tgt.lid).name).split('\n')[0]} can’t swap here: one of them shares the next segment with the lines beside it. Swap them at a station where they run side by side.`);return}
+  changed()}
 function toggleLaneEdit(){laneEdit=!laneEdit;lsSet('sndt:laneEdit',laneEdit?'1':'0');renderInspector();requestOverlay()}
 function toggleBends(){showBends=!showBends;lsSet('sndt:bends',showBends?'1':'0');$('#bendsBtn').setAttribute('aria-pressed',showBends);render();toast(showBends?'Bend points shown':'Bend points hidden')}
 function setMode(m){mode=m;document.body.classList.toggle('adv',m==='adv');$('#mSimple').setAttribute('aria-pressed',m==='simple');$('#mAdv').setAttribute('aria-pressed',m==='adv');lsSet('blockline:mode',m);renderInspector()}
