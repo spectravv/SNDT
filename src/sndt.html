@@ -1575,7 +1575,10 @@ function regionSVG(r,i){
   // (the number near two opposite corners, inside the shape, so an inner zone drawn over the middle doesn't hide it)
   // (the number goes where it fits wholly inside the zone and isn't covered by a zone drawn over it: the free spot nearest the top left,
   // and the one nearest the bottom right when that is somewhere else)
-  if(r.zone){const zs=r.fs||48,tw=textW(String(r.label||''),zs,800),th=zs*.72,m=zs*.3,num=(x,y)=>`<text x="${f(x)}" y="${f(y+th)}" font-size="${f(zs)}" font-weight="800" fill="${r.color}" fill-opacity="${Math.min(1,op*2.6)}">${cjkT(String(r.label))}</text>`;
+  // (a bright zone colour would leave its number faint on the light shade, so the number is darkened towards the ink and drawn stronger)
+  if(r.zone){const zs=r.fs||48,tw=textW(String(r.label||''),zs,800),th=zs*.72,m=zs*.3,hx=/^#?([0-9a-f]{6})$/i.exec(r.color||''),v=hx?parseInt(hx[1],16):0,lum=hx?.2126*(v>>16&255)+.7152*(v>>8&255)+.0722*(v&255):0,bright=lum>140,
+    nc=bright?mix(r.color,S.ink,Math.min(.7,(lum-110)/200)):r.color,no=bright?Math.max(.5,Math.min(1,op*2.6)):Math.min(1,op*2.6),
+    num=(x,y)=>`<text x="${f(x)}" y="${f(y+th)}" font-size="${f(zs)}" font-weight="800" fill="${nc}" fill-opacity="${f(no)}">${cjkT(String(r.label))}</text>`;
     let lab='';if(r.label){const above=i==null?[]:M.regions.slice(i+1).filter(o=>o.zone),spots=[];
       for(let y=y0;y<=y1-th;y+=zs/4)for(let x=x0;x<=x1-tw;x+=zs/4){const pts=[[x-m,y-m],[x+tw+m,y-m],[x-m,y+th+m],[x+tw+m,y+th+m],[x+tw/2,y+th/2]];
         if(pts.every(([px,py])=>regionHas(r,px,py)&&!above.some(o=>regionHas(o,px,py))))spots.push({x,y})}

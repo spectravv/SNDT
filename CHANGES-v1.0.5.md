@@ -21,3 +21,4 @@
 - Fare zone numbers are placed where the whole number fits inside the zone and isn't covered by a zone drawn over it (nearest the top left, plus nearest the bottom right when that is elsewhere), so odd shapes no longer push the number outside.
 - Joined areas: every part keeps its own corner points (drag to move, click a midpoint to add one, double-click to remove), not only the first area's; a joined rectangle becomes a four-corner free shape so it can be edited the same way.
 - Fare zones: "How many numbers" (0–12, default 2) next to the zone number, with Number size beside it (both shown in Simple mode too). The first number sits nearest the top left and each next one in the free spot farthest from the others, so they spread over the zone; numbers that would crowd each other are left out.
+- Fare zones in a bright colour (yellow, light green…) draw their numbers darker and stronger, so they stay readable on the light shade.
