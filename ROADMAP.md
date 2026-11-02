@@ -91,6 +91,13 @@ Bug fixes and small features; v1.1 is shelved until these are done (user decisio
 - Style set decisions (user, 2026-10-29): picking a set only FILLS the existing settings, which stay editable after; line colours are kept but their saturation/brightness is shifted to match the set; all six ship in v1.1; names: Poster (Łódź), Bold (Charlotte), Flowing (Moscow), Night Transit (Dark Transit), Frost (Frosted Glass), Ribbon (Dutch rail).
 
 ## v1.0.5 (planned)
+- Bugs from players (2026-11-02):
+  - "Line between stations": a striped (white blocks inside the line) line's blocks go askew around a bend (screenshot only; which map and style isn't known yet).
+  - Isolated line view, large interchanges (Chrome and the mobile app): at a station with many lines (Stopton Central, 6 lines) the coloured ticks below the station bunch up against each other and the circle, the black ones merging.
+- Ideas from players (2026-11-02):
+  - Fare zones shown on the map like on the Tube map: numbered grey/white zone bands behind the lines, "station in both zones" marking.
+  - Interchange styles in the isolated line view: London-style boxes with the line names (as now), or line numbers / roundels as other systems use.
+  - Station numbers: a "Renumber" button in the line's Station codes settings that fills in every station's number along the line, so an infill station (NS3A between NS3 and NS4) doesn't mean editing each following station by hand.
 - Manual layout (step 2 of the precision plan; moved here from v1.2 by the user on 2026-10-31): a "Manual layout" switch per map (Free mode then means precise + manual) that freezes the automatic layout into per-line, per-segment sideways offsets, which the user then sets by dragging or typing; the automatic bundling/reordering leaves them alone; switching back returns to automatic; a single segment can be re-frozen from the automatic layout.
 
 ## Later
