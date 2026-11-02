@@ -1804,7 +1804,8 @@ function overlaySVG(G){
     for(const p of P)g+=`<circle cx="${p[0]}" cy="${p[1]}" r="${f(3.5/k)}" fill="${c}" stroke="#fff" stroke-width="${f(1/k)}" pointer-events="none"/>`;return g};
   if(natureDraft)o+=draftGuide(natureDraft.pts,true,null);
   if(regionDraft)o+=draftGuide(regionDraft.pts,true,'#3AB3DA');
-  for(const s of sel)if((s.t==='nature'||s.t==='water'||s.t==='region')&&tool==='select'){const a=shapeOf(s);if(!a||!a.pts||!a.pts.length)continue;const closed=s.t==='nature'||s.t==='region'||a.t==='fill',P=a.pts,r=6/view.k,sw=1.5/view.k;
+  const editShapes=[];for(const s of sel){if(!(s.t==='nature'||s.t==='water'||s.t==='region')||tool!=='select')continue;editShapes.push(s);const r=s.t==='region'&&M.regions.find(x=>x.id===s.id);if(r&&!r.locked)regionParts(r).forEach(j=>editShapes.push({t:'region',id:j.id}))}
+  for(const s of editShapes){const a=shapeOf(s);if(!a||!a.pts||!a.pts.length)continue;const closed=s.t==='nature'||s.t==='region'||a.t==='fill',P=a.pts,r=6/view.k,sw=1.5/view.k;
     o+=`<path d="M${P.map(p=>p[0]+' '+p[1]).join('L')}${closed?'Z':''}" fill="none" stroke="${c}" stroke-width="${f(sw)}" stroke-dasharray="${f(5/view.k)} ${f(4/view.k)}" pointer-events="none"/>`;
     for(let i=0;i<(closed?P.length:P.length-1);i++){const p=P[i],q=P[(i+1)%P.length];o+=`<circle data-kind="mid" data-coll="${s.t}" data-id="${a.id}" data-i="${i}" cx="${f((p[0]+q[0])/2)}" cy="${f((p[1]+q[1])/2)}" r="${f(r*.7)}" fill="#fff" stroke="${c}" stroke-width="${f(sw)}" style="cursor:copy"/>`}
     P.forEach((p,i)=>{o+=`<circle data-kind="vx" data-coll="${s.t}" data-id="${a.id}" data-i="${i}" cx="${p[0]}" cy="${p[1]}" r="${f(r)}" fill="${c}" stroke="#fff" stroke-width="${f(sw)}" style="cursor:move"/>`})}
@@ -1856,7 +1857,10 @@ function natureSVG(){let o='';for(const a of M.nature||[]){if(!a.pts||a.pts.leng
   o+=`<path d="M${P.map(p=>f(p.x)+' '+f(p.y)).join('L')}Z" fill="${a.color}"${a.opacity!=null&&a.opacity<1?` fill-opacity="${a.opacity}"`:''} stroke="${mix(a.color,'#000000',.14)}" stroke-opacity="${a.opacity??1}" stroke-width="1.2" stroke-linejoin="round"/>`}return o}
 let natureKey=null;
 function renderNature(){const key=JSON.stringify([M.nature||[],M.settings.shapeR]);if(key===natureKey)return;natureKey=key;$('#natureL').innerHTML=natureSVG()}
-function shapeOf(s){return s.t==='nature'?(M.nature||[]).find(a=>a.id===s.id):s.t==='water'?(M.water||[]).find(a=>a.id===s.id):s.t==='region'?M.regions.find(a=>a.id===s.id&&a.pts&&!a.locked):null}
+function shapeOf(s){if(s.t==='region'&&String(s.id).includes('#')){const [rid,k]=String(s.id).split('#'),r=M.regions.find(a=>a.id===rid&&!a.locked);return r?regionParts(r)[+k]||null:null}
+  return s.t==='nature'?(M.nature||[]).find(a=>a.id===s.id):s.t==='water'?(M.water||[]).find(a=>a.id===s.id):s.t==='region'?M.regions.find(a=>a.id===s.id&&a.pts&&!a.locked):null}
+// the parts joined to an area, each a free shape with its own id (area id#n) so its corners can be edited like any area's
+function regionParts(r){return(r.join||[]).map((j,k)=>{if(!j.pts){j.pts=[[j.x,j.y],[j.x+j.w,j.y],[j.x+j.w,j.y+j.h],[j.x,j.y+j.h]];delete j.x;delete j.y;delete j.w;delete j.h}j.id=r.id+'#'+k;return j})}
 function pip(w,P){let inside=false;for(let j=0,k=P.length-1;j<P.length;k=j++){const xi=P[j][0],yi=P[j][1],xk=P[k][0],yk=P[k][1];if((yi>w.y)!==(yk>w.y)&&w.x<(xk-xi)*(w.y-yi)/(yk-yi)+xi)inside=!inside}return inside}
 function waterAt(w){const A=M.water||[];for(let i=A.length-1;i>=0;i--){const a=A[i],P=a.pts;if(!P||!P.length)continue;
   if(a.t==='fill'){if(P.length>2&&pip(w,P))return a}
@@ -2330,11 +2334,11 @@ function act(name,arg,el){
     case 'region-join':{const rs=sel.filter(x=>x.t==='region').map(x=>M.regions.find(r=>r.id===x.id)).filter(r=>r&&!r.locked);if(rs.length<2)break;pushUndo();
       // the first selected keeps its look; the others (with anything joined to them) become its parts
       const [main,...rest]=rs;main.join=main.join||[];
-      for(const r of rest){if(r.pts)main.join.push({pts:r.pts.map(q=>q.slice()),radius:r.radius});else for(const q of [{x:r.x,y:r.y,w:r.w,h:r.h}].concat(r.more||[]))main.join.push({x:q.x,y:q.y,w:q.w,h:q.h,radius:r.radius});
+      for(const r of rest){if(r.pts)main.join.push({pts:r.pts.map(q=>q.slice()),radius:r.radius});else for(const q of [{x:r.x,y:r.y,w:r.w,h:r.h}].concat(r.more||[]))main.join.push({pts:[[q.x,q.y],[q.x+q.w,q.y],[q.x+q.w,q.y+q.h],[q.x,q.y+q.h]],radius:r.radius});
         for(const j of r.join||[])main.join.push(j);M.regions=M.regions.filter(x=>x!==r)}
       sel=[{t:'region',id:main.id}];changed();toast(tr('Joined into one area. Split it again from its panel.'));break}
     case 'region-split':{const r=one&&one.t==='region'&&M.regions.find(x=>x.id===one.id);if(!r||!(r.join||[]).length)break;pushUndo();const i=M.regions.indexOf(r),out=[];
-      for(const j of r.join){const n=JSON.parse(JSON.stringify(r));delete n.join;delete n.more;n.id=uid();if(j.pts){n.pts=j.pts.map(q=>q.slice())}else{delete n.pts;Object.assign(n,{x:j.x,y:j.y,w:j.w,h:j.h})}if(j.radius!=null)n.radius=j.radius;regionShapes(n);out.push(n)}
+      for(const j of r.join){const n=JSON.parse(JSON.stringify(r));delete n.join;delete n.more;delete n.locked;n.id=uid();if(j.pts){n.pts=j.pts.map(q=>q.slice())}else{delete n.pts;Object.assign(n,{x:j.x,y:j.y,w:j.w,h:j.h})}if(j.radius!=null)n.radius=j.radius;regionShapes(n);out.push(n)}
       delete r.join;M.regions.splice(i+1,0,...out);changed();break}
     case 'rkind':{const r=one&&one.t==='region'&&M.regions.find(x=>x.id===one.id);if(!r||(arg==='zone')===!!r.zone)break;pushUndo();
       if(arg==='zone'){r.zone=true;if(r.color==='#3AB3DA'){r.color='#7d7d7d';r.opacity=.22}if(!r.label||r.label==='District'){const n=M.regions.filter(x=>x.zone).length;r.label=String(n)}}
