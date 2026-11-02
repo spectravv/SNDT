@@ -1383,14 +1383,21 @@ function numBox(s,G){if(M.settings.stNums!=='marks'||s.kind==='waypoint')return 
   // a box sized by hand (drag its handles): the badges share its width, and the text shrinks if it no longer fits
   if(W!==W0)ws=ws.map(v=>v*W/W0);
   // each badge: the code on one line, or (narrow but tall enough) the letters above the number, whichever lets the text be bigger
-  const rows=[],fss=[];B.forEach((b,i)=>{const av=ws[i]-Math.min(pad,ws[i]*.15)*2,one=tw[i]>0?Math.min(fs0,fs0*av/tw[i]):fs0,m=String(b.text).match(/^(.*?[^\d\s])\s*(\d.*)$/);
-    let two=0;if(m){const a=textW(m[1],fs0,700),c=textW(m[2],fs0,700);two=Math.min(h*.44,fs0*av/Math.max(a,c,1))}
-    if(m&&two>one*1.15){rows.push([m[1],m[2]]);fss.push(two)}else{rows.push([b.text]);fss.push(one)}});
-  return{B,h,fs:Math.min(...fss),fss,rows,ws,W}}
+  const fit=(t,w,ch)=>{const f0=ch*.62,p0=ch*.32,av=w-Math.min(p0,w*.15)*2,t0=textW(t,f0,700),one=t0>0?Math.min(f0,f0*av/t0):f0,m=String(t).match(/^(.*?[^\d\s])\s*(\d.*)$/);
+    let two=0;if(m){const a=textW(m[1],f0,700),c=textW(m[2],f0,700);two=Math.min(ch*.44,f0*av/Math.max(a,c,1))}return m&&two>one*1.15?{rw:[m[1],m[2]],fz:two}:{rw:[t],fz:one}};
+  // a box made taller by hand stacks the codes in rows (A B C / D E F, then A B / C D / E F…): as many rows as make the text biggest
+  const lay=r=>{const cols=Math.ceil(B.length/r),ch=h/r,cells=[];
+    B.forEach((b,i)=>{const row=Math.floor(i/cols),inRow=Math.min(cols,B.length-row*cols),k=i-row*cols;
+      if(r===1)cells.push({x:ws.slice(0,i).reduce((a,v)=>a+v,0),y:0,w:ws[i],h});else cells.push({x:W*k/inRow,y:ch*row,w:W/inRow,h:ch})});
+    cells.forEach((c,i)=>Object.assign(c,fit(B[i].text,c.w,c.h)));return cells};
+  let cells=lay(1),best=Math.min(...cells.map(c=>c.fz));
+  if(s.numH>0)for(let r=2;r<=B.length;r++){const c=lay(r),v=Math.min(...c.map(c=>c.fz));if(v>best*1.05){cells=c;best=v}}
+  return{B,h,fs:best,cells,W}}
 // a slider and a number box for the same size (empty number = automatic / follow the map)
 function sizePair(o,id,p,v,auto){return `<div class="sizepair"><input type="range" data-obj="${o}" data-id="${id}" data-prop="${p}" data-type="numnull" min="6" max="60" step="1" value="${v>0?v:auto}" aria-label="Size"><input type="number" id="${fid(o,p)}" data-obj="${o}" data-id="${id}" data-prop="${p}" data-type="numnull" min="4" max="200" step="0.5" value="${v>0?v:''}" placeholder="${f(auto)}"></div>`}
-function numBadgesSVG(s,nb,c){const S=M.settings,x0=c.x-nb.W/2,y0=c.y-nb.h/2,r=nb.h*.3,id='nb'+s.id;let x=x0,o='',tx='';
-  nb.B.forEach((b,i)=>{o+=`<rect x="${f(x)}" y="${f(y0)}" width="${f(nb.ws[i]+.5)}" height="${f(nb.h)}" fill="${esc(b.color)}"/>`;const fz=nb.fss?nb.fss[i]:nb.fs,rw=nb.rows?nb.rows[i]:[b.text];tx+=`<text x="${f(x+nb.ws[i]/2)}" y="${f(rw.length>1?c.y-fz*.18:c.y+fz*.36)}" text-anchor="middle" font-size="${f(fz)}" font-weight="700" fill="${contrastOn(b.color)}"${s.closed?` stroke="${esc(b.color)}" stroke-width="${f(nb.fs*.22)}" paint-order="stroke"`:''}>${rw.length>1?`<tspan x="${f(x+nb.ws[i]/2)}">${esc(rw[0])}</tspan><tspan x="${f(x+nb.ws[i]/2)}" dy="${f(fz*1.02)}">${esc(rw[1])}</tspan>`:esc(b.text)}</text>`;x+=nb.ws[i]});
+function numBadgesSVG(s,nb,c){const S=M.settings,x0=c.x-nb.W/2,y0=c.y-nb.h/2,r=Math.min(...nb.cells.map(q=>Math.min(q.w,q.h)))*.3,id='nb'+s.id;let o='',tx='';
+  nb.B.forEach((b,i)=>{const q=nb.cells[i],bx=x0+q.x,by=y0+q.y,cx=bx+q.w/2,cy=by+q.h/2,fz=q.fz,rw=q.rw;o+=`<rect x="${f(bx)}" y="${f(by)}" width="${f(q.w+.5)}" height="${f(q.h+.5)}" fill="${esc(b.color)}"/>`;
+    tx+=`<text x="${f(cx)}" y="${f(rw.length>1?cy-fz*.18:cy+fz*.36)}" text-anchor="middle" font-size="${f(fz)}" font-weight="700" fill="${contrastOn(b.color)}"${s.closed?` stroke="${esc(b.color)}" stroke-width="${f(nb.fs*.22)}" paint-order="stroke"`:''}>${rw.length>1?`<tspan x="${f(cx)}">${esc(rw[0])}</tspan><tspan x="${f(cx)}" dy="${f(fz*1.02)}">${esc(rw[1])}</tspan>`:esc(b.text)}</text>`});
   // not in service: diagonal stripes in the background colour across the badges, under the codes
   if(s.closed){const g=nb.h*.34,w=g*.45;let st='';for(let k=-nb.h;k<nb.W+nb.h;k+=g)st+=`M${f(x0+k)} ${f(y0+nb.h)}L${f(x0+k+nb.h)} ${f(y0)}`;o+=`<path d="${st}" stroke="${S.bg}" stroke-width="${f(w)}" stroke-opacity=".75" fill="none"/>`}
   o+=tx;
@@ -1556,7 +1563,12 @@ function regionSVG(r,i){
   let defs=`<mask id="${id}-o" maskUnits="userSpaceOnUse" ${box}><rect ${box} fill="#fff"/>${shp(r,'fill="#000"')}</mask>`,cut='',edge='';
   if(front.length){defs+=`<mask id="${id}-c" maskUnits="userSpaceOnUse" ${box}><rect ${box} fill="#fff"/>${front.map(F=>shp(F,`fill="#000" stroke="#000" stroke-width="${f(gap*2)}"`)).join('')}</mask><clipPath id="${id}-k">${shp(r,'')}</clipPath>`;
     cut=` mask="url(#${id}-c)"`;edge=`<g clip-path="url(#${id}-k)" opacity="${Math.min(1,op*4)}">${front.filter(F=>!F.pts).map(F=>shp(F,`fill="none" stroke="${r.color}" stroke-width="1.5"${dash}`,gap+.75)).join('')}</g>`}
-  const lp=r.pts&&r.pts.length>2?{x:r.pts.reduce((a,p)=>a+p[0],0)/r.pts.length,y:r.pts.reduce((a,p)=>a+p[1],0)/r.pts.length+4,anchor:' text-anchor="middle"'}:{x:r.x+10,y:r.y+19,anchor:''};
+  const lp=r.pts&&r.pts.length>2?{x:r.pts.reduce((a,p)=>a+p[0],0)/r.pts.length,y:r.pts.reduce((a,p)=>a+p[1],0)/r.pts.length+4,anchor:' text-anchor="middle"'}:r.zone?{x:r.x+r.w/2,y:r.y+r.h/2+4,anchor:' text-anchor="middle"'}:{x:r.x+10,y:r.y+19,anchor:''};
+  // fare zone (Tube-map style): a plain shaded area, no border, its number big and faint
+  // (the number near two opposite corners, inside the shape, so an inner zone drawn over the middle doesn't hide it)
+  if(r.zone){const zs=r.fs||48,P=r.pts&&r.pts.length>2?r.pts.map(p=>({x:p[0],y:p[1]})):[{x:x0,y:y0},{x:x1,y:y1}],tl=P.reduce((a,p)=>p.x+p.y<a.x+a.y?p:a),br=P.reduce((a,p)=>p.x+p.y>a.x+a.y?p:a),m=zs*.45+(r.radius??10)*.3;
+    const num=(x,y,anc)=>`<text x="${f(x)}" y="${f(y)}" text-anchor="${anc}" font-size="${f(zs)}" font-weight="800" fill="${r.color}" fill-opacity="${Math.min(1,op*2.6)}">${cjkT(String(r.label))}</text>`;
+    return `<g data-kind="region" data-id="${r.id}"><defs>${defs}</defs><g${cut}><g opacity="${op}">${shp(r,`fill="${r.color}"`)}</g>${r.label?num(tl.x+m,tl.y+m+zs*.72,'start')+num(br.x-m,br.y-m,'end'):''}</g></g>`}
   return `<g data-kind="region" data-id="${r.id}"><defs>${defs}</defs><g${cut}><g opacity="${op}">${shp(r,`fill="${r.color}"`)}</g><g mask="url(#${id}-o)" opacity="${Math.min(1,op*4)}">${shp(r,`fill="none" stroke="${r.color}" stroke-width="3"${dash}`)}</g>${edge}${r.label?`<text x="${f(lp.x)}" y="${f(lp.y)}"${lp.anchor} font-size="${r.fs||11}" font-weight="700" letter-spacing=".08em" fill="${S.ink}" fill-opacity=".62">${cjkT(String(r.label).toUpperCase())}</text>`:''}</g></g>`;
 }
 // lines A to Z (numbers in order), the same order as the Lines list, so the legend matches it
@@ -2127,7 +2139,9 @@ function inspText(t){if(!t)return inspMap();return `<div class="pane"><h3>Text</
   <div class="grid2 adv-only">${fld('Rotation °',inp('text',t.id,'rot',t.rot||0,'num','step="15"'))}${fld('Align',selectF('text',t.id,'align',t.align||'left',[['left','Left'],['center','Centre'],['right','Right']]))}${fld('X',inp('text',t.id,'x',t.x,'num'))}${fld('Y',inp('text',t.id,'y',t.y,'num'))}</div>
   <div class="btns"><button class="btn" data-act="dup">Duplicate</button><button class="btn warn" data-act="del-sel" data-confirm="1">Delete text</button></div></div>`}
 function inspRegion(r){if(!r)return inspMap();return `<div class="pane"><h3>Area</h3>${chk('region',r.id,'locked',!!r.locked,'Lock in place')}${r.locked?'<p class="sub">Locked: it cannot be moved, resized or deleted by accident. Dragging on it draws a selection box instead.</p>':''}
-  ${fld('Label',inp('region',r.id,'label',r.label,'text'))}
+  <div class="fld"><span>${tr('Kind')}</span><div class="opts" style="width:fit-content"><button class="opt" data-act="rkind:district" aria-pressed="${!r.zone}">${tr('District')}</button><button class="opt" data-act="rkind:zone" aria-pressed="${!!r.zone}">${tr('Fare zone')}</button></div></div>
+  ${r.zone?`<p class="sub">${tr('Drawn like the Tube map’s fare zones: a plain shaded area with its number. Stack zones in alternating shades (one grey, the next lighter); where zones overlap, choose which one keeps the overlap below.')}</p>`:''}
+  ${fld(r.zone?tr('Zone number'):'Label',inp('region',r.id,'label',r.label,'text'))}
   <div class="grid2">${fld('Colour',inp('region',r.id,'color',r.color,'color'))}${fld('Fill strength',inp('region',r.id,'opacity',r.opacity??.12,'num','min="0" max="1" step="0.05"'))}</div>${chk('region',r.id,'dashed',!!r.dashed,'Dashed border')}
   ${r.locked||r.pts?'':'<p class="sub">Drag a corner handle to resize that part.</p>'}
   <div class="fld"><span>Shape</span>${r.pts?'<p class="sub">Drag a corner to move it, click a midpoint to add a corner, double-click a corner to remove it.</p>':(r.more||[]).length?'':'<div class="btns"><button class="btn acc" data-act="region-topoly">Turn into free shape</button></div><p class="sub">Makes the four corners editable like a free-shape area.</p>'}
@@ -2135,7 +2149,7 @@ function inspRegion(r){if(!r)return inspMap();return `<div class="pane"><h3>Area
   ${(()=>{const i=M.regions.indexOf(r),ov=M.regions.filter((o,j)=>j!==i&&regionsOverlap(regionShapes(r),regionShapes(o),M.settings.regionGap??6));if(!ov.length)return'';const wins=ov.every(o=>M.regions.indexOf(o)<i);
     return `<div class="fld"><span>Overlaps ${ov.map(o=>esc(o.label||'an area')).join(', ')}</span><div class="opts"><button class="opt" data-act="rz:front" aria-pressed="${wins}">This area keeps the overlap</button><button class="opt" data-act="rz:back" aria-pressed="${!wins&&ov.every(o=>M.regions.indexOf(o)>i)}">Cut this area</button></div></div>
     ${fld('Gap where areas meet',inp('settings','s','regionGap',M.settings.regionGap??6,'num','min="0" max="60"'))}`})()}
-  <div class="grid2 adv-only">${fld('X',inp('region',r.id,'x',r.x,'num'))}${fld('Y',inp('region',r.id,'y',r.y,'num'))}${fld('Width',inp('region',r.id,'w',r.w,'num'))}${fld('Height',inp('region',r.id,'h',r.h,'num'))}${fld('Corner radius',inp('region',r.id,'radius',r.radius??10,'num','min="0"'))}${fld('Label size',inp('region',r.id,'fs',r.fs||11,'num'))}</div>
+  <div class="grid2 adv-only">${fld('X',inp('region',r.id,'x',r.x,'num'))}${fld('Y',inp('region',r.id,'y',r.y,'num'))}${fld('Width',inp('region',r.id,'w',r.w,'num'))}${fld('Height',inp('region',r.id,'h',r.h,'num'))}${fld('Corner radius',inp('region',r.id,'radius',r.radius??10,'num','min="0"'))}${fld(r.zone?tr('Number size'):'Label size',inp('region',r.id,'fs',r.fs||(r.zone?48:11),'num'))}</div>
   <div class="btns"><button class="btn" data-act="dup">Duplicate</button><button class="btn warn" data-act="del-sel" data-confirm="1">Delete area</button></div></div>`}
 function inspLegend(){const lg=M.settings.legend;return `<div class="pane"><h3>Legend</h3>${fld('Heading',inp('settings','s','legend.title',lg.title,'text','placeholder="No heading"'))}
   <p class="sub">The legend lists every visible line. Hide a line from it in the line's Advanced settings.</p>
@@ -2299,6 +2313,9 @@ function act(name,arg,el){
       for(const id of curL.stops){const st=stOf(id);if(!st||st.kind==='waypoint'||(curL.skip||[]).includes(id)||seen.has(id))continue;seen.add(id);seq.push(st)}
       if(curL.numRev)seq.reverse();const n0=Number.isFinite(+curL.numStart)&&curL.numStart!==''&&curL.numStart!=null?+curL.numStart:1;pushUndo();
       seq.forEach((st,i)=>{(st.nums||(st.nums={}))[curL.id]=pre+'\u2009'+(n0+i)});changed();toast(`${tr('Renumbered')} ${seq.length} ${tr('stations')}: ${pre} ${n0}–${n0+seq.length-1}`);break}
+    case 'rkind':{const r=one&&one.t==='region'&&M.regions.find(x=>x.id===one.id);if(!r||(arg==='zone')===!!r.zone)break;pushUndo();
+      if(arg==='zone'){r.zone=true;if(r.color==='#3AB3DA'){r.color='#7d7d7d';r.opacity=.22}if(!r.label||r.label==='District'){const n=M.regions.filter(x=>x.zone).length;r.label=String(n)}}
+      else{delete r.zone;if(/^\d+$/.test(r.label||''))r.label='District'}changed();break}
     case 'skip-tog':{const L=lnOf(arg);if(!curSt||!L)break;pushUndo();const k=(L.skip||[]).indexOf(curSt.id);if(k>=0){L.skip.splice(k,1);if(!L.skip.length)delete L.skip}else(L.skip||(L.skip=[])).push(curSt.id);changed();break}
     case 'lane-reset':if(curSt&&curSt.laneOrder){pushUndo();delete curSt.laneOrder;changed()}break;
     case 'ncolor':natureColor=arg;lsSet('sndt:ncolor',arg);if(natureDraft){natureDraft.color=arg;render()}renderInspector();break;
