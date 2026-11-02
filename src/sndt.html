@@ -2054,7 +2054,7 @@ function inspLine(L,segK){
    ${fld('Legend description',inp('line',L.id,'legendDesc',L.legendDesc||'','text','placeholder="'+esc(tr('Optional, shown muted after the name'))+'"'))}
    ${chk('line',L.id,'noLegend',!!L.noLegend,'Leave out of the legend')}
    <div class="grid2">${fld('Station code',inp('line',L.id,'numPrefix',L.numPrefix||'','text','placeholder="e.g. NS" maxlength="6"'))}${fld('First number',inp('line',L.id,'numStart',L.numStart??1,'num','min="0"'))}</div>
-   ${L.numPrefix?chk('line',L.id,'numRev',!!L.numRev,'Number from the other end')+(M.settings.stNums!=='marks'?'<p class="sub">Turn on Station numbers in This map › Stations to show them.</p>':''):''}
+   ${L.numPrefix?chk('line',L.id,'numRev',!!L.numRev,'Number from the other end')+`<div class="btns"><button class="btn" data-act="renum">${tr('Renumber stations')}</button></div><p class="sub">${tr('Writes the numbers in order along the line into every station, replacing ones typed by hand. Use it after adding a station in between.')}</p>`+(M.settings.stNums!=='marks'?'<p class="sub">Turn on Station numbers in This map › Stations to show them.</p>':''):''}
    <div class="fld"><span>Colour · Minecraft dyes</span><div class="dyes">${DYES.map(([n,c])=>`<button data-act="color:${c}" style="background:${c}" title="${n} dye" aria-label="${n} dye" aria-pressed="${L.color.toLowerCase()===c.toLowerCase()}"></button>`).join('')}</div></div>
    ${fld('Custom colour',inp('line',L.id,'color',L.color,'color','data-relist="1"'))}
    <div class="grid2">${fld('Line type',modeSelect(L))}${fld('Line style',selectF('line',L.id,'style',L.style||'solid',Object.entries(STYLES)))}</div>
@@ -2288,6 +2288,10 @@ function act(name,arg,el){
     case 'bends':toggleBends();break;
     case 'lane-edit':if((arg==='on')!==laneEdit)toggleLaneEdit();break;
     case 'near-add':if(curSt)addToNearLine(curSt,arg);break;
+    case 'renum':{if(!curL||!String(curL.numPrefix||'').trim())break;const pre=String(curL.numPrefix).trim(),seen=new Set(),seq=[];
+      for(const id of curL.stops){const st=stOf(id);if(!st||st.kind==='waypoint'||(curL.skip||[]).includes(id)||seen.has(id))continue;seen.add(id);seq.push(st)}
+      if(curL.numRev)seq.reverse();const n0=Number.isFinite(+curL.numStart)&&curL.numStart!==''&&curL.numStart!=null?+curL.numStart:1;pushUndo();
+      seq.forEach((st,i)=>{(st.nums||(st.nums={}))[curL.id]=pre+'\u2009'+(n0+i)});changed();toast(`${tr('Renumbered')} ${seq.length} ${tr('stations')}: ${pre} ${n0}–${n0+seq.length-1}`);break}
     case 'skip-tog':{const L=lnOf(arg);if(!curSt||!L)break;pushUndo();const k=(L.skip||[]).indexOf(curSt.id);if(k>=0){L.skip.splice(k,1);if(!L.skip.length)delete L.skip}else(L.skip||(L.skip=[])).push(curSt.id);changed();break}
     case 'lane-reset':if(curSt&&curSt.laneOrder){pushUndo();delete curSt.laneOrder;changed()}break;
     case 'ncolor':natureColor=arg;lsSet('sndt:ncolor',arg);if(natureDraft){natureDraft.color=arg;render()}renderInspector();break;

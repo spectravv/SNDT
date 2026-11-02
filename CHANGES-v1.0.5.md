@@ -11,3 +11,4 @@
   - a swap the layout can't draw (e.g. a line between two lines that share the next segment) is refused with a message instead of saving an order that draws something else.
   On that map 40 of 43 neighbour swaps now work in Lines first (the rest are refused with the message), before most did nothing.
 - A segment's hand-set line order only counts while it includes all the segment's lines. One saved before another line was added used to push the new line to the far side, so it crossed the whole bundle (the Ivybridge Line at Shenton Lane and Sai Wan East).
+- Station numbers: "Renumber stations" in a line's Station code settings writes the numbers in order along the line into every station (replacing hand-typed ones), so adding an infill station no longer means retyping every station after it (player idea 2026-11-02).
