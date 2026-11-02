@@ -1066,6 +1066,22 @@ function geom(){
         grp.sort((p,q)=>p.turn-q.turn);
         if(lo.has(X)){const r=lo.get(X),k=sideOf(X,grp[0].d);slotSort(grp,o=>{const c=o.t.lines.filter(l=>r.has(l));return c.length?k*c.reduce((a,l)=>a+r.get(l),0)/c.length:null})}
         groups.push({X,d:grp[0].d,dl:grp[0].dl,items:grp,total:grp.reduce((a,o)=>a+o.t.lines.length,0),s:null,adj:[]})}}
+    // a line that passes a station without stopping runs in the outer lane of each bundle there, beside the mark, on the side of the
+    // station it is already nearer (the same side all round, so it carries straight on); this beats the station's dot order, but a
+    // hand-set order on the segment wins
+    for(const L of M.lines){if(L.hidden||!L.skip)continue;
+      for(const X of new Set(L.skip)){const r=ref.get(X);if(!r)continue;
+        const gs=groups.filter(g=>g.X===X&&g.items.some(o=>o.t.lines.includes(L.id)));if(!groups.some(g=>g.X===X&&g.items.some(o=>o.t.lines.some(l=>!passesAt(l,X)))))continue;
+        if(gs.some(g=>g.items.some(o=>o.t.lines.includes(L.id)&&(o.t.via||(M.segs[o.t.key]||{}).order))))continue;
+        const sgn=g=>g.d.x*r.x+g.d.y*r.y>=0?1:-1,pos=g=>{let n0=0;for(const o of g.items){const n=o.t.lines.length,k=o.t.lines.indexOf(L.id);if(k>=0)return n0+(o.atA?k:n-1-k);n0+=n}return 0};
+        // the side where fewer other lines have to cross over: moving its segment past others in the bundle, then moving it past the
+        // other lines on its own segment; a tie goes to the side it is nearer
+        const cost=sd=>gs.reduce((a,g)=>{const hi=sd*sgn(g)>0,i=g.items.findIndex(o=>o.t.lines.includes(L.id)),o=g.items[i],k=o.t.lines.indexOf(L.id),n=o.t.lines.length;
+          return a+(hi?g.items.slice(i+1):g.items.slice(0,i)).reduce((c,x)=>c+x.t.lines.length,0)*n+(hi===o.atA?n-1-k:k)},0);
+        const near=Math.sign(gs.reduce((a,g)=>a+sgn(g)*(pos(g)-(g.total-1)/2),0))||1,side=cost(-near)<cost(near)?-near:near;
+        for(const g of gs){const hi=side*sgn(g)>0,o=g.items.find(o=>o.t.lines.includes(L.id)),t=o.t;
+          g.items.splice(g.items.indexOf(o),1);if(hi)g.items.push(o);else g.items.unshift(o);
+          t.lines.splice(t.lines.indexOf(L.id),1);if(hi===o.atA)t.lines.push(L.id);else t.lines.unshift(L.id)}}}
     const byX=new Map();for(const g of groups){if(!byX.has(g.X))byX.set(g.X,[]);byX.get(g.X).push(g)}
     // lines running straight through a station keep the same order on both sides: where the two sides disagree, the side
     // that needs fewer lines to cross over is reordered to match, so lines cross where they split instead of inside the station
