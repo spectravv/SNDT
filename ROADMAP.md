@@ -90,7 +90,12 @@ Bug fixes and small features; v1.1 is shelved until these are done (user decisio
   - Dutch rail (photo of an NS map, 2026-10-29): thick parallel lines with thin white gaps between them, small white stop dots inside the line, short black leader ticks from the stop to its name, interchanges as a dark bar across all lines with a white dot per line, line codes (S64, IC27) written in pills inside the line, big bold capitals for main stations.
 - Style set decisions (user, 2026-10-29): picking a set only FILLS the existing settings, which stay editable after; line colours are kept but their saturation/brightness is shifted to match the set; all six ship in v1.1; names: Poster (Łódź), Bold (Charlotte), Flowing (Moscow), Night Transit (Dark Transit), Frost (Frosted Glass), Ribbon (Dutch rail).
 
-## v1.0.5 (planned)
+## v1.0.5 (RELEASED 2026-11-02, see releases/v1.0.5/ and CHANGES-v1.0.5.md)
+Done: all player bugs and ideas below except where noted. Tried and rejected by the user: interchange slots (stations as a resizable grid of slots), automatic fare zones from per-station zone numbers (user wanted cosmetic, district-style zones instead).
+Still open from this list: Manual layout (below, moved to v1.0.6); hand-drawn route under a bundle (c&t Lake, Ivybridge – Ivybridge Market) still merges crossing gaps into one hole (user can reset the route); 利立 doubling-back line; handbook articles + Crowdin strings for everything new since v1.0.4; GitHub push of v1.0.5.
+
+## v1.0.6 (next)
+- Manual layout (step 2 of the precision plan), carried over from v1.0.5.
 - Bugs from players (2026-11-02):
   - "Line between stations": a striped (white blocks inside the line) line's blocks go askew around a bend (screenshot only; which map and style isn't known yet).
   - Isolated line view, large interchanges (Chrome and the mobile app): at a station with many lines (Stopton Central, 6 lines) the coloured ticks below the station bunch up against each other and the circle, the black ones merging.
