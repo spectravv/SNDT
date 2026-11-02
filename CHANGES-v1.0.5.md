@@ -12,3 +12,4 @@
   On that map 40 of 43 neighbour swaps now work in Lines first (the rest are refused with the message), before most did nothing.
 - A segment's hand-set line order only counts while it includes all the segment's lines. One saved before another line was added used to push the new line to the far side, so it crossed the whole bundle (the Ivybridge Line at Shenton Lane and Sai Wan East).
 - Station numbers: "Renumber stations" in a line's Station code settings writes the numbers in order along the line into every station (replacing hand-typed ones), so adding an infill station no longer means retyping every station after it (player idea 2026-11-02).
+- Striped lines (and lines under construction): the light blocks are drawn one by one along the line and turned with it, so they stay square and evenly spaced around bends instead of coming out skewed (player report 2026-11-02).

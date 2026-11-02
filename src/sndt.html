@@ -1306,6 +1306,12 @@ const dOf=pts=>'M'+pts.map(p=>f(p.x)+' '+f(p.y)).join('L');
 
 /* ---------- rendering ---------- */
 function lw(L){return L.width||M.settings.lineWidth}
+// the light blocks of a striped line, each placed along the path and turned with it (a dash pattern bends with the path's corners,
+// so on a rounded bend its blocks came out skewed)
+function stripeBlocks(d,w,col,op){const P=String(d).replace(/^M/,'').split('L').map(t=>{const [x,y]=t.trim().split(/\s+/).map(Number);return{x,y}}).filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y));
+  if(P.length<2)return'';let len=0;for(let i=1;i<P.length;i++)len+=Math.hypot(P[i].x-P[i-1].x,P[i].y-P[i-1].y);const n=Math.max(1,Math.round(len/(w*.9))),step=len/n,bw=step/2,bh=w*.5;let o='';
+  for(let k=0;k<n;k++){const q=polyAt(P,step*(k+.5)),a=Math.atan2(q.u.y,q.u.x)*180/Math.PI;o+=`<rect x="${f(q.x-bw/2)}" y="${f(q.y-bh/2)}" width="${f(bw)}" height="${f(bh)}" fill="${col}" transform="rotate(${f(a)} ${f(q.x)} ${f(q.y)})"/>`}
+  return `<g${op}>${o}</g>`}
 function strokeFor(d,L,w,extra=''){
   const c=L.color,op=L.opacity!=null&&L.opacity<1?` opacity="${L.opacity}"`:'',S=M.settings,base=`d="${d}" fill="none" stroke-linejoin="round"${op} ${extra}`;
   const style=L.style||'solid';
@@ -1317,7 +1323,7 @@ function strokeFor(d,L,w,extra=''){
     case 'outlined':return `<path ${base} stroke="${S.ink}" stroke-width="${w+3}" stroke-linecap="round"/><path ${base} stroke="${c}" stroke-width="${w-1}" stroke-linecap="round"/>`;
     case 'thin':return `<path ${base} stroke="${c}" stroke-width="${f(w*.45)}" stroke-linecap="round" stroke-dasharray="${f(w*1.2)} ${f(w*.7)}"/>`;
     case 'narrow':return `<path ${base} stroke="${c}" stroke-width="${f(w*.55)}" stroke-linecap="round"/>`;
-    case 'striped':return `<path ${base} stroke="${c}" stroke-width="${w}" stroke-linecap="butt"/><path ${base} stroke="${S.bg}" stroke-width="${f(w*.5)}" stroke-dasharray="${f(w*.45)} ${f(w*.45)}" stroke-linecap="butt"/>`;
+    case 'striped':return `<path ${base} stroke="${c}" stroke-width="${w}" stroke-linecap="butt"/>`+stripeBlocks(d,w,S.bg,op);
     case 'railway':return `<path ${base} stroke="${c}" stroke-width="${w}" stroke-linecap="butt"/><path ${base} stroke="${S.bg}" stroke-width="${f(w*.36)}" stroke-dasharray="${f(w*1.3)} ${f(w*1.3)}" stroke-linecap="butt"/>`;
     default:return `<path ${base} stroke="${c}" stroke-width="${w}" stroke-linecap="round"/>`;
   }
