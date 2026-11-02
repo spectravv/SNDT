@@ -1128,7 +1128,11 @@ function geom(){
     const agree=v=>{let best=v[0],bn=-1;const mean=v.reduce((a,x)=>a+x,0)/v.length;for(const x of v){const n=v.filter(y=>Math.abs(y-x)<.5).length;if(n>bn||(n===bn&&Math.abs(x-mean)<Math.abs(best-mean))){best=x;bn=n}}return best};
     // bundles across a station, straight or (two or more lines) turning there: line the shared lines up (shift of one side = -shift of the other - c)
     for(const gs of byX.values())for(let i=0;i<gs.length;i++)for(let j=i+1;j<gs.length;j++){const g=gs[i],h=gs[j],dot=across(g,h);if(dot>.1)continue;
-      const lg=lat(g),lh=lat(h),com=[...lg.keys()].filter(l=>lh.has(l));if(com.length>(dot<-.97?0:1))link(g,h,linesFirst?agree(com.map(l=>lg.get(l)+lh.get(l))):com.reduce((a,l)=>a+lg.get(l)+lh.get(l),0)/com.length,dot<-.97?3:1)}
+      const lg=lat(g),lh=lat(h),com=[...lg.keys()].filter(l=>lh.has(l));
+      // a turn (or a bundle that only lines up a little further on) only lines up lines that stay (nearly) side by side through it,
+      // not ones that two or more other lines come between on one side
+      const spread=m=>{const v=com.map(l=>m.get(l));return Math.max(...v)-Math.min(...v)};if(g.d.x*h.d.x+g.d.y*h.d.y>=-.97&&com.length>1&&Math.abs(spread(lg)-spread(lh))>sp*1.5)continue;
+      if(com.length>(dot<-.97?0:1))link(g,h,linesFirst?agree(com.map(l=>lg.get(l)+lh.get(l))):com.reduce((a,l)=>a+lg.get(l)+lh.get(l),0)/com.length,dot<-.97?3:1)}
     // a straight segment (even one with bend points on the straight) carries its shift from one station to the next
     const straight=t=>{const P=t.pts,a=P[0],u=unit(P[P.length-1].x-a.x,P[P.length-1].y-a.y);return P.every(p=>Math.abs((p.x-a.x)*u.y-(p.y-a.y)*u.x)<.5)};
     const byT=new Map();for(const g of groups)for(const o of g.items){if(!straight(o.t))continue;if(!byT.has(o.t))byT.set(o.t,[]);byT.get(o.t).push([g,o])}
