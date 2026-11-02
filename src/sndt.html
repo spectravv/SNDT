@@ -777,7 +777,7 @@ function normalize(m){
   if(m.settings&&m.settings.route==='arc')m.settings.route='oct1';
   // older maps chose "draw straight over" separately; it is now a gap of 0
   if(m.settings.crossings==='overlap')m.settings.crossGap=0;delete m.settings.crossings;
-  m.stations.forEach(s=>{s.id=s.id||uid();s.kind=s.kind==='portal'?'interchange':s.kind||'stop';s.label=s.label||'e';s.x=+s.x||0;s.y=+s.y||0;slotsClean(s)});
+  m.stations.forEach(s=>{s.id=s.id||uid();s.kind=s.kind==='portal'?'interchange':s.kind||'stop';s.label=s.label||'e';s.x=+s.x||0;s.y=+s.y||0});
   return m;
 }
 
@@ -958,7 +958,7 @@ function autoRoutes(tracks,st,mix){
     t.route=best.r;t.pts=best.P;t.bb=box(t.pts)}
   for(const t of auto){t.pts0=t.pts;delete t.bb}all.forEach(t=>delete t.bb)}
 function geom(){
-  const st=new Map(M.stations.map(s=>[s.id,s])),tracks=new Map(),ends=new Map(),G0slots=new Map();
+  const st=new Map(M.stations.map(s=>[s.id,s])),tracks=new Map(),ends=new Map();
   M.lines.forEach(L=>{if(L.hidden)return;for(const [a,b] of pairs(L)){if(a===b||!st.has(a)||!st.has(b))continue;const key=segKey(a,b);let t=tracks.get(key);if(!t){t={key,a:a<b?a:b,b:a<b?b:a,lines:[]};tracks.set(key,t)}if(!t.lines.includes(L.id))t.lines.push(L.id)}});
   const sp=M.settings.lineWidth+M.settings.lineGap,mix=routeMix(),rings=new Map();
   M.lines.forEach(L=>{if(L.hidden||!L.loop||!L.circle)return;const c=ringFit(L);if(!c)return;const dir=ringDir(L,c);for(const [a,b] of pairs(L))if(a!==b)rings.set(segKey(a,b),{c,dir,from:a})});
@@ -1200,24 +1200,12 @@ function geom(){
         if(!ends.has(t.a))ends.set(t.a,[]);if(!ends.has(t.b))ends.set(t.b,[]);const pass=t.over&&t.over.get(lid);
         if(!pass||!pass.has(t.a))ends.get(t.a).push({x:piece[0].x,y:piece[0].y,lid,dir:d0});if(!pass||!pass.has(t.b))ends.get(t.b).push({x:piece[piece.length-1].x,y:piece[piece.length-1].y,lid,dir:d1})})});
   }
-  // stations drawn with slots: each line's piece runs into its slot instead of ending on its lane
-  for(const s of M.stations){const g=slotGeo(s),E=ends.get(s.id);if(!g||!E)continue;const pos=new Map();
-    // (its lane plus a pull towards the neighbouring station on each arm, so a line coming in from the west and leaving south heads for the bottom left)
-    for(const t of tracks.values()){if(t.via||(t.a!==s.id&&t.b!==s.id)||!t.off)continue;const F=st.get(t.a===s.id?t.b:t.a),u=unit(F.x-s.x,F.y-s.y);
-      for(const lid of t.lines){if(passesAt(lid,s.id))continue;const P=t.off.get(lid);if(!P||P.length<2)continue;const e=t.a===s.id?P[0]:P[P.length-1],o=pos.get(lid)||{x:0,y:0,n:0};
-        o.x+=e.x+u.x*g.W;o.y+=e.y+u.y*g.H;o.n++;(o.arms||(o.arms=[])).push({x:e.x+u.x*g.W*1.5,y:e.y+u.y*g.H*1.5});pos.set(lid,o)}}
-    for(const o of pos.values()){o.x/=o.n;o.y/=o.n}const plan=slotPlan(s,pos);if(!plan||!plan.size)continue;G0slots.set(s.id,plan);
-    const lead=Math.max(g.W,g.H)/2+sp*2.5;
-    for(const t of tracks.values()){if(t.via||(t.a!==s.id&&t.b!==s.id)||!t.off)continue;
-      for(const lid of t.lines){const v=plan.get(lid);if(!v)continue;let P=t.off.get(lid);if(!P||P.length<2)continue;const atA=t.a===s.id;if(atA)P=P.slice().reverse();
-        const old=P[P.length-1],T=g.pt(v[0],v[1]);P=slotTail(P,T,lead);t.off.set(lid,atA?P.reverse():P);
-        for(const e of E)if(e.lid===lid&&Math.hypot(e.x-old.x,e.y-old.y)<.01){e.x=T.x;e.y=T.y}}}}
   // express segments are drawn along the lanes they were given on the segments underneath
   const glue=(A,B)=>A.length&&Math.hypot(A[A.length-1].x-B[0].x,A[A.length-1].y-B[0].y)<.01?A.concat(B.slice(1)):A.concat(B);
   for(const t of tracks.values())if(t.via){t.off=new Map();let C=[];
     for(const {u,from} of t.via)C=glue(C,u.a===from?u.pts:u.pts.slice().reverse());t.pts=C;
     for(const lid of t.lines){let O=[];for(const {u,from} of t.via){const P=u.off&&u.off.get(lid);if(P)O=glue(O,u.a===from?P:P.slice().reverse())}t.off.set(lid,O)}}
-  return{st,tracks,ends,ref,slots:G0slots};
+  return{st,tracks,ends,ref};
 }
 // a line of a segment whose lines swap sides: its own lane at each end, stepping across at 45° around the middle of the segment
 // (the middle of its longest straight stretch when that is long enough)
@@ -1336,37 +1324,6 @@ const iconOf=s=>s&&s.cicon&&(M.icons||[]).find(i=>i.id===s.cicon);
 function ciconBox(s){const ic=s.kind!=='waypoint'&&iconOf(s);if(!ic)return null;const h=stSize(s)*1.5*(s.ciconSize||100)/100,w=h*(ic.ar||1);return{ic,w,h}}
 function ciconSVG(s){const b=ciconBox(s);return b?`<image href="${b.ic.src}" x="${f(s.x-b.w/2)}" y="${f(s.y-b.h/2)}" width="${f(b.w)}" height="${f(b.h)}" preserveAspectRatio="xMidYMid meet"/>`:''}
 function stSize(s){if(s.size)return s.size;const b=M.settings.stationSize;return{interchange:b+2,hub:b+8,hsr:b+2,bus:Math.round(b*.8),local:Math.round(b*.6)}[s.kind]||b}
-// interchange slots: a station can be drawn as a grid of slots (s.slots = {c: columns, r: rows, at: {line id: [column, row]}}),
-// each line running into its own slot instead of its lane
-function slotsClean(s){const o=s.slots;if(!o||typeof o!=='object'){delete s.slots;return}const n=v=>Math.max(1,Math.min(12,Math.round(+v)||1));o.c=n(o.c);o.r=n(o.r);
-  const at={},used=new Set();for(const [l,v] of Object.entries(o.at&&typeof o.at==='object'?o.at:{})){if(!Array.isArray(v))continue;const c=Math.round(+v[0]),r=Math.round(+v[1]),k=c+','+r;if(c>=0&&r>=0&&c<o.c&&r<o.r&&!used.has(k)){used.add(k);at[l]=[c,r]}}o.at=at}
-function slotGeo(s){const o=s&&s.slots;if(!o||s.kind==='waypoint')return null;const S=M.settings,U=Math.max(S.lineWidth+S.lineGap,S.lineWidth*1.6+4);
-  return{U,c:o.c,r:o.r,W:o.c*U+U*.5,H:o.r*U+U*.5,pt:(c,r)=>({x:s.x+(c-(o.c-1)/2)*U,y:s.y+(r-(o.r-1)/2)*U})}}
-// which slot each line uses: the ones set by hand, then any line without one takes the free slot nearest to where it meets the station
-// (pos: line id -> where it meets the station without slots); a line left over when the slots run out keeps its lane
-function slotPlan(s,pos){const g=slotGeo(s);if(!g)return null;const out=new Map(),used=new Set();
-  for(const [l,v] of Object.entries(s.slots.at))if(pos.has(l)&&!used.has(v+'')){used.add(v+'');out.set(l,v)}
-  const k=Math.max(...[...pos.values()].map(p=>Math.max(Math.abs(p.x-s.x)/(g.W/2),Math.abs(p.y-s.y)/(g.H/2))),1e-9);
-  for(const [l,p] of [...pos].sort((a,b)=>a[0]<b[0]?-1:1)){if(out.has(l))continue;let best=null,bd=Infinity;const q={x:s.x+(p.x-s.x)/k,y:s.y+(p.y-s.y)/k};
-    for(let r=0;r<g.r;r++)for(let c=0;c<g.c;c++){if(used.has(c+','+r))continue;const t=g.pt(c,r),d=Math.hypot(t.x-q.x,t.y-q.y);if(d<bd){bd=d;best=[c,r]}}
-    if(best){used.add(best+'');out.set(l,best)}}
-  // then swap automatic picks (with each other or into empty slots) while that lowers the number of crossings between the lines'
-  // straight runs from their arms into their slots
-  const auto=[...out.keys()].filter(l=>!s.slots.at[l]&&pos.get(l).arms),free=[];for(let r=0;r<g.r;r++)for(let c=0;c<g.c;c++)if(![...out.values()].some(v=>v[0]===c&&v[1]===r))free.push([c,r]);
-  const segs=l=>{const T=g.pt(...out.get(l));return(pos.get(l).arms||[]).map(a=>[a,T])},cost=()=>{const L=[...out.keys()],S=L.map(segs);let n=0;
-    for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++)for(const [a,b] of S[i])for(const [c,d] of S[j])if(segsCross(a,b,c,d))n++;return n};
-  let cur=cost();for(let it=0;it<20&&cur;it++){let better=false;
-    for(const l of auto){for(const m of auto.concat(free.map((v,i)=>i))){if(m===l)continue;const isFree=typeof m==='number',a=out.get(l),b=isFree?free[m]:out.get(m);
-      out.set(l,b);if(isFree)free[m]=a;else out.set(m,a);const c=cost();if(c<cur){cur=c;better=true}else{out.set(l,a);if(isFree)free[m]=b;else out.set(m,b)}}}
-    if(!better)break}
-  return out}
-// the last stretch of a line's piece into its slot: straight on along the line, then an S-curve into the slot point
-function slotTail(P,T,lead){let i=P.length-1,run=0;while(i>0&&run+Math.hypot(P[i].x-P[i-1].x,P[i].y-P[i-1].y)<lead){run+=Math.hypot(P[i].x-P[i-1].x,P[i].y-P[i-1].y);i--}
-  let A=P[i],keep=P.slice(0,i+1);if(i>0){const need=lead-run,l=Math.hypot(P[i].x-P[i-1].x,P[i].y-P[i-1].y),k=Math.min(1,need/(l||1));A={x:P[i].x+(P[i-1].x-P[i].x)*k,y:P[i].y+(P[i-1].y-P[i].y)*k};keep=P.slice(0,i).concat([A])}
-  const nx=keep.length>1?keep[keep.length-2]:A,d=keep.length>1?unit(A.x-nx.x,A.y-nx.y):unit(P[P.length-1].x-A.x,P[P.length-1].y-A.y),m=Math.hypot(T.x-A.x,T.y-A.y)*.42;
-  const c1={x:A.x+d.x*m,y:A.y+d.y*m},c2={x:T.x-d.x*m,y:T.y-d.y*m},out=keep.slice();
-  for(let j=1;j<=16;j++){const q=j/16,u=1-q;out.push({x:u*u*u*A.x+3*u*u*q*c1.x+3*u*q*q*c2.x+q*q*q*T.x,y:u*u*u*A.y+3*u*u*q*c1.y+3*u*q*q*c2.y+q*q*q*T.y})}
-  return out}
 function farPair(E,s){
   if(!E.length)return[{x:s.x,y:s.y},{x:s.x,y:s.y}];
   // span the widest bundle of parallel line ends, so a bundle turning at the station doesn't tilt the marker
@@ -1427,7 +1384,7 @@ function numBadgesSVG(s,nb,c){const S=M.settings,x0=c.x-nb.W/2,y0=c.y-nb.h/2,r=n
   o+=tx;
   return `<clipPath id="${id}"><rect x="${f(x0)}" y="${f(y0)}" width="${f(nb.W)}" height="${f(nb.h)}" rx="${f(r)}"/></clipPath><rect x="${f(x0-1)}" y="${f(y0-1)}" width="${f(nb.W+2)}" height="${f(nb.h+2)}" rx="${f(r+1)}" fill="${S.bg}"/><g clip-path="url(#${id})">${o}</g>`}
 // where a station's mark is drawn: its own point, or (lines first) the middle of the line ends it covers
-function markAt(s,G){if(M.settings.layout!=='lines'||s.kind==='waypoint'||ciconBox(s)||(G.slots&&G.slots.has(s.id)))return{x:s.x,y:s.y};const E=(G.ends.get(s.id)||[]).filter(e=>!passesAt(e.lid,s.id));if(!E.length)return{x:s.x,y:s.y};
+function markAt(s,G){if(M.settings.layout!=='lines'||s.kind==='waypoint'||ciconBox(s))return{x:s.x,y:s.y};const E=(G.ends.get(s.id)||[]).filter(e=>!passesAt(e.lid,s.id));if(!E.length)return{x:s.x,y:s.y};
   const [p,q]=farPair(E,s);return{x:(p.x+q.x)/2,y:(p.y+q.y)/2}}
 function stationSVG(s,G,editor){
   const S=M.settings,E=(G.ends.get(s.id)||[]).filter(e=>!passesAt(e.lid,s.id)),sz=stSize(s),lids=[...new Set(E.map(e=>e.lid))],k=s.kind||'stop';
@@ -1463,17 +1420,13 @@ function stationSVG(s,G,editor){
     const inter=k==='interchange'||lids.length>1;g=cap(S.stFill,inter?S.ink:lineCol,sz,k==='interchange'?3:2.4);
   }
   const xm=s.closed&&k!=='waypoint'?(()=>{const r=Math.max(2.5,sz*.3),w=Math.max(1.4,sz*.13),cx=cb?s.x:(p.x+q.x)/2,cy=cb?s.y:(p.y+q.y)/2;return `<path d="M${f(cx-r)} ${f(cy-r)}L${f(cx+r)} ${f(cy+r)}M${f(cx+r)} ${f(cy-r)}L${f(cx-r)} ${f(cy+r)}" stroke="${S.ink}" stroke-width="${f(w)}" stroke-linecap="round" fill="none"/>`})():'';
-  const sgo=k!=='waypoint'&&G.slots&&G.slots.has(s.id)&&slotGeo(s);
-  if(sgo){const plan=G.slots.get(s.id),W=sgo.W,H=sgo.H;g=`<rect x="${f(s.x-W/2)}" y="${f(s.y-H/2)}" width="${f(W)}" height="${f(H)}" rx="${f(Math.min(W,H)/2)}" fill="${S.stFill}" stroke="${S.ink}" stroke-width="3"/>`;
-    for(const [lid,v] of plan){const L=lnOf(lid),p=sgo.pt(v[0],v[1]);if(L)g+=`<circle cx="${f(p.x)}" cy="${f(p.y)}" r="${f(sgo.U*.32)}" fill="${L.color}" stroke="${S.ink}" stroke-width="1.8"/>`}}
   if(cb)g=s.ciconOver?g+ciconSVG(s):ciconSVG(s);
   // codes as the mark: a station not in service shows them striped instead of crossed out (the X would hide the codes)
   const nb=!cb&&numBox(s,G);if(nb)g=numBadgesSVG(s,nb,{x:(p.x+q.x)/2,y:(p.y+q.y)/2});
   const nbHit=nb&&editor?`<rect x="${f((p.x+q.x)/2-nb.W/2)}" y="${f((p.y+q.y)/2-nb.h/2)}" width="${f(nb.W)}" height="${f(nb.h)}" fill="transparent"/>`:'';
   const ow=G.owStops&&k!=='waypoint'&&k!=='arrow'&&k!=='local'&&!s.closed?G.owStops.get(s.id):null;
   const om=ow?chevron(mc.x,mc.y,ow,Math.max(4,sz*.5),S.ink,Math.max(1.3,sz*.13)):'';
-  const sgHit=sgo&&editor?`<rect x="${f(s.x-sgo.W/2)}" y="${f(s.y-sgo.H/2)}" width="${f(sgo.W)}" height="${f(sgo.H)}" fill="transparent"/>`:'';
-  return `<g data-kind="station" data-id="${s.id}">${g}${om}${nb?'':xm}${hit}${nbHit}${sgHit}</g>`;
+  return `<g data-kind="station" data-id="${s.id}">${g}${om}${nb?'':xm}${hit}${nbHit}</g>`;
 }
 const ICONS={
   airport:['Airport','<path d="M7 1.6c.5 0 .8.4.8.9v3.3l4.6 2.7v1.2L7.8 8.4v2.8l1.4 1v.9L7 12.5l-2.2.6v-.9l1.4-1V8.4L1.6 9.7V8.5l4.6-2.7V2.5c0-.5.3-.9.8-.9z" fill="FG"/>'],
@@ -1507,7 +1460,7 @@ function textW0(str,fs,weight,italic){const S=M.settings,key=[str,fs,weight,ital
 function contrastOn(hex){const [r,g,b]=hexRgb(hex);return(.299*r+.587*g+.114*b)/255>.6?'#1d2226':'#ffffff'}
 function labelBox(s,G,dk,push=0){
   const S=M.settings,dir=DIRS[dk]||DIRS.e,E=G.ends.get(s.id)||[],cb=ciconBox(s),sz=Math.max(stSize(s),cb?Math.max(cb.w,cb.h):0),bgp=s.lbg?4:0,o=markAt(s,G);
-  let ext=0;const nb=numBox(s,G);if(nb)ext=Math.abs(dir[0])*nb.W/2+Math.abs(dir[1])*nb.h/2-sz/2;const sgo=G.slots&&G.slots.has(s.id)&&slotGeo(s);if(sgo)ext=Math.max(ext,Math.abs(dir[0])*sgo.W/2+Math.abs(dir[1])*sgo.H/2-sz/2);
+  let ext=0;const nb=numBox(s,G);if(nb)ext=Math.abs(dir[0])*nb.W/2+Math.abs(dir[1])*nb.h/2-sz/2;
   for(const e of E){ext=Math.max(ext,(e.x-o.x)*dir[0]+(e.y-o.y)*dir[1]);if(s.kind==='arrow'){const L=lnOf(e.lid),len=(L?lw(L):S.lineWidth)*1.9;ext=Math.max(ext,(e.x-e.dir.x*len-o.x)*dir[0]+(e.y-e.dir.y*len-o.y)*dir[1]-sz/2+2)}}
   const gap=sz/2+ext+5+push+bgp,x0=o.x+dir[0]*gap+(s.ldx||0),y0=o.y+dir[1]*gap+(s.ldy||0);
   const fs=s.fs||(s.kind==='hub'?Math.round(S.labelSize*1.15):S.labelSize),rows=String(s.name).split('\n'),rsz=rows.map(r=>cjkFs([r],fs)),fe=rsz[0],dys=rows.map((r,i)=>i?rsz[i-1]*.3+rsz[i]*.85:0),h=rsz.reduce((a,v)=>a+v*1.15,0);
@@ -1804,10 +1757,6 @@ function overlaySVG(G){
     if(N.length>1)for(const n of N){const L=lnOf(n.lid);if(!L)continue;const dr=drag&&drag.type==='lane'&&drag.lid===n.lid;
       o+=`<circle data-kind="lane" data-id="${sel[0].id}" data-key="${n.lid}" cx="${f(n.x)}" cy="${f(n.y)}" r="${f(Math.max(r,7/k))}" fill="${L.color}" stroke="#fff" stroke-width="${f(2/k)}" style="cursor:grab"${dr?' opacity=".35"':''}><title>${esc(L.name)}</title></circle>`}
     if(drag&&drag.type==='lane'&&drag.moved){const L=lnOf(drag.lid);if(L)o+=`<circle cx="${f(drag.at.x)}" cy="${f(drag.at.y)}" r="${f(9/k)}" fill="${L.color}" stroke="${c}" stroke-width="${f(2/k)}" pointer-events="none"/>`}}
-  if(G&&G.slots&&tool==='select'&&sel.length===1&&sel[0].t==='station'&&G.slots.has(sel[0].id)){const s=stOf(sel[0].id),g=slotGeo(s),plan=G.slots.get(s.id),k=view.k,taken=new Set([...plan.values()].map(v=>v+''));
-    for(let r=0;r<g.r;r++)for(let cc=0;cc<g.c;cc++)if(!taken.has(cc+','+r)){const p=g.pt(cc,r);o+=`<circle cx="${f(p.x)}" cy="${f(p.y)}" r="${f(g.U*.26)}" fill="none" stroke="${c}" stroke-width="${f(1.4/k)}" stroke-dasharray="${f(3/k)} ${f(3/k)}" pointer-events="none"/>`}
-    for(const [lid,v] of plan){const L=lnOf(lid),p=g.pt(v[0],v[1]),dr=drag&&drag.type==='slot'&&drag.lid===lid;if(L)o+=`<circle data-kind="slot" data-id="${s.id}" data-key="${lid}" cx="${f(p.x)}" cy="${f(p.y)}" r="${f(Math.max(g.U*.4,9/k))}" fill="transparent" style="cursor:grab"${dr?' stroke="'+c+'" stroke-width="'+f(2/k)+'"':''}><title>${esc(L.name)}</title></circle>`}
-    if(drag&&drag.type==='slot'&&drag.moved){const L=lnOf(drag.lid);if(L)o+=`<circle cx="${f(drag.at.x)}" cy="${f(drag.at.y)}" r="${f(g.U*.36)}" fill="${L.color}" stroke="${c}" stroke-width="${f(2.5/k)}" pointer-events="none"/>`}}
   if(drawLine&&hover){const L=lnOf(drawLine),last=L&&stOf(drawEnd==='start'?L.stops[0]:L.stops[L.stops.length-1]);if(last)o+=`<path d="${dOf(routePts(last,hover,M.settings.route))}" fill="none" stroke="${L.color}" stroke-width="${lw(L)}" stroke-opacity=".45" stroke-linecap="round" stroke-dasharray="${lw(L)} ${lw(L)}" pointer-events="none"/>`}
   // no cursor (a finger has lifted): draw the draft up to its last corner
   const draftGuide=(P,closed,fill)=>{const l=P[P.length-1],f0=P[0],k=view.k,hv=hover||{x:l[0],y:l[1]};let g='';
@@ -1839,9 +1788,7 @@ function overlaySVG(G){
   if(tool==='water'&&hover&&waterMode!=='fill')o+=`<circle cx="${f(hover.x)}" cy="${f(hover.y)}" r="${brush/2}" fill="none" stroke="${c}" stroke-width="${f(1.5/view.k)}" stroke-dasharray="${f(4/view.k)} ${f(3/view.k)}" pointer-events="none"/>`;
   if(tool==='station'&&hover&&!drag)o+=`<circle cx="${hover.x}" cy="${hover.y}" r="${M.settings.stationSize/2}" fill="none" stroke="${c}" stroke-dasharray="3 2" pointer-events="none"/>`;
   for(const s of sel){
-    if(s.t==='station'){const st=stOf(s.id);if(!st)continue;const sg=G.slots&&G.slots.has(st.id)&&slotGeo(st);
-      if(sg){o+=`<rect x="${f(st.x-sg.W/2-5)}" y="${f(st.y-sg.H/2-5)}" width="${f(sg.W+10)}" height="${f(sg.H+10)}" rx="${f(Math.min(sg.W,sg.H)/2+5)}" fill="none" stroke="${c}" stroke-width="2" stroke-dasharray="4 3" pointer-events="none"/>`;continue}
-      const E=G.ends.get(st.id)||[];const [p,q]=farPair(E,st);const r=stSize(st)/2+6;
+    if(s.t==='station'){const st=stOf(s.id);if(!st)continue;const E=G.ends.get(st.id)||[];const [p,q]=farPair(E,st);const r=stSize(st)/2+6;
       o+=Math.hypot(p.x-q.x,p.y-q.y)<.5?`<circle cx="${f(st.x)}" cy="${f(st.y)}" r="${r}" fill="none" stroke="${c}" stroke-width="2" stroke-dasharray="4 3" pointer-events="none"/>`:`<line x1="${f(p.x)}" y1="${f(p.y)}" x2="${f(q.x)}" y2="${f(q.y)}" stroke="${c}" stroke-opacity=".9" stroke-width="${r*2}" stroke-linecap="round" fill="none" pointer-events="none" style="stroke-opacity:.18"/>`}
     if(s.t==='line'&&s.seg){const t=G.tracks.get(s.seg);if(t)o+=`<path d="${dOf(t.pts)}" fill="none" stroke="${c}" stroke-width="2" stroke-dasharray="5 4" pointer-events="none"/>`}
     // station number codes: drag a corner or an edge to size the box by hand (it stays a rectangle centred on the station)
@@ -2031,11 +1978,6 @@ function inspStation(s){
    <div class="fld"><span>Served by</span><div class="chips">${lines.map(L=>`<button class="chip" data-nt data-act="sel-line:${L.id}"><i style="background:${L.color}"></i>${esc(L.name)}</button>`).join('')||'<span class="sub">No lines yet. Use the line tool (L) and click this station.</span>'}</div></div>
    ${(()=>{const nl=nearLines(s,lastG);return nl.length?`<div class="fld"><span>${tr('Lines passing close by')}</span><div class="chips">${nl.map(o=>`<button class="chip" data-nt data-act="near-add:${o.L.id}" title="${esc(tr('Make this station a stop on this line'))}">+ <i style="background:${o.L.color}"></i>${esc(String(o.L.name||'').replace(/\n/g,' '))}</button>`).join('')}</div><p class="sub">${tr('Lines within two grid steps that don’t stop here yet. Click one to add this station to it.')}</p></div>`:''})()}
    ${lines.length?`<div class="fld"><span>${tr('Stops here')}</span><div class="chips">${lines.map(L=>`<button class="chip" data-nt data-act="skip-tog:${L.id}" aria-pressed="${!passesAt(L.id,s.id)}" title="${esc(tr('Untick a line that passes through without stopping'))}"><i style="background:${L.color}"></i>${esc(L.name)}</button>`).join('')}</div><p class="sub">${tr('Untick a line that passes through without stopping: it keeps its lane here (and can be reordered) but gets no stop.')}</p></div>`:''}
-   ${lines.length>1?`<div class="fld"><span>${tr('Slots')}</span><div class="opts" style="width:fit-content"><button class="opt" data-act="slots:off" aria-pressed="${!s.slots}">${tr('Off')}</button><button class="opt" data-act="slots:on" aria-pressed="${!!s.slots}">${tr('On')}</button></div>
-   ${s.slots?`<div class="grid2"><div class="fld"><span>${tr('Across')}</span><div class="btns"><button class="btn" data-act="slots-size:-1,0" aria-label="${esc(tr('Fewer columns'))}">−</button><b data-nt style="align-self:center;min-width:18px;text-align:center">${s.slots.c}</b><button class="btn" data-act="slots-size:1,0" aria-label="${esc(tr('More columns'))}">+</button></div></div><div class="fld"><span>${tr('Down')}</span><div class="btns"><button class="btn" data-act="slots-size:0,-1" aria-label="${esc(tr('Fewer rows'))}">−</button><b data-nt style="align-self:center;min-width:18px;text-align:center">${s.slots.r}</b><button class="btn" data-act="slots-size:0,1" aria-label="${esc(tr('More rows'))}">+</button></div></div></div>
-   <div class="chips">${[[2,1],[3,1],[2,2],[3,2],[2,3],[4,2]].map(([c,r])=>`<button class="chip" data-nt data-act="slots-preset:${c},${r}" aria-pressed="${s.slots.c===c&&s.slots.r===r}">${c}×${r}</button>`).join('')}</div>
-   <div class="btns"><button class="btn" data-act="slots-auto">${tr('Auto-place')}</button><button class="btn" data-act="slots-rot">${tr('Turn 90°')}</button></div>
-   <p class="sub">${tr('Drag a line’s dot on the map onto another slot to move it there. Dropping it on a taken slot swaps the two lines.')}</p>`:`<p class="sub">${tr('Draw this station as a grid of slots and choose which slot each line runs into.')}</p>`}</div>`:''}
    ${lines.length>1?`<div class="adv-only" style="display:flex;flex-direction:column;gap:10px">
    <div class="fld"><span>Reorder lines at stations</span><div class="opts" style="width:fit-content"><button class="opt" data-act="lane-edit:off" aria-pressed="${!laneEdit}">Off</button><button class="opt" data-act="lane-edit:on" aria-pressed="${laneEdit}">On</button></div></div>
    <p class="sub">${laneEdit?'Drag a line’s dot on the map onto another to swap the two lines here.':'Turn it on to see a dot where each line meets this station, then drag one onto another to swap the two lines.'}</p>
@@ -2341,11 +2283,6 @@ function act(name,arg,el){
     case 'bends':toggleBends();break;
     case 'lane-edit':if((arg==='on')!==laneEdit)toggleLaneEdit();break;
     case 'near-add':if(curSt)addToNearLine(curSt,arg);break;
-    case 'slots':if(!curSt)break;pushUndo();if(arg==='off')delete curSt.slots;else{const n=Math.max(2,(lastG||geom()).ends.get(curSt.id)?new Set((lastG||geom()).ends.get(curSt.id).map(e=>e.lid)).size:2);curSt.slots={c:Math.ceil(n/(n>3?2:1)),r:n>3?2:1,at:{}};slotsFreeze(curSt)}changed();break;
-    case 'slots-size':{if(!curSt||!curSt.slots)break;const [dc,dr]=arg.split(',').map(Number),o=curSt.slots;pushUndo();o.c=Math.max(1,Math.min(12,o.c+dc));o.r=Math.max(1,Math.min(12,o.r+dr));slotsClean(curSt);slotsFreeze(curSt);changed();break}
-    case 'slots-preset':{if(!curSt||!curSt.slots)break;const [c,r]=arg.split(',').map(Number);pushUndo();curSt.slots.c=c;curSt.slots.r=r;slotsClean(curSt);slotsFreeze(curSt);changed();break}
-    case 'slots-rot':{if(!curSt||!curSt.slots)break;const o=curSt.slots,at={};pushUndo();for(const [l,[c,r]] of Object.entries(o.at))at[l]=[o.r-1-r,c];[o.c,o.r]=[o.r,o.c];o.at=at;changed();break}
-    case 'slots-auto':if(!curSt||!curSt.slots)break;pushUndo();curSt.slots.at={};slotsFreeze(curSt);changed();break;
     case 'skip-tog':{const L=lnOf(arg);if(!curSt||!L)break;pushUndo();const k=(L.skip||[]).indexOf(curSt.id);if(k>=0){L.skip.splice(k,1);if(!L.skip.length)delete L.skip}else(L.skip||(L.skip=[])).push(curSt.id);changed();break}
     case 'lane-reset':if(curSt&&curSt.laneOrder){pushUndo();delete curSt.laneOrder;changed()}break;
     case 'ncolor':natureColor=arg;lsSet('sndt:ncolor',arg);if(natureDraft){natureDraft.color=arg;render()}renderInspector();break;
@@ -2587,13 +2524,6 @@ function updHint(){draftClass();const h=$('#hint');let t=HINTS[tool]||'';const t
   if(tool==='nature'&&natureDraft)t='Click to add points. Click the first point, double-click or press Enter to close the area. Esc cancels.';
   if(tool==='water'&&waterInput==='click')t=waterDraft?(waterDraft.t==='fill'?'Click to add points. Click the first point, double-click or press Enter to close the shape. Esc cancels.':'Click to add points. Double-click or press Enter to finish. Esc cancels.'):'Click to place the first point. Hold Alt to place off the grid.';if(tool==='line'&&drawLine){const L=lnOf(drawLine);{const e=L&&stOf(drawEnd==='start'?L.stops[0]:L.stops[L.stops.length-1]);t=L&&L.stops.length?`Extending ${L.name} from ${e&&e.name?String(e.name).replace(/\n/g,' '):'its '+drawEnd}: ${tch?'tap the next station, or empty space for a new stop.':'click the next station, or empty space for a new stop. Enter or Esc to finish.'}`:`Drawing ${L?L.name:'line'}: ${tch?'tap the first station.':'click the first station. Enter or Esc to finish.'}`}}if(tch)t=HINTS_TOUCH[t]||t;h.textContent=t;h.hidden=!t}
 function finishDraw(){const L=drawLine&&lnOf(drawLine);drawLine=null;if(L&&L.stops.length<2){M.lines=M.lines.filter(l=>l!==L)}hover=null;if(L&&lnOf(L.id))sel=[{t:'line',id:L.id}];setTool('select');changed()}
-// a station's slots as drawn now (hand-set ones plus the automatic picks) become its own, so they stay put when the map changes
-function slotsFreeze(s){if(!s.slots)return;const G=geom(),p=G.slots.get(s.id);if(p)s.slots.at=Object.fromEntries([...p].map(([l,v])=>[l,v.slice()]))}
-// dropping a line's slot dot on another slot moves it there (swapping with the line already in it)
-function slotDrop(d){const s=stOf(d.sid),g=slotGeo(s);if(!g)return;let best=null,bd=g.U*.7;
-  for(let r=0;r<g.r;r++)for(let c=0;c<g.c;c++){const p=g.pt(c,r),dd=Math.hypot(p.x-d.at.x,p.y-d.at.y);if(dd<bd){bd=dd;best=[c,r]}}
-  if(!best)return;slotsFreeze(s);const at=s.slots.at,was=at[d.lid];if(!was||was+''===best+'')return;pushUndo();
-  const other=Object.keys(at).find(l=>l!==d.lid&&at[l]+''===best+'');if(other)at[other]=was;at[d.lid]=best;changed()}
 // dropping a line's dot on another line's dot at a station swaps the two lines' places there
 function laneDrop(d){const s=stOf(d.sid),G=lastG||geom();if(!s)return;const N=laneNow(d.sid,G),k=view.k;let tgt=null,bd=Infinity;
   for(const n of N){if(n.lid===d.lid)continue;const dd=Math.hypot(n.x-d.at.x,n.y-d.at.y);if(dd<bd){bd=dd;tgt=n}}
@@ -2712,7 +2642,6 @@ function pointerDown(e){if(multiAdd&&e.pointerType!=='mouse'&&dtapSel)Object.def
   // select tool
   if(h&&(h.kind==='vx'||h.kind==='mid')){const a=shapeOf({t:h.coll,id:h.id});if(a){drag={type:h.kind==='vx'?'nvx':'nmid',a,i:+h.i,start:w,moved:false};return}}
   if(h&&h.kind==='lane'){drag={type:'lane',sid:h.id,lid:h.key,start:w,at:w,moved:false};return}
-  if(h&&h.kind==='slot'){drag={type:'slot',sid:h.id,lid:h.key,start:w,at:w,moved:false};return}
   if(h&&h.kind==='hdl'){drag={type:'hdl',key:h.key,i:+h.i,s:+h.coll||1,start:w,moved:false,off:cpOff(h.key,+h.i)};return}
   if(h&&(h.kind==='cp'||h.kind==='cpadd')){const v=sel[0]&&segView(h.key,sel[0].id),i=+h.i,m=v&&(h.kind==='cp'?[v.ch[i+1],v.dv[i+1]]:[{x:(v.ch[i].x+v.ch[i+1].x)/2,y:(v.ch[i].y+v.ch[i+1].y)/2},{x:(v.dv[i].x+v.dv[i+1].x)/2,y:(v.dv[i].y+v.dv[i+1].y)/2}]);
     drag={type:h.kind,key:h.key,i,start:w,moved:false,off:m?{x:m[1].x-m[0].x,y:m[1].y-m[0].y}:{x:0,y:0}};return}
@@ -2768,7 +2697,7 @@ svg.addEventListener('pointermove',e=>{
     if(!drag.moved){if(Math.hypot(dx,dy)*view.k<2)return;pushUndo();const sg=makeCustom(drag.key);if(!sg){drag=null;return}
       if(drag.type==='cpadd'){sg.pts.splice(drag.i,0,{x:0,y:0});drag.type='cp'}drag.moved=true}
     M.segs[drag.key].pts[drag.i]=Object.assign({},M.segs[drag.key].pts[drag.i],{x:snap(w.x-drag.off.x,e.altKey),y:snap(w.y-drag.off.y,e.altKey)});requestRender();return}
-  if(drag.type==='lane'||drag.type==='slot'){if(!drag.moved&&Math.hypot(dx,dy)*view.k<3)return;drag.moved=true;drag.at=w;requestOverlay();return}
+  if(drag.type==='lane'){if(!drag.moved&&Math.hypot(dx,dy)*view.k<3)return;drag.moved=true;drag.at=w;requestOverlay();return}
   if(drag.type==='hdl'){const sg=M.segs[drag.key],q=sg&&sg.pts[drag.i];if(!q)return;if(!drag.moved){if(Math.hypot(dx,dy)*view.k<2)return;pushUndo();drag.moved=true}
     q.hx=Math.round((w.x-drag.off.x-q.x)*drag.s);q.hy=Math.round((w.y-drag.off.y-q.y)*drag.s);if(Math.hypot(q.hx,q.hy)<3){delete q.hx;delete q.hy}requestRender();return}
   if(drag.type==='nvx'||drag.type==='nmid'){if(!drag.moved){if(Math.hypot(dx,dy)*view.k<2)return;pushUndo();if(drag.type==='nmid'){drag.a.pts.splice(drag.i+1,0,[0,0]);drag.i++;drag.type='nvx'}drag.moved=true}
@@ -2793,7 +2722,6 @@ function endPointer(e){
   if(!d.moved&&d.type==='cp'){anchorSel={kind:'cp',key:d.key,i:d.i};requestOverlay();return}
   if(!d.moved&&d.type==='nvx'){const coll=d.a===shapeOf({t:'region',id:d.a.id})?'region':(M.water||[]).includes(d.a)?'water':'nature';anchorSel={kind:'vx',coll,id:d.a.id,i:d.i};requestOverlay();return}
   if(d.type==='lane'){if(d.moved)laneDrop(d);requestOverlay();return}
-  if(d.type==='slot'){if(d.moved)slotDrop(d);requestOverlay();return}
   if(d.type==='hdl'){if(d.moved)changed();return}
   if(d.type==='move'||d.type==='label'||d.type==='resize'||d.type==='iresize'||d.type==='nbresize'||d.type==='cp'||d.type==='cpadd'||d.type==='nvx'||d.type==='nmid'||d.type==='nmove'){if(d.moved){anchorSel=null;changed()}return}
   if(d.type==='marquee'){if(d.moved){const x0=Math.min(d.a.x,d.b.x),x1=Math.max(d.a.x,d.b.x),y0=Math.min(d.a.y,d.b.y),y1=Math.max(d.a.y,d.b.y);
