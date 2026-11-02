@@ -1546,37 +1546,6 @@ function regionShapes(r){if(r.pts&&r.pts.length){let x0=1e9,y0=1e9,x1=-1e9,y1=-1
 function roundPolyD(P,rad){const n=P.length;if(n<3)return'';let d='';for(let i=0;i<n;i++){const p=P[i],a=P[(i-1+n)%n],b=P[(i+1)%n],la=Math.hypot(p[0]-a[0],p[1]-a[1])||1,lb=Math.hypot(b[0]-p[0],b[1]-p[1])||1,r=Math.min(rad,la/2,lb/2);
   d+=(i?'L':'M')+f(p[0]+(a[0]-p[0])*r/la)+' '+f(p[1]+(a[1]-p[1])*r/la)+'Q'+f(p[0])+' '+f(p[1])+' '+f(p[0]+(b[0]-p[0])*r/lb)+' '+f(p[1]+(b[1]-p[1])*r/lb)}return d+'Z'}
 function regionsOverlap(A,B,g){return A.some(p=>B.some(q=>p.x-g<q.x+q.w&&q.x-g<p.x+p.w&&p.y-g<q.y+q.h&&q.y-g<p.y+p.h))}
-// fare zones (settings.zones, Tube-map style): every spot near the network belongs to the zone of its nearest zoned station (a station's
-// s.zone, e.g. "2" or "2/3" for one in both zones, which counts as the lower one); zone n's area is traced with marching squares (so
-// its edges run straight or at 45°) and the areas are stacked from the outermost zone in, in alternating shades, each band with its number
-let zonesMemo=null;
-function zonesSVG(){const S=M.settings;if(!S.zones)return'';const Z=M.stations.filter(s=>s.kind!=='waypoint'&&parseInt(s.zone)>0).map(s=>({x:s.x,y:s.y,z:parseInt(s.zone)}));if(!Z.length)return'';
-  const key=JSON.stringify([Z,S.grid,S.zoneReach,S.bg,S.ink]);if(zonesMemo&&zonesMemo.key===key)return zonesMemo.svg;
-  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const p of Z){x0=Math.min(x0,p.x);y0=Math.min(y0,p.y);x1=Math.max(x1,p.x);y1=Math.max(y1,p.y)}
-  const D=(S.grid||10)*(+S.zoneReach>0?+S.zoneReach:6);x0-=D;y0-=D;x1+=D;y1+=D;const c=Math.max((S.grid||10)/2,Math.max(x1-x0,y1-y0)/260),nx=Math.ceil((x1-x0)/c)+3,ny=Math.ceil((y1-y0)/c)+3,ox=x0-c,oy=y0-c;
-  // zone of each grid point (0 = outside the reach of every station)
-  const zg=new Int16Array(nx*ny),D2=D*D;for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const X=ox+i*c,Y=oy+j*c;let bd=Infinity,bz=0;for(const p of Z){const d=(p.x-X)**2+(p.y-Y)**2;if(d<bd){bd=d;bz=p.z}}zg[j*nx+i]=bd<=D2?bz:0}
-  const zmax=Math.max(...Z.map(p=>p.z));let o='';
-  const trace=n=>{const v=(i,j)=>i>=0&&j>=0&&i<nx&&j<ny&&zg[j*nx+i]>0&&zg[j*nx+i]<=n,segs=new Map(),add=(a,b)=>{const k=a[0]+','+a[1];(segs.get(k)||segs.set(k,[]).get(k)).push(b)};
-    // marching squares on the half-step lattice: edge midpoints in units of half a cell
-    for(let j=-1;j<ny;j++)for(let i=-1;i<nx;i++){const a=v(i,j),b=v(i+1,j),cc=v(i+1,j+1),d=v(i,j+1),m=(a?8:0)|(b?4:0)|(cc?2:0)|(d?1:0);if(!m||m===15)continue;
-      const T=[2*i+1,2*j],R=[2*i+2,2*j+1],B=[2*i+1,2*j+2],L=[2*i,2*j+1];
-      const E={1:[[B,L]],2:[[R,B]],3:[[R,L]],4:[[T,R]],5:[[T,L],[B,R]],6:[[T,B]],7:[[T,L]],8:[[L,T]],9:[[B,T]],10:[[L,B],[R,T]],11:[[R,T]],12:[[L,R]],13:[[B,R]],14:[[L,B]]}[m];for(const [p,q] of E)add(p,q)}
-    let d='';const used=new Set();for(const [k0,arr] of segs)for(let a=0;a<arr.length;a++){if(used.has(k0+'#'+a))continue;used.add(k0+'#'+a);let cur=arr[a],pts=[k0.split(',').map(Number)];
-      for(let g=0;g<1e5;g++){pts.push(cur);const k=cur[0]+','+cur[1],nx2=segs.get(k);if(!nx2)break;const ix=nx2.findIndex((_,t)=>!used.has(k+'#'+t));if(ix<0)break;used.add(k+'#'+ix);cur=nx2[ix]}
-      // drop points in the middle of straight runs so the path stays small
-      const P=pts.filter((p,t)=>t===0||t===pts.length-1||(p[0]-pts[t-1][0])*(pts[t+1][1]-p[1])!==(p[1]-pts[t-1][1])*(pts[t+1][0]-p[0]));
-      d+='M'+P.map(p=>f(ox+p[0]*c/2)+' '+f(oy+p[1]*c/2)).join('L')+'Z'}
-    return d};
-  for(let n=zmax;n>=1;n--){const d=trace(n);if(d)o+=`<path d="${d}" fill="${mix(S.ink,S.bg,n%2?.93:.86)}" fill-rule="evenodd" stroke="${mix(S.ink,S.bg,n%2?.93:.86)}" stroke-width="${f(c*.6)}" stroke-linejoin="round"/>`}
-  // a number in the roomiest spot of each zone (distance from the zone's edge, by a chamfer pass)
-  const dist=new Float32Array(nx*ny);for(let n=1;n<=zmax;n++){for(let t=0;t<nx*ny;t++)dist[t]=zg[t]===n?1e9:0;
-    for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const t=j*nx+i;if(!dist[t])continue;dist[t]=Math.min(dist[t],i?dist[t-1]+1:0,j?dist[t-nx]+1:0,i&&j?dist[t-nx-1]+1.4:0,j&&i<nx-1?dist[t-nx+1]+1.4:0)}
-    for(let j=ny-1;j>=0;j--)for(let i=nx-1;i>=0;i--){const t=j*nx+i;if(!dist[t])continue;dist[t]=Math.min(dist[t],i<nx-1?dist[t+1]+1:0,j<ny-1?dist[t+nx]+1:0,i<nx-1&&j<ny-1?dist[t+nx+1]+1.4:0,j<ny-1&&i?dist[t+nx-1]+1.4:0)}
-    let bt=-1,bv=0;for(let t=0;t<nx*ny;t++)if(dist[t]>bv){bv=dist[t];bt=t}if(bt<0)continue;
-    const fs=Math.min(bv*c*1.3,(S.labelSize||13)*4);if(fs<(S.labelSize||13)*.9)continue;
-    o+=`<text x="${f(ox+(bt%nx)*c)}" y="${f(oy+Math.floor(bt/nx)*c+fs*.35)}" text-anchor="middle" font-size="${f(fs)}" font-weight="800" fill="${mix(S.ink,S.bg,.72)}">${n}</text>`}
-  const svg=`<g pointer-events="none">${o}</g>`;zonesMemo={key,svg};return svg}
 function regionSVG(r,i){
   const S=M.settings,R=regionShapes(r),rad=r.radius??10,op=r.opacity??.12,gap=S.regionGap??6,id='sndt-rg-'+String(r.id).replace(/[^\w-]/g,''),dash=r.dashed?' stroke-dasharray="6 4"':'';
   let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const q of R){x0=Math.min(x0,q.x);y0=Math.min(y0,q.y);x1=Math.max(x1,q.x+q.w);y1=Math.max(y1,q.y+q.h)}
@@ -1724,7 +1693,7 @@ function onewaySVG(G){let o='';G.owStops=new Map();
   return o?'<g>'+o+'</g>':''}
 function mapSVG(editor){
   const G=geom(),S=M.settings,cuts=crossings(G);let o=editor?'':'<g>'+natureSVG()+waterSVG()+'</g>',xdefs='';
-  o+='<g>'+zonesSVG()+M.regions.map(regionSVG).join('')+imagesSVG('bottom',editor)+'</g>';
+  o+='<g>'+M.regions.map(regionSVG).join('')+imagesSVG('bottom',editor)+'</g>';
   o+='<g>';
   for(const L of M.lines.slice().reverse()){if(L.hidden)continue;const runs=lineRuns(L,G);if(!runs.length)continue;const d=runs.map(dOf).join('');
     const cut=cuts.get(L.id);if(cut){const id='sndt-x-'+String(L.id).replace(/[^\w-]/g,'');let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const r of runs)for(const p of r){x0=Math.min(x0,p.x);y0=Math.min(y0,p.y);x1=Math.max(x1,p.x);y1=Math.max(y1,p.y)}const pd=lw(L)+24,bx=`x="${f(x0-pd)}" y="${f(y0-pd)}" width="${f(x1-x0+2*pd)}" height="${f(y1-y0+2*pd)}"`;xdefs+=`<mask id="${id}" maskUnits="userSpaceOnUse" ${bx}><rect ${bx} fill="#fff"/>${cut.join('')}</mask>`;o+=`<g mask="url(#${id})">`}
@@ -1970,9 +1939,6 @@ function inspMap(){
    ${fld('Station numbers',selectF('settings','s','stNums',S.stNums||'off',[['off','Off'],['marks','Codes as station marks']]))}
    ${S.stNums==='marks'?fld('Code size (empty = automatic)',sizePair('settings','s','numSize',S.numSize,Math.max(12,(S.stationSize||14)*1.05))):''}
    <p class="sub">Give a line a station code (like NS) in its panel and its stations are numbered along it: NS 1, NS 2… An interchange shows the codes of all its numbered lines side by side.</p>
-   ${fld(tr('Fare zones'),`<div class="opts" style="width:fit-content"><button class="opt" data-act="zones:off" aria-pressed="${!S.zones}">${tr('Off')}</button><button class="opt" data-act="zones:on" aria-pressed="${!!S.zones}">${tr('On')}</button></div>`)}
-   ${S.zones?fld(tr('How far zones reach past the stations (grid steps)'),inp('settings','s','zoneReach',S.zoneReach??6,'num','min="1" max="40"')):''}
-   <p class="sub">${tr('Give stations a fare zone in their panel (1, 2, or 2/3 for a station in both). The zones are drawn behind the lines in alternating shades, each with its number, like the Tube map.')}</p>
    <div class="adv-only">${fld('Station size',inp('settings','s','stationSize',S.stationSize,'num','min="4" max="60"'))}</div></div>
   <div class="pane"><h3>Labels</h3>
    ${chk('settings','s','halo',S.halo,'Label halo')}
@@ -2012,7 +1978,6 @@ function inspStation(s){
   return `<div class="pane"><h3>Station</h3>
    ${fld('Name',adv()?area('station',s.id,'name',s.name,'rows="2" data-relist="1"'):inp('station',s.id,'name',s.name,'text','data-relist="1"'))}
    ${adv()?'<p class="sub" style="margin-top:-4px">Press Enter for a second line.</p>':''}
-   ${M.settings.zones||M.stations.some(x=>x.zone)?fld(tr('Fare zone'),inp('station',s.id,'zone',s.zone||'','text','placeholder="'+esc(tr('e.g. 2, or 2/3 for both'))+'" maxlength="8"')):''}
    <div class="fld"><span>Type</span>${kindPicker(s.kind||'stop')}</div>
    ${(()=>{if(s.kind==='waypoint')return'';const G=lastG||geom(),B=stNums(G).get(s.id)||[],ls=lines.filter(L=>String(L.numPrefix||'').trim());if(!ls.length)return'';
      return (M.settings.stNums==='marks'?`<p class="sub">${tr('Drag the square handles around the codes on the map to size them.')}</p>`+(s.numW||s.numH||s.numSize?'<div class="btns"><button class="btn" data-act="num-size-reset">'+tr('Reset code size')+'</button></div>':''):'')+`<div class="grid2">${ls.map(L=>{const auto=(B.find(b=>b.lid===L.id)||{}).text||'';return fld(tr('Number on')+' '+String(L.name).split('\n')[0],inp('station',s.id,'nums.'+L.id,(s.nums||{})[L.id]||'','text','placeholder="'+esc(auto)+'" maxlength="10"'))}).join('')}</div>`})()}
@@ -2190,7 +2155,6 @@ function xferRow(x,from){const others=x.sts.filter(id=>id!==from).map(stOf).filt
 function inspRegionTool(){return `<div class="pane"><h3>Draw an area</h3><p class="sub">Click the corners of the area; they snap to the grid (hold Alt to place freely). Click the first corner, double-click or press Enter to finish. Backspace removes the last corner, Esc cancels.</p></div>`}
 function inspMulti(){
   const sts=sel.filter(s=>s.t==='station');let xp='';
-  if(sts.length>=2&&M.settings.zones){const zs=[...new Set(sts.map(x=>(stOf(x.id)||{}).zone||''))];xp+=`<div class="pane"><h3>${tr('Fare zone')}</h3><div class="fld"><span>${tr('Zone for all selected stations')}</span><input id="f-mzone" data-zone-all="1" type="text" maxlength="8" value="${esc(zs.length===1?zs[0]:'')}" placeholder="${esc(zs.length>1?tr('Mixed'):tr('e.g. 2'))}"></div></div>`}
   if(sts.length>=2){const ids=sts.map(x=>x.id),gs=[...new Set(ids.map(xferOf).filter(Boolean))],same=gs.length===1&&ids.every(id=>gs[0].sts.includes(id));
     xp=`<div class="pane"><h3>Out-of-station transfer</h3><p class="sub">Shows that passengers can change between these stations by walking outside. Any number of stations can be linked; they are joined by the shortest links.</p>
     ${same?xferRow(gs[0],null)+(gs[0].sts.length-ids.length>=2?'<div class="btns"><button class="btn" data-act="xfer-out">Take the selected stations out</button></div>':'')
@@ -2249,9 +2213,7 @@ insp.addEventListener('input',e=>{const el=e.target;
   if(pendingUndo){pushUndo();pendingUndo=false}
   if(applyField(el)){requestRender();scheduleSave();updUndo();if(el.dataset.relist)renderLists();
     if(el.dataset.obj==='seg'&&el.dataset.prop==='arc'){insp.querySelectorAll('[data-obj="seg"][data-prop="arc"]').forEach(x=>{if(x!==el)x.value=el.value});insp.querySelectorAll('[data-act^="arc-angle:"]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.act==='arc-angle:'+(+el.value)))}}});
-insp.addEventListener('change',e=>{const el=e.target;
-  if(el.dataset.zoneAll){const v=el.value.trim();pushUndo();for(const x of sel)if(x.t==='station'){const st=stOf(x.id);if(!st)continue;if(v)st.zone=v;else delete st.zone}changed();return}
-  if(!el.dataset.prop)return;
+insp.addEventListener('change',e=>{const el=e.target;if(!el.dataset.prop)return;
   if(el.tagName==='SELECT'||el.type==='checkbox'){pushUndo();applyField(el);changed(true);return}
   if(el.dataset.pos){const o=getObj(el.dataset.obj,el.dataset.id);if(o){o[el.dataset.prop]=snap(o[el.dataset.prop]);changed(false);const r=mapRect(),sx=o.x*view.k+view.x,sy=o.y*view.k+view.y;if(sx<0||sy<0||sx>r.width||sy>r.height)centerOn(o);setTimeout(renderInspector,0)}}
   if(el.dataset.obj==='text'&&el.dataset.prop==='text')setTimeout(textEmptyCheck,0);
@@ -2337,7 +2299,6 @@ function act(name,arg,el){
       for(const id of curL.stops){const st=stOf(id);if(!st||st.kind==='waypoint'||(curL.skip||[]).includes(id)||seen.has(id))continue;seen.add(id);seq.push(st)}
       if(curL.numRev)seq.reverse();const n0=Number.isFinite(+curL.numStart)&&curL.numStart!==''&&curL.numStart!=null?+curL.numStart:1;pushUndo();
       seq.forEach((st,i)=>{(st.nums||(st.nums={}))[curL.id]=pre+'\u2009'+(n0+i)});changed();toast(`${tr('Renumbered')} ${seq.length} ${tr('stations')}: ${pre} ${n0}–${n0+seq.length-1}`);break}
-    case 'zones':pushUndo();if(arg==='on')M.settings.zones=true;else delete M.settings.zones;changed();break;
     case 'skip-tog':{const L=lnOf(arg);if(!curSt||!L)break;pushUndo();const k=(L.skip||[]).indexOf(curSt.id);if(k>=0){L.skip.splice(k,1);if(!L.skip.length)delete L.skip}else(L.skip||(L.skip=[])).push(curSt.id);changed();break}
     case 'lane-reset':if(curSt&&curSt.laneOrder){pushUndo();delete curSt.laneOrder;changed()}break;
     case 'ncolor':natureColor=arg;lsSet('sndt:ncolor',arg);if(natureDraft){natureDraft.color=arg;render()}renderInspector();break;
