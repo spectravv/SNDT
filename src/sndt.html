@@ -976,6 +976,14 @@ function geom(){
     let par=0;for(let i=0;i+1<P.length;i++){const vx=P[i+1].x-P[i].x,vy=P[i+1].y-P[i].y,l=Math.hypot(vx,vy);if(l&&Math.abs(vx*u.y-vy*u.x)/l<.02)par+=l}
     if(par<al-Math.abs(perp)*1.5-.5)return null;
     return{pts:[{x:A.x,y:A.y},{x:A.x+u.x*al,y:A.y+u.y*al}],perp}};
+  // a hand-drawn segment whose first bend point sits right beside its station (a short hook into the station point): start the
+  // segment where its next leg passes the station instead; how far the station lies beside it (corrA / corrB) goes to the lane solver
+  const stubCut=t=>{for(const atA of [true,false]){const P=atA?t.pts:t.pts.slice().reverse(),S=st.get(atA?t.a:t.b);if(P.length<3||!S||S.kind==='waypoint')continue;
+    const p1=P[1],w=unit(P[2].x-p1.x,P[2].y-p1.y),along=(S.x-p1.x)*w.x+(S.y-p1.y)*w.y,side=(S.x-p1.x)*-w.y+(S.y-p1.y)*w.x,leg=Math.hypot(P[2].x-p1.x,P[2].y-p1.y);
+    if(Math.abs(side)<=.5||Math.abs(side)>sp||Math.abs(along)>sp*2.5||along>leg-sp)continue;
+    P.splice(0,2,{x:p1.x+w.x*along,y:p1.y+w.y*along});
+    // sideways is measured across the a→b direction: at the far end the leg runs the other way
+    if(atA)t.corrA=side;else{t.corrB=-side;P.reverse()}t.pts=P}};
   for(const t of tracks.values()){
     const sg=M.segs[t.key]||{};
     if(sg.order){t.lines.sort((x,y)=>{const i=sg.order.indexOf(x),j=sg.order.indexOf(y);return(i<0?99:i)-(j<0?99:j)})}
@@ -984,6 +992,7 @@ function geom(){
     t.pts=dedupePts(ring?(ring.from===t.a?ringPts(st.get(t.a),st.get(t.b),ring.c,ring.dir):ringPts(st.get(t.b),st.get(t.a),ring.c,ring.dir).reverse()):t.fit?[{x:st.get(t.a).x,y:st.get(t.a).y},{x:st.get(t.b).x,y:st.get(t.b).y}]:routePts(st.get(t.a),st.get(t.b),t.route,sg));
     t.pts0=t.pts;
     if(linesFirst&&!ring&&!t.fit&&NEAR_ROUTES.includes(sg.route||M.settings.route)){const nr=nearAxis(t,t.pts);if(nr){t.pts=t.pts0=nr.pts;t.corrB=nr.perp;t.route='straight';t.auto=false}}
+    if(linesFirst&&t.route==='custom'&&!sg.smooth&&!(sg.pts||[]).some(p=>p.hx||p.hy)){stubCut(t);t.pts0=t.pts}
   }
   if(mix.length>1)autoRoutes(tracks,st,mix);
   // express segments that run along other segments, skipping their stations, share those segments' lanes
@@ -1107,7 +1116,7 @@ function geom(){
     // a straight segment (even one with bend points on the straight) carries its shift from one station to the next
     const straight=t=>{const P=t.pts,a=P[0],u=unit(P[P.length-1].x-a.x,P[P.length-1].y-a.y);return P.every(p=>Math.abs((p.x-a.x)*u.y-(p.y-a.y)*u.x)<.5)};
     const byT=new Map();for(const g of groups)for(const o of g.items){if(!straight(o.t))continue;if(!byT.has(o.t))byT.set(o.t,[]);byT.get(o.t).push([g,o])}
-    for(const ends of byT.values())if(ends.length===2)link(ends[0][0],ends[1][0],ends[0][1].off+ends[1][1].off-(ends[0][1].t.corrB||0),2+(ends[0][0].total+ends[1][0].total)/1e3);
+    for(const ends of byT.values())if(ends.length===2)link(ends[0][0],ends[1][0],ends[0][1].off+ends[1][1].off-(ends[0][1].t.corrB||0)+(ends[0][1].t.corrA||0),2+(ends[0][0].total+ends[1][0].total)/1e3);
     // links can disagree around a loop of stations; keep the strongest ones that don't (straight through a station, then along a segment,
     // busiest first so a segment that has to step across lanes is a quiet one, then turns)
     {const par=new Map(groups.map(g=>[g,g])),root=g=>{while(par.get(g)!==g)g=par.get(g);return g};
@@ -1132,7 +1141,7 @@ function geom(){
     // a single straight piece that ends at a bend point moves as a whole, which would break the corner there, so it keeps only its bundle place
     // (lines first: only a real corner; a bend point that just ends a line can move with it)
     const wpEnd=o=>{const w=o.atA?o.t.b:o.t.a;return o.t.pts.length===2&&(st.get(w)||{}).kind==='waypoint'&&!(linesFirst&&(segsAt.get(w)||[]).length<2)};
-    for(const g of groups)for(const o of g.items){const v=wpEnd(o)?(g.items.length>1?o.off:0):o.off+g.s;if(!v&&!o.t.ds&&!o.t.corrB)continue;const ds=o.t.ds||(o.t.ds=new Array(Math.max(2,o.t.pts.length-1)).fill(NaN));if(o.atA)ds[0]=v;else ds[ds.length-1]=-v+(o.t.corrB||0)}
+    for(const g of groups)for(const o of g.items){const v=wpEnd(o)?(g.items.length>1?o.off:0):o.off+g.s;if(!v&&!o.t.ds&&!o.t.corrB&&!o.t.corrA)continue;const ds=o.t.ds||(o.t.ds=new Array(Math.max(2,o.t.pts.length-1)).fill(NaN));if(o.atA)ds[0]=v+(o.t.corrA||0);else ds[ds.length-1]=-v+(o.t.corrB||0)}
     for(const t of tracks.values())if(t.ds){const ds=t.ds,P=t.pts;delete t.ds;
       if(P.length>2){t.pts=shiftPoly(P,ds.map(v=>isNaN(v)?0:v));continue}
       const a=isNaN(ds[0])?ds[1]:ds[0],b=isNaN(ds[1])?ds[0]:ds[1];
