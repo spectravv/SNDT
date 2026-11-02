@@ -1547,8 +1547,13 @@ function textSVG(t){
   const anchor=t.align==='center'?'middle':t.align==='right'?'end':'start';
   return `<text data-kind="text" data-id="${t.id}" x="${t.x}" y="${t.y}" font-size="${fs}" font-weight="${t.bold?800:500}"${t.italic?' font-style="italic"':''} fill="${t.color||S.ink}" text-anchor="${anchor}"${t.font?` font-family="${esc(t.font)}"`:''}${tr}>${rows.map((r,i)=>`<tspan x="${t.x}" dy="${i?f(lh):0}">${cjkT(r)||' '}</tspan>`).join('')}</text>`;
 }
-function regionShapes(r){if(r.pts&&r.pts.length){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const p of r.pts){x0=Math.min(x0,p[0]);y0=Math.min(y0,p[1]);x1=Math.max(x1,p[0]);y1=Math.max(y1,p[1])}r.x=x0;r.y=y0;r.w=x1-x0;r.h=y1-y0;return[{x:x0,y:y0,w:x1-x0,h:y1-y0}]}
-  return[{x:r.x,y:r.y,w:r.w,h:r.h}].concat(r.more||[])}
+// whether a point is inside an area (its free shape, its rectangles, or any part joined to it)
+function regionHas(r,x,y){const inPoly=P=>{let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const [xi,yi]=P[i],[xj,yj]=P[j];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)c=!c}return c},
+    inRect=q=>x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h,one=o=>o.pts&&o.pts.length>2?inPoly(o.pts):[{x:o.x,y:o.y,w:o.w,h:o.h}].concat(o.more||[]).some(inRect);
+  return one(r)||(r.join||[]).some(one)}
+function regionShapes(r){const jb=(r.join||[]).map(j=>{if(!j.pts)return{x:j.x,y:j.y,w:j.w,h:j.h};let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const p of j.pts){x0=Math.min(x0,p[0]);y0=Math.min(y0,p[1]);x1=Math.max(x1,p[0]);y1=Math.max(y1,p[1])}return{x:x0,y:y0,w:x1-x0,h:y1-y0}});
+  if(r.pts&&r.pts.length){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const p of r.pts){x0=Math.min(x0,p[0]);y0=Math.min(y0,p[1]);x1=Math.max(x1,p[0]);y1=Math.max(y1,p[1])}r.x=x0;r.y=y0;r.w=x1-x0;r.h=y1-y0;return[{x:x0,y:y0,w:x1-x0,h:y1-y0}].concat(jb)}
+  return[{x:r.x,y:r.y,w:r.w,h:r.h}].concat(r.more||[],jb)}
 // polygon with softly rounded corners
 function roundPolyD(P,rad){const n=P.length;if(n<3)return'';let d='';for(let i=0;i<n;i++){const p=P[i],a=P[(i-1+n)%n],b=P[(i+1)%n],la=Math.hypot(p[0]-a[0],p[1]-a[1])||1,lb=Math.hypot(b[0]-p[0],b[1]-p[1])||1,r=Math.min(rad,la/2,lb/2);
   d+=(i?'L':'M')+f(p[0]+(a[0]-p[0])*r/la)+' '+f(p[1]+(a[1]-p[1])*r/la)+'Q'+f(p[0])+' '+f(p[1])+' '+f(p[0]+(b[0]-p[0])*r/lb)+' '+f(p[1]+(b[1]-p[1])*r/lb)}return d+'Z'}
@@ -1558,7 +1563,9 @@ function regionSVG(r,i){
   let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const q of R){x0=Math.min(x0,q.x);y0=Math.min(y0,q.y);x1=Math.max(x1,q.x+q.w);y1=Math.max(y1,q.y+q.h)}
   const pd=gap+20,box=`x="${f(x0-pd)}" y="${f(y0-pd)}" width="${f(x1-x0+2*pd)}" height="${f(y1-y0+2*pd)}"`;
   const rects=(R2,attrs,grow=0)=>R2.map(q=>`<rect x="${f(q.x-grow)}" y="${f(q.y-grow)}" width="${f(q.w+2*grow)}" height="${f(q.h+2*grow)}" rx="${f(rad+grow)}" ${attrs}/>`).join('');
-  const shp=(o,attrs,grow=0)=>o.pts&&o.pts.length>2?`<path d="${roundPolyD(o.pts,(o.radius??10)+grow)}" ${attrs}/>`:rects(regionShapes(o),attrs,grow);
+  const shp1=(o,attrs,grow=0)=>o.pts&&o.pts.length>2?`<path d="${roundPolyD(o.pts,(o.radius??10)+grow)}" ${attrs}/>`:rects(o.join?[{x:o.x,y:o.y,w:o.w,h:o.h}].concat(o.more||[]):regionShapes(o),attrs,grow);
+  // an area joined from several (r.join): its parts are drawn together, so the fill and the outline run as one shape
+  const shp=(o,attrs,grow=0)=>shp1(o,attrs,grow)+(o.join||[]).map(j=>shp1(Object.assign({radius:o.radius},j),attrs,grow)).join('');
   const front=i==null?[]:M.regions.slice(i+1).filter(o=>regionsOverlap(R,regionShapes(o),gap));
   let defs=`<mask id="${id}-o" maskUnits="userSpaceOnUse" ${box}><rect ${box} fill="#fff"/>${shp(r,'fill="#000"')}</mask>`,cut='',edge='';
   if(front.length){defs+=`<mask id="${id}-c" maskUnits="userSpaceOnUse" ${box}><rect ${box} fill="#fff"/>${front.map(F=>shp(F,`fill="#000" stroke="#000" stroke-width="${f(gap*2)}"`)).join('')}</mask><clipPath id="${id}-k">${shp(r,'')}</clipPath>`;
@@ -1566,9 +1573,14 @@ function regionSVG(r,i){
   const lp=r.pts&&r.pts.length>2?{x:r.pts.reduce((a,p)=>a+p[0],0)/r.pts.length,y:r.pts.reduce((a,p)=>a+p[1],0)/r.pts.length+4,anchor:' text-anchor="middle"'}:r.zone?{x:r.x+r.w/2,y:r.y+r.h/2+4,anchor:' text-anchor="middle"'}:{x:r.x+10,y:r.y+19,anchor:''};
   // fare zone (Tube-map style): a plain shaded area, no border, its number big and faint
   // (the number near two opposite corners, inside the shape, so an inner zone drawn over the middle doesn't hide it)
-  if(r.zone){const zs=r.fs||48,P=r.pts&&r.pts.length>2?r.pts.map(p=>({x:p[0],y:p[1]})):[{x:x0,y:y0},{x:x1,y:y1}],tl=P.reduce((a,p)=>p.x+p.y<a.x+a.y?p:a),br=P.reduce((a,p)=>p.x+p.y>a.x+a.y?p:a),m=zs*.45+(r.radius??10)*.3;
-    const num=(x,y,anc)=>`<text x="${f(x)}" y="${f(y)}" text-anchor="${anc}" font-size="${f(zs)}" font-weight="800" fill="${r.color}" fill-opacity="${Math.min(1,op*2.6)}">${cjkT(String(r.label))}</text>`;
-    return `<g data-kind="region" data-id="${r.id}"><defs>${defs}</defs><g${cut}><g opacity="${op}">${shp(r,`fill="${r.color}"`)}</g>${r.label?num(tl.x+m,tl.y+m+zs*.72,'start')+num(br.x-m,br.y-m,'end'):''}</g></g>`}
+  // (the number goes where it fits wholly inside the zone and isn't covered by a zone drawn over it: the free spot nearest the top left,
+  // and the one nearest the bottom right when that is somewhere else)
+  if(r.zone){const zs=r.fs||48,tw=textW(String(r.label||''),zs,800),th=zs*.72,m=zs*.3,num=(x,y)=>`<text x="${f(x)}" y="${f(y+th)}" font-size="${f(zs)}" font-weight="800" fill="${r.color}" fill-opacity="${Math.min(1,op*2.6)}">${cjkT(String(r.label))}</text>`;
+    let lab='';if(r.label){const above=i==null?[]:M.regions.slice(i+1).filter(o=>o.zone),spots=[];
+      for(let y=y0;y<=y1-th;y+=zs/4)for(let x=x0;x<=x1-tw;x+=zs/4){const pts=[[x-m,y-m],[x+tw+m,y-m],[x-m,y+th+m],[x+tw+m,y+th+m],[x+tw/2,y+th/2]];
+        if(pts.every(([px,py])=>regionHas(r,px,py)&&!above.some(o=>regionHas(o,px,py))))spots.push({x,y})}
+      if(spots.length){const tl=spots.reduce((a,p)=>p.x+p.y<a.x+a.y?p:a),br=spots.reduce((a,p)=>p.x+p.y>a.x+a.y?p:a);lab=num(tl.x,tl.y)+(Math.hypot(br.x-tl.x,br.y-tl.y)>tw+zs*2?num(br.x,br.y):'')}}
+    return `<g data-kind="region" data-id="${r.id}"><defs>${defs}</defs><g${cut}><g opacity="${op}">${shp(r,`fill="${r.color}"`)}</g>${lab}</g></g>`}
   return `<g data-kind="region" data-id="${r.id}"><defs>${defs}</defs><g${cut}><g opacity="${op}">${shp(r,`fill="${r.color}"`)}</g><g mask="url(#${id}-o)" opacity="${Math.min(1,op*4)}">${shp(r,`fill="none" stroke="${r.color}" stroke-width="3"${dash}`)}</g>${edge}${r.label?`<text x="${f(lp.x)}" y="${f(lp.y)}"${lp.anchor} font-size="${r.fs||11}" font-weight="700" letter-spacing=".08em" fill="${S.ink}" fill-opacity=".62">${cjkT(String(r.label).toUpperCase())}</text>`:''}</g></g>`;
 }
 // lines A to Z (numbers in order), the same order as the Lines list, so the legend matches it
@@ -1821,7 +1833,7 @@ function overlaySVG(G){
       for(const [k,ax,ay] of [['nw',-1,-1],['n',0,-1],['ne',1,-1],['e',1,0],['se',1,1],['s',0,1],['sw',-1,1],['w',-1,0]])
         o+=`<rect data-kind="nbh" data-id="${st.id}" data-i="${k}" x="${f(cx+ax*hw-z/2)}" y="${f(cy+ay*hh-z/2)}" width="${f(z)}" height="${f(z)}" fill="#fff" stroke="${c}" stroke-width="${f(1.5/view.k)}" style="cursor:${k==='n'||k==='s'?'ns':k==='e'||k==='w'?'ew':k==='nw'||k==='se'?'nwse':'nesw'}-resize"/>`}}
     if(s.t==='image'){const im=(M.images||[]).find(x=>x.id===s.id);if(im)o+=`<rect x="${f(im.x-3)}" y="${f(im.y-3)}" width="${f(im.w+6)}" height="${f(im.h+6)}" fill="none" stroke="${c}" stroke-width="${f(1.5/view.k)}" stroke-dasharray="${f(5/view.k)} ${f(4/view.k)}" pointer-events="none"${im.rot?` transform="rotate(${im.rot} ${f(im.x+im.w/2)} ${f(im.y+im.h/2)})"`:''}/><rect data-kind="ihandle" data-id="${im.id}" x="${f(im.x+im.w-6/view.k)}" y="${f(im.y+im.h-6/view.k)}" width="${f(12/view.k)}" height="${f(12/view.k)}" rx="2" fill="${c}" style="cursor:nwse-resize"/>`}
-    if(s.t==='region'){const r=M.regions.find(x=>x.id===s.id);if(r&&r.pts&&!r.locked)continue;if(r)regionShapes(r).forEach((q,i)=>{o+=`<rect x="${q.x-3}" y="${q.y-3}" width="${q.w+6}" height="${q.h+6}" rx="${(r.radius??10)+3}" fill="none" stroke="${c}" stroke-width="1.5" stroke-dasharray="5 4" pointer-events="none"/>`+(r.locked?(i?'':`<g transform="translate(${f(q.x+q.w-10)} ${f(q.y-8)})" pointer-events="none"><rect width="18" height="18" rx="3" fill="${c}"/><path d="M5.5 8V6a3.5 3.5 0 0 1 7 0v2" fill="none" stroke="#fff" stroke-width="1.7"/><rect x="4" y="8" width="10" height="7" rx="1.2" fill="#fff"/></g>`):`<rect data-kind="handle" data-id="${r.id}" data-i="${i-1}" x="${q.x+q.w-6}" y="${q.y+q.h-6}" width="12" height="12" rx="2" fill="${c}" style="cursor:nwse-resize"/>`)})}
+    if(s.t==='region'){const r=M.regions.find(x=>x.id===s.id);if(r&&r.pts&&!r.locked)continue;if(r)regionShapes(r).slice(0,1+(r.more||[]).length).forEach((q,i)=>{o+=`<rect x="${q.x-3}" y="${q.y-3}" width="${q.w+6}" height="${q.h+6}" rx="${(r.radius??10)+3}" fill="none" stroke="${c}" stroke-width="1.5" stroke-dasharray="5 4" pointer-events="none"/>`+(r.locked?(i?'':`<g transform="translate(${f(q.x+q.w-10)} ${f(q.y-8)})" pointer-events="none"><rect width="18" height="18" rx="3" fill="${c}"/><path d="M5.5 8V6a3.5 3.5 0 0 1 7 0v2" fill="none" stroke="#fff" stroke-width="1.7"/><rect x="4" y="8" width="10" height="7" rx="1.2" fill="#fff"/></g>`):`<rect data-kind="handle" data-id="${r.id}" data-i="${i-1}" x="${q.x+q.w-6}" y="${q.y+q.h-6}" width="12" height="12" rx="2" fill="${c}" style="cursor:nwse-resize"/>`)})}
   }
   if(sel.length===1&&sel[0].t==='line'&&sel[0].seg&&tool==='select'){const key=sel[0].seg,v=segView(key,sel[0].id,G);
     if(v){const ch=v.dv,r=6/view.k,sw=1.5/view.k;
@@ -2140,12 +2152,13 @@ function inspText(t){if(!t)return inspMap();return `<div class="pane"><h3>Text</
   <div class="btns"><button class="btn" data-act="dup">Duplicate</button><button class="btn warn" data-act="del-sel" data-confirm="1">Delete text</button></div></div>`}
 function inspRegion(r){if(!r)return inspMap();return `<div class="pane"><h3>Area</h3>${chk('region',r.id,'locked',!!r.locked,'Lock in place')}${r.locked?'<p class="sub">Locked: it cannot be moved, resized or deleted by accident. Dragging on it draws a selection box instead.</p>':''}
   <div class="fld"><span>${tr('Kind')}</span><div class="opts" style="width:fit-content"><button class="opt" data-act="rkind:district" aria-pressed="${!r.zone}">${tr('District')}</button><button class="opt" data-act="rkind:zone" aria-pressed="${!!r.zone}">${tr('Fare zone')}</button></div></div>
+  ${(r.join||[]).length?`<div class="fld"><span>${tr('Joined from')} ${r.join.length+1} ${tr('areas')}</span><div class="btns"><button class="btn" data-act="region-split">${tr('Split into separate areas')}</button></div></div>`:''}
   ${r.zone?`<p class="sub">${tr('Drawn like the Tube map’s fare zones: a plain shaded area with its number. Stack zones in alternating shades (one grey, the next lighter); where zones overlap, choose which one keeps the overlap below.')}</p>`:''}
   ${fld(r.zone?tr('Zone number'):'Label',inp('region',r.id,'label',r.label,'text'))}
   <div class="grid2">${fld('Colour',inp('region',r.id,'color',r.color,'color'))}${fld('Fill strength',inp('region',r.id,'opacity',r.opacity??.12,'num','min="0" max="1" step="0.05"'))}</div>${chk('region',r.id,'dashed',!!r.dashed,'Dashed border')}
   ${r.locked||r.pts?'':'<p class="sub">Drag a corner handle to resize that part.</p>'}
   <div class="fld"><span>Shape</span>${r.pts?'<p class="sub">Drag a corner to move it, click a midpoint to add a corner, double-click a corner to remove it.</p>':(r.more||[]).length?'':'<div class="btns"><button class="btn acc" data-act="region-topoly">Turn into free shape</button></div><p class="sub">Makes the four corners editable like a free-shape area.</p>'}
-   ${(r.more||[]).length?`<div class="stops">${regionShapes(r).map((q,i)=>`<div class="stop"><span class="n">${i+1}</span><span class="nm">${Math.round(q.w)} × ${Math.round(q.h)}</span><span class="b">${i?`<button data-act="region-part-del:${i-1}" aria-label="Remove this rectangle">×</button>`:''}</span></div>`).join('')}</div>`:''}</div>
+   ${(r.more||[]).length?`<div class="stops">${regionShapes(r).slice(0,1+r.more.length).map((q,i)=>`<div class="stop"><span class="n">${i+1}</span><span class="nm">${Math.round(q.w)} × ${Math.round(q.h)}</span><span class="b">${i?`<button data-act="region-part-del:${i-1}" aria-label="Remove this rectangle">×</button>`:''}</span></div>`).join('')}</div>`:''}</div>
   ${(()=>{const i=M.regions.indexOf(r),ov=M.regions.filter((o,j)=>j!==i&&regionsOverlap(regionShapes(r),regionShapes(o),M.settings.regionGap??6));if(!ov.length)return'';const wins=ov.every(o=>M.regions.indexOf(o)<i);
     return `<div class="fld"><span>Overlaps ${ov.map(o=>esc(o.label||'an area')).join(', ')}</span><div class="opts"><button class="opt" data-act="rz:front" aria-pressed="${wins}">This area keeps the overlap</button><button class="opt" data-act="rz:back" aria-pressed="${!wins&&ov.every(o=>M.regions.indexOf(o)>i)}">Cut this area</button></div></div>
     ${fld('Gap where areas meet',inp('settings','s','regionGap',M.settings.regionGap??6,'num','min="0" max="60"'))}`})()}
@@ -2173,6 +2186,7 @@ function inspMulti(){
     xp=`<div class="pane"><h3>Out-of-station transfer</h3><p class="sub">Shows that passengers can change between these stations by walking outside. Any number of stations can be linked; they are joined by the shortest links.</p>
     ${same?xferRow(gs[0],null)+(gs[0].sts.length-ids.length>=2?'<div class="btns"><button class="btn" data-act="xfer-out">Take the selected stations out</button></div>':'')
       :`<div class="btns"><button class="btn acc" data-act="xfer-add">${gs.length?tr('Link into one transfer'):tr('Link as out-of-station transfer')}</button></div>${gs.length?'<p class="sub">Stations already in a transfer are merged into the new one.</p>':''}`}</div>`}
+  const rgs=sel.filter(s=>s.t==='region');if(rgs.length>=2)xp+=`<div class="pane"><h3>${tr('Areas')}</h3><div class="btns"><button class="btn acc" data-act="region-join">${tr('Join into one area')}</button></div><p class="sub">${tr('The selected districts or fare zones become one area with one outline, keeping the look of the first one you selected.')}</p></div>`;
   return xp+`<div class="pane"><h3>Selection</h3><h2>${sel.length} items</h2><p class="sub">${sts.length} station${sts.length===1?'':'s'}. Drag any of them to move the whole group.</p></div>
   ${sts.length>1?`<div class="pane"><h3>Line up</h3><div class="btns"><button class="btn" data-act="align:h">Same row</button><button class="btn" data-act="align:v">Same column</button><button class="btn" data-act="align:d">On a 45° line</button></div>
    <div class="btns adv-only"><button class="btn" data-act="dist:h">Even spacing ↔</button><button class="btn" data-act="dist:v">Even spacing ↕</button></div>
@@ -2313,6 +2327,15 @@ function act(name,arg,el){
       for(const id of curL.stops){const st=stOf(id);if(!st||st.kind==='waypoint'||(curL.skip||[]).includes(id)||seen.has(id))continue;seen.add(id);seq.push(st)}
       if(curL.numRev)seq.reverse();const n0=Number.isFinite(+curL.numStart)&&curL.numStart!==''&&curL.numStart!=null?+curL.numStart:1;pushUndo();
       seq.forEach((st,i)=>{(st.nums||(st.nums={}))[curL.id]=pre+'\u2009'+(n0+i)});changed();toast(`${tr('Renumbered')} ${seq.length} ${tr('stations')}: ${pre} ${n0}–${n0+seq.length-1}`);break}
+    case 'region-join':{const rs=sel.filter(x=>x.t==='region').map(x=>M.regions.find(r=>r.id===x.id)).filter(r=>r&&!r.locked);if(rs.length<2)break;pushUndo();
+      // the first selected keeps its look; the others (with anything joined to them) become its parts
+      const [main,...rest]=rs;main.join=main.join||[];
+      for(const r of rest){if(r.pts)main.join.push({pts:r.pts.map(q=>q.slice()),radius:r.radius});else for(const q of [{x:r.x,y:r.y,w:r.w,h:r.h}].concat(r.more||[]))main.join.push({x:q.x,y:q.y,w:q.w,h:q.h,radius:r.radius});
+        for(const j of r.join||[])main.join.push(j);M.regions=M.regions.filter(x=>x!==r)}
+      sel=[{t:'region',id:main.id}];changed();toast(tr('Joined into one area. Split it again from its panel.'));break}
+    case 'region-split':{const r=one&&one.t==='region'&&M.regions.find(x=>x.id===one.id);if(!r||!(r.join||[]).length)break;pushUndo();const i=M.regions.indexOf(r),out=[];
+      for(const j of r.join){const n=JSON.parse(JSON.stringify(r));delete n.join;delete n.more;n.id=uid();if(j.pts){n.pts=j.pts.map(q=>q.slice())}else{delete n.pts;Object.assign(n,{x:j.x,y:j.y,w:j.w,h:j.h})}if(j.radius!=null)n.radius=j.radius;regionShapes(n);out.push(n)}
+      delete r.join;M.regions.splice(i+1,0,...out);changed();break}
     case 'rkind':{const r=one&&one.t==='region'&&M.regions.find(x=>x.id===one.id);if(!r||(arg==='zone')===!!r.zone)break;pushUndo();
       if(arg==='zone'){r.zone=true;if(r.color==='#3AB3DA'){r.color='#7d7d7d';r.opacity=.22}if(!r.label||r.label==='District'){const n=M.regions.filter(x=>x.zone).length;r.label=String(n)}}
       else{delete r.zone;if(/^\d+$/.test(r.label||''))r.label='District'}changed();break}
@@ -2538,7 +2561,7 @@ function moveDrag(w,free){const ids=new Set(sel.filter(s=>s.t==='station').map(s
   for(const [k,sg] of Object.entries(M.segs)){if(!sg||!Array.isArray(sg.pts))continue;const [a,b]=k.split('~');if(ids.has(a)&&ids.has(b))for(const q of sg.pts)cps.push({o:q,ox:q.x,oy:q.y,rel:1})}
   return{type:'move',start:w,moved:false,free,items:cps.concat(sel.flatMap(s=>{
   if(s.t==='nature'||s.t==='water'){const a=(s.t==='water'?M.water:M.nature||[]).find(x=>x.id===s.id);return a?[{o:a,orig:a.pts.map(q=>q.slice())}]:[]}
-  const o=s.t==='station'?stOf(s.id):s.t==='text'?M.texts.find(x=>x.id===s.id):s.t==='region'?M.regions.find(x=>x.id===s.id):s.t==='image'?(M.images||[]).find(x=>x.id===s.id):s.t==='legend'?M.settings.legend:null;if(!o||o.locked)return[];if(o.pts)return[{o,orig:o.pts.map(q=>q.slice())}];return[o].concat(s.t==='region'?(o.more||[]):[]).map(q=>({o:q,ox:q.x,oy:q.y}))}))}}
+  const o=s.t==='station'?stOf(s.id):s.t==='text'?M.texts.find(x=>x.id===s.id):s.t==='region'?M.regions.find(x=>x.id===s.id):s.t==='image'?(M.images||[]).find(x=>x.id===s.id):s.t==='legend'?M.settings.legend:null;if(!o||o.locked)return[];const jn=s.t==='region'?(o.join||[]).map(j=>j.pts?{o:j,orig:j.pts.map(q=>q.slice())}:{o:j,ox:j.x,oy:j.y}):[];if(o.pts)return[{o,orig:o.pts.map(q=>q.slice())}].concat(jn);return[o].concat(s.t==='region'?(o.more||[]):[]).map(q=>({o:q,ox:q.x,oy:q.y})).concat(jn)}))}}
 function select(list){textEmptyCheck();anchorSel=null;sel=list;if(drawLine&&!(list.length===1&&list[0].t==='line'&&list[0].id===drawLine)&&tool!=='line')drawLine=null;render();renderLists();renderInspector()}
 function setTool(t,keepDraw){if(t==='image'){imgReplace=null;$('#imgIn').click();return}if(t!=='region')regionAdd=null;if(waterDraft&&t!=='water')finishWater();if(natureDraft&&t!=='nature')finishNature();if(regionDraft&&t!=='region')finishRegionDraft();anchorSel=null;tool=t;if(!keepDraw&&t!=='line')drawLine=null;if(t==='line'&&!keepDraw&&drawLine&&!(sel.length===1&&sel[0].t==='line'&&sel[0].id===drawLine)){const P=lnOf(drawLine);if(P&&P.stops.length<2)M.lines=M.lines.filter(l=>l!==P);drawLine=null}if(t!=='line'&&!keepDraw)drawLine=null;
   svg.setAttribute('class','t-'+t);
