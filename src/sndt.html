@@ -1579,7 +1579,11 @@ function regionSVG(r,i){
     let lab='';if(r.label){const above=i==null?[]:M.regions.slice(i+1).filter(o=>o.zone),spots=[];
       for(let y=y0;y<=y1-th;y+=zs/4)for(let x=x0;x<=x1-tw;x+=zs/4){const pts=[[x-m,y-m],[x+tw+m,y-m],[x-m,y+th+m],[x+tw+m,y+th+m],[x+tw/2,y+th/2]];
         if(pts.every(([px,py])=>regionHas(r,px,py)&&!above.some(o=>regionHas(o,px,py))))spots.push({x,y})}
-      if(spots.length){const tl=spots.reduce((a,p)=>p.x+p.y<a.x+a.y?p:a),br=spots.reduce((a,p)=>p.x+p.y>a.x+a.y?p:a);lab=num(tl.x,tl.y)+(Math.hypot(br.x-tl.x,br.y-tl.y)>tw+zs*2?num(br.x,br.y):'')}}
+      // as many numbers as asked for (r.znum, default 2): the first nearest the top left, each next one in the free spot farthest from
+      // those already placed, so they spread out over the zone; one that would sit close to another is left out
+      const want=r.znum??2;if(spots.length&&want>0){const got=[spots.reduce((a,p)=>p.x+p.y<a.x+a.y?p:a)];
+        while(got.length<want){let best=null,bd=0;for(const p of spots){const d=Math.min(...got.map(g=>Math.hypot(p.x-g.x,p.y-g.y)));if(d>bd){bd=d;best=p}}if(!best||bd<tw+zs*2)break;got.push(best)}
+        lab=got.map(p=>num(p.x,p.y)).join('')}}
     return `<g data-kind="region" data-id="${r.id}"><defs>${defs}</defs><g${cut}><g opacity="${op}">${shp(r,`fill="${r.color}"`)}</g>${lab}</g></g>`}
   return `<g data-kind="region" data-id="${r.id}"><defs>${defs}</defs><g${cut}><g opacity="${op}">${shp(r,`fill="${r.color}"`)}</g><g mask="url(#${id}-o)" opacity="${Math.min(1,op*4)}">${shp(r,`fill="none" stroke="${r.color}" stroke-width="3"${dash}`)}</g>${edge}${r.label?`<text x="${f(lp.x)}" y="${f(lp.y)}"${lp.anchor} font-size="${r.fs||11}" font-weight="700" letter-spacing=".08em" fill="${S.ink}" fill-opacity=".62">${cjkT(String(r.label).toUpperCase())}</text>`:''}</g></g>`;
 }
@@ -2159,6 +2163,7 @@ function inspRegion(r){if(!r)return inspMap();return `<div class="pane"><h3>Area
   ${(r.join||[]).length?`<div class="fld"><span>${tr('Joined from')} ${r.join.length+1} ${tr('areas')}</span><div class="btns"><button class="btn" data-act="region-split">${tr('Split into separate areas')}</button></div></div>`:''}
   ${r.zone?`<p class="sub">${tr('Drawn like the Tube map’s fare zones: a plain shaded area with its number. Stack zones in alternating shades (one grey, the next lighter); where zones overlap, choose which one keeps the overlap below.')}</p>`:''}
   ${fld(r.zone?tr('Zone number'):'Label',inp('region',r.id,'label',r.label,'text'))}
+  ${r.zone?`<div class="grid2">${fld(tr('How many numbers'),inp('region',r.id,'znum',r.znum??2,'num','min="0" max="12"'))}${fld(tr('Number size'),inp('region',r.id,'fs',r.fs||48,'num','min="6"'))}</div>`:''}
   <div class="grid2">${fld('Colour',inp('region',r.id,'color',r.color,'color'))}${fld('Fill strength',inp('region',r.id,'opacity',r.opacity??.12,'num','min="0" max="1" step="0.05"'))}</div>${chk('region',r.id,'dashed',!!r.dashed,'Dashed border')}
   ${r.locked||r.pts?'':'<p class="sub">Drag a corner handle to resize that part.</p>'}
   <div class="fld"><span>Shape</span>${r.pts?'<p class="sub">Drag a corner to move it, click a midpoint to add a corner, double-click a corner to remove it.</p>':(r.more||[]).length?'':'<div class="btns"><button class="btn acc" data-act="region-topoly">Turn into free shape</button></div><p class="sub">Makes the four corners editable like a free-shape area.</p>'}
@@ -2166,7 +2171,7 @@ function inspRegion(r){if(!r)return inspMap();return `<div class="pane"><h3>Area
   ${(()=>{const i=M.regions.indexOf(r),ov=M.regions.filter((o,j)=>j!==i&&regionsOverlap(regionShapes(r),regionShapes(o),M.settings.regionGap??6));if(!ov.length)return'';const wins=ov.every(o=>M.regions.indexOf(o)<i);
     return `<div class="fld"><span>Overlaps ${ov.map(o=>esc(o.label||'an area')).join(', ')}</span><div class="opts"><button class="opt" data-act="rz:front" aria-pressed="${wins}">This area keeps the overlap</button><button class="opt" data-act="rz:back" aria-pressed="${!wins&&ov.every(o=>M.regions.indexOf(o)>i)}">Cut this area</button></div></div>
     ${fld('Gap where areas meet',inp('settings','s','regionGap',M.settings.regionGap??6,'num','min="0" max="60"'))}`})()}
-  <div class="grid2 adv-only">${fld('X',inp('region',r.id,'x',r.x,'num'))}${fld('Y',inp('region',r.id,'y',r.y,'num'))}${fld('Width',inp('region',r.id,'w',r.w,'num'))}${fld('Height',inp('region',r.id,'h',r.h,'num'))}${fld('Corner radius',inp('region',r.id,'radius',r.radius??10,'num','min="0"'))}${fld(r.zone?tr('Number size'):'Label size',inp('region',r.id,'fs',r.fs||(r.zone?48:11),'num'))}</div>
+  <div class="grid2 adv-only">${fld('X',inp('region',r.id,'x',r.x,'num'))}${fld('Y',inp('region',r.id,'y',r.y,'num'))}${fld('Width',inp('region',r.id,'w',r.w,'num'))}${fld('Height',inp('region',r.id,'h',r.h,'num'))}${fld('Corner radius',inp('region',r.id,'radius',r.radius??10,'num','min="0"'))}${r.zone?'':fld('Label size',inp('region',r.id,'fs',r.fs||11,'num'))}</div>
   <div class="btns"><button class="btn" data-act="dup">Duplicate</button><button class="btn warn" data-act="del-sel" data-confirm="1">Delete area</button></div></div>`}
 function inspLegend(){const lg=M.settings.legend;return `<div class="pane"><h3>Legend</h3>${fld('Heading',inp('settings','s','legend.title',lg.title,'text','placeholder="No heading"'))}
   <p class="sub">The legend lists every visible line. Hide a line from it in the line's Advanced settings.</p>
