@@ -518,6 +518,7 @@ input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}
       <div class="cursor" id="cursor">x 0 · y 0</div>
       <div class="ilvf" id="ilvf" hidden><div class="ilvf-grip" id="ilvfGrip" title="Drag to resize" aria-label="Resize"><i></i></div><div class="ilvf-bar"><b>Isolated line view</b><button class="btn" data-act="ilvf-pick">Lines…</button>
         <div class="opts" id="ilvfNames"><button class="opt" data-act="ilvf-names:auto">Auto</button><button class="opt" data-act="ilvf-names:straight">Straight</button><button class="opt" data-act="ilvf-names:angled">Angled</button></div>
+        <div class="opts" id="ilvfIx" title="How other lines are shown at interchanges"><button class="opt" data-act="ilvf-ix:names">Names</button><button class="opt" data-act="ilvf-ix:codes">Codes</button><button class="opt" data-act="ilvf-ix:dots">Dots</button></div>
         <div class="opts"><button class="opt fac-tog" id="ilvfFacBtn" data-act="ilvf-fac" aria-pressed="false" title="Show each station's facility icons under it"><i aria-hidden="true"></i><svg viewBox="0 0 14 14" width="13" height="13" aria-hidden="true"><path d="M7 1.5l1.65 3.6 3.9.4-2.9 2.6.85 3.85L7 9.9l-3.5 2.05.85-3.85-2.9-2.6 3.9-.4z" fill="currentColor"/></svg>Facilities</button></div>
         <span class="spacer"></span><button class="btn" data-act="ilvf-exp:png">PNG</button><button class="btn" data-act="ilvf-exp:svg">SVG</button><button class="btn" data-act="ilvf-close" aria-label="Close">×</button></div><div class="ilvf-body" id="ilvfBody"></div><input type="range" class="ilvf-x" id="ilvfX" min="0" max="1000" value="0" aria-label="Scroll the strip"></div>
       <div class="zoom"><button id="bendsBtn" data-act="bends" aria-pressed="true" title="Show or hide bend points (B)">Bends</button><button data-act="zoom-out" aria-label="Zoom out">−</button><span id="zoomVal">100%</span><button data-act="zoom-in" aria-label="Zoom in">+</button><button data-act="fit" title="Fit map (F)">Fit</button></div>
@@ -2382,6 +2383,7 @@ function act(name,arg,el){
     case 'ilvf-show':{const ids=[...document.querySelectorAll('#ilvfPick input:checked')].map(e=>e.dataset.lid);closeModal();if(ids.length){ilvfLines=ids;ilvfOpen(true)}else ilvfOpen(false);break}
     case 'ilvf-close':ilvfOpen(false);break;
     case 'ilvf-names':ilvfNames=arg;lsSet('sndt:ilvfNames',arg);ilvfDraw();break;
+    case 'ilvf-ix':ilvfIx=arg;lsSet('sndt:ilvfIx',arg);ilvfDraw();break;
     case 'ilvf-fac':ilvfFac=!ilvfFac;lsSet('sndt:ilvfFac',ilvfFac?'1':'0');ilvfDraw();break;
     case 'ilvf-exp':ilvfExport(arg);break;
     case 'clean-map':closePop();cleanModal();break;
@@ -2885,7 +2887,10 @@ function toast(t){document.querySelectorAll('.toast').forEach(o=>o.remove());con
 // isolated line view, "ILVF" (idea by Paddy): chosen lines drawn as straight strips for platform displays and station signs.
 // Stations evenly spaced, names above (angled when they don't fit), interchanges as ringed dots with short stubs in the other
 // lines' colours; shown in a panel at the bottom of the map, with its own PNG/SVG export
-let ilvfOn=false,ilvfLines=[],ilvfNames=lsGet('sndt:ilvfNames')||'auto',ilvfFac=lsGet('sndt:ilvfFac')==='1';
+let ilvfOn=false,ilvfLines=[],ilvfNames=lsGet('sndt:ilvfNames')||'auto',ilvfFac=lsGet('sndt:ilvfFac')==='1',ilvfIx=['names','codes','dots'].includes(lsGet('sndt:ilvfIx'))?lsGet('sndt:ilvfIx'):'names';
+// a line's short code for badges: its station code prefix if it has one, else the initials of its name without "Line" (Chiselsmith & City Line → CC)
+function lineCode(L){const p=String(L.numPrefix||'').trim();if(p)return p;const w=String(L.name||'').split('\n')[0].split(/[\s&+\/-]+/).filter(x=>x&&!/^(line|linie|ligne|línea|linea|線|线|綫)$/i.test(x));
+  if(w.length===1&&/^\d/.test(w[0]))return w[0].slice(0,3);return(w.map(x=>[...x][0]).join('').toUpperCase()||'?').slice(0,3)}
 function ilvfPick(){const ls=linesAZ(M.lines.filter(L=>!L.hidden&&L.stops.length>1));if(!ls.length){toast(tr('Draw a line first.'));return}
   const pre=new Set(ilvfOn?ilvfLines:sel.filter(x=>x.t==='line').map(x=>x.id));
   modal(`<div id="ilvfPick" style="display:flex;flex-direction:column;gap:12px"><h2>${tr('Isolated line view')}</h2><p class="sub">${tr('Pick the lines to show as straight strips, for platform displays and station signs.')}</p>
@@ -2893,7 +2898,7 @@ function ilvfPick(){const ls=linesAZ(M.lines.filter(L=>!L.hidden&&L.stops.length
    <div class="btns"><button class="btn acc" data-act="ilvf-show">${tr('Show strip')}</button><button class="btn" data-act="close-modal">${tr('Cancel')}</button></div></div>`)}
 function ilvfOpen(on){ilvfOn=on;$('#ilvf').hidden=!on;$('#stage').classList.toggle('ilvf-on',on);if(on)ilvfDraw()}
 function ilvfDraw(){if(!ilvfOn)return;ilvfLines=ilvfLines.filter(id=>{const L=lnOf(id);return L&&L.stops.length>1});if(!ilvfLines.length){ilvfOpen(false);return}
-  document.querySelectorAll('#ilvfNames .opt').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.act==='ilvf-names:'+ilvfNames)));$('#ilvfFacBtn').setAttribute('aria-pressed',String(ilvfFac));
+  document.querySelectorAll('#ilvfNames .opt').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.act==='ilvf-names:'+ilvfNames)));document.querySelectorAll('#ilvfIx .opt').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.act==='ilvf-ix:'+ilvfIx)));$('#ilvfFacBtn').setAttribute('aria-pressed',String(ilvfFac));
   $('#ilvfBody').innerHTML=ilvfSVG(ilvfLines,ilvfNames).svg;ilvfSync()}
 // the slider under the strip follows the panel's sideways scroll and moves it; the strip can also be dragged with the mouse
 function ilvfSync(){const b=$('#ilvfBody'),r=$('#ilvfX'),max=b.scrollWidth-b.clientWidth;r.hidden=max<2;if(max>=2)r.value=String(Math.round(b.scrollLeft/max*1000))}
@@ -2928,15 +2933,24 @@ function ilvfSVG(lids,mode,font){const S=M.settings,fs=Math.max(11,S.labelSize||
     o+=`<path d="M${f(xs[0])} ${f(bar)}H${f(xs[xs.length-1])}" stroke="${esc(col)}" stroke-width="${lw}" stroke-linecap="round"/>`;
     let low=bar+lw;
     P.forEach((st,i)=>{const x=xs[i],end=i===0||i===P.length-1,oth=ilvfOthers(st,L),dim=st.closed?mix(S.ink,S.bg,.5):S.ink;
-      if(oth.length){const k=oth.length,sp=8,tf=fs*.62;linesAZ(oth).forEach((l,j)=>{const sx=x+(j-(k-1)/2)*sp;o+=`<path d="M${f(sx)} ${f(bar+6)}V${f(bar+26)}" stroke="${esc(l.color||'#888')}" stroke-width="5" stroke-linecap="round"/>`});
-        linesAZ(oth).forEach((l,j)=>{const t=String(l.name||'').replace(/\n/g,' '),tw=textW(t,tf,700)+8,ty=bar+32+j*(tf+6),c=l.color||'#888';
-          o+=`<rect x="${f(x-tw/2)}" y="${f(ty)}" width="${f(tw)}" height="${f(tf+4)}" rx="2" fill="${esc(c)}"/><text x="${f(x)}" y="${f(ty+tf*.86+1)}" text-anchor="middle" font-size="${f(tf)}" font-weight="700" fill="${contrastOn(c)}">${esc(t)}</text>`});
-        low=Math.max(low,bar+32+k*(tf+6));
-        o+=`<circle cx="${f(x)}" cy="${f(bar)}" r="9" fill="${S.stFill}" stroke="${S.ink}" stroke-width="3"/>`}
+      // interchanges: a stub per other line (each cased in the background colour, so two lines of the same colour side by side stay
+      // apart), then the lines as name boxes, as code badges, or nothing more (ilvfIx); 3+ lines make the mark a pill over the stubs
+      let ub=bar+lw;
+      if(oth.length){const k=oth.length,ls=linesAZ(oth),sp=10,tf=fs*.62,hw=k>2&&ilvfIx!=='codes'?(k-1)/2*sp:0;
+        if(ilvfIx!=='codes')ls.forEach((l,j)=>{const sx=x+(j-(k-1)/2)*sp;o+=`<path d="M${f(sx)} ${f(bar+6)}V${f(bar+26)}" stroke="${S.bg}" stroke-width="8" stroke-linecap="round"/><path d="M${f(sx)} ${f(bar+6)}V${f(bar+26)}" stroke="${esc(l.color||'#888')}" stroke-width="5" stroke-linecap="round"/>`});
+        if(ilvfIx==='names'){ls.forEach((l,j)=>{const t=String(l.name||'').replace(/\n/g,' '),tw=textW(t,tf,700)+8,ty=bar+32+j*(tf+6),c=l.color||'#888';
+            o+=`<rect x="${f(x-tw/2)}" y="${f(ty)}" width="${f(tw)}" height="${f(tf+4)}" rx="2" fill="${esc(c)}"/><text x="${f(x)}" y="${f(ty+tf*.86+1)}" text-anchor="middle" font-size="${f(tf)}" font-weight="700" fill="${contrastOn(c)}">${esc(t)}</text>`});ub=bar+32+k*(tf+6)}
+        else if(ilvfIx==='codes'){const z=Math.round(fs*1.3),cf=fs*.7,B=ls.map(l=>{const t=lineCode(l);return{l,t,w:Math.max(z,textW(t,cf,800)+8)}}),rows=[[]];let rw=0;
+          for(const b of B){if(rows[rows.length-1].length&&rw+b.w>gap-8){rows.push([]);rw=0}rows[rows.length-1].push(b);rw+=b.w+3}
+          rows.forEach((r,ri)=>{let bx=x-(r.reduce((a,b)=>a+b.w+3,0)-3)/2;const by=bar+16+ri*(z+3);for(const b of r){const c=b.l.color||'#888';
+            o+=`<rect x="${f(bx)}" y="${f(by)}" width="${f(b.w)}" height="${z}" rx="${f(z*.3)}" fill="${esc(c)}"/><text x="${f(bx+b.w/2)}" y="${f(by+z/2+cf*.36)}" text-anchor="middle" font-size="${f(cf)}" font-weight="800" fill="${contrastOn(c)}">${esc(b.t)}</text>`;bx+=b.w+3}});ub=bar+16+rows.length*(z+3)}
+        else ub=bar+28;
+        low=Math.max(low,ub);
+        o+=hw?`<rect x="${f(x-hw-9)}" y="${f(bar-9)}" width="${f(hw*2+18)}" height="18" rx="9" fill="${S.stFill}" stroke="${S.ink}" stroke-width="3"/>`:`<circle cx="${f(x)}" cy="${f(bar)}" r="9" fill="${S.stFill}" stroke="${S.ink}" stroke-width="3"/>`}
       else o+=`<circle cx="${f(x)}" cy="${f(bar)}" r="4.2" fill="${S.stFill}"/>`;
       if(st.closed)o+=`<path d="M${f(x-4)} ${f(bar-4)}L${f(x+4)} ${f(bar+4)}M${f(x+4)} ${f(bar-4)}L${f(x-4)} ${f(bar+4)}" stroke="${S.ink}" stroke-width="1.6"/>`;
       // facilities (the switch in the strip's bar, idea by Curt): under the station, below any transfer badges, wrapped to fit between stations
-      const fi=ilvfFac?(st.icons||[]).filter(k=>ICONS[k]):[];if(fi.length){const z=Math.round(fs*1.1),cols=Math.max(1,Math.min(fi.length,Math.floor((gap-10)/(z+3)))),t0=(oth.length?bar+32+oth.length*(fs*.62+6):bar+lw)+6;
+      const fi=ilvfFac?(st.icons||[]).filter(k=>ICONS[k]):[];if(fi.length){const z=Math.round(fs*1.1),cols=Math.max(1,Math.min(fi.length,Math.floor((gap-10)/(z+3)))),t0=ub+6;
         fi.forEach((k,j)=>{const c=j%cols,r=Math.floor(j/cols),n=Math.min(cols,fi.length-r*cols);o+=iconSVG(k,x-(n*(z+3)-3)/2+c*(z+3),t0+r*(z+3),z)});low=Math.max(low,t0+Math.ceil(fi.length/cols)*(z+3))}
       const [a,b]=rowsOf(st),wt=end?800:600,ty=bar-18;
       if(angled)o+=`<g transform="rotate(-40 ${f(x+2)} ${f(ty)})"><text x="${f(x+2)}" y="${f(ty)}" font-size="${fs}" font-weight="${wt}" fill="${dim}">${esc(a)}${b?`<tspan font-size="${f(fs2)}" font-weight="400" font-style="italic" dx="6">${esc(b)}</tspan>`:''}</text></g>`;
