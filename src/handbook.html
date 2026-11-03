@@ -183,7 +183,8 @@ td:first-child{white-space:nowrap;font-weight:600}
     <li><b>Live room</b>: edit a map together. See <a href="#live">Live rooms</a>.</li>
     <li><b>Help</b>: the tutorial and this handbook.</li>
     <li><b>Language</b> (11 languages) and <b>theme</b> (auto, light, dark).</li>
-    <li><b>Undo</b> and <b>redo</b>, <b>Map</b> / <b>Timeline</b>, <b>Simple</b> / <b>Advanced</b>, and <b>Export</b>.</li>
+    <li><b>Grid</b> / <b>Free</b>: snap stations to the grid or place them freely (see <a href="#map-settings">Grid</a>). <b>Lines</b> / <b>Stations</b>: the lane layout (see <a href="#layout">Lane layout</a>).</li>
+    <li><b>Undo</b> and <b>redo</b>, <b>Simple</b> / <b>Advanced</b>, <b>Map</b> / <b>Timeline</b>, and <b>Export</b>.</li>
   </ul>
   <h3>Around the map</h3>
   <ul>
@@ -215,7 +216,8 @@ td:first-child{white-space:nowrap;font-weight:600}
     <li>Click to select; <kbd>Shift</kbd>+click adds to the selection; drag on empty map draws a selection box (hold Shift to add).</li>
     <li>Arrow keys nudge the selection by one grid cell. <kbd>Alt</kbd>+drag moves without snapping.</li>
     <li><kbd>Del</kbd> deletes, <kbd>Ctrl+D</kbd> duplicates, <kbd>Ctrl+A</kbd> selects every station.</li>
-    <li>Scroll to zoom; <kbd>Shift</kbd>+scroll pans sideways; <kbd>F</kbd> fits the map.</li>
+    <li>Scroll to zoom; <kbd>Shift</kbd>+scroll pans sideways; <kbd>F</kbd> fits the map. When zoomed far out the grid dots thin out, and below 25% they are hidden; snapping still uses the real grid.</li>
+    <li>Double-click a line's track (or press <span class="ui">Select the whole line</span> in a segment's panel) to select the whole line with its stations and bend points, ready to move or to add to the timeline in one go. The panel still shows the line's settings, and <kbd>Del</kbd> still deletes only the line.</li>
   </ul>
 </article>
 
@@ -233,7 +235,8 @@ td:first-child{white-space:nowrap;font-weight:600}
     <li><b>Not in service</b>: draws a cross over the station and greys its name.</li>
     <li><b>Served by</b>: the lines through the station; click one to select it.</li>
     <li><b>Lines passing close by</b>: lines whose track runs within two grid steps of the station without stopping there; click one to add the station to it, between the two stops it passes.</li>
-    <li><b>Stops here</b>: untick a line that passes through without stopping (an express). It keeps its lane through the station, so it runs beside the others and can be reordered there, but gets no stop mark. Add the station to the line first (Lines passing close by, or Add stop here), then untick it.</li>
+    <li><b>Number on …</b> (when the station's lines have a station code): type this station's own code on a line, like NS3A for an infill station; empty uses the automatic number. See <a href="#numbers">Station numbers</a>.</li>
+    <li><b>Stops here</b>: untick a line that passes through without stopping (an express). It runs in the outer lane there, beside the station mark instead of through it, on the side where the fewest lines have to cross over, and gets no stop. Add the station to the line first (Lines passing close by, or Add stop here), then untick it.</li>
   </ul>
   <div class="demo" data-demo="shapes"><div class="demo-head">Station shapes<span>map-wide shape</span></div><div class="stagebox"></div><div class="controls"></div></div>
   <h3>Position <span class="tag a">Advanced</span></h3>
@@ -261,6 +264,26 @@ td:first-child{white-space:nowrap;font-weight:600}
   </ul>
   <div class="note"><b>Small files</b>PNG and other pictures are shrunk to 160 pixels at most, and small SVGs are kept as they are, so maps stay quick to save and share.</div>
   <div class="demo tall" data-demo="icon"><div class="demo-head">Custom icon<span>with the station panel</span></div><div class="stagebox"></div><p class="how">The selected station's panel is on the right. Upload any PNG or SVG from your device, then try both modes and the size slider. Nothing here is saved.</p></div>
+</article>
+
+<article id="numbers" data-group="Drawing">
+  <h2>Station numbers</h2>
+  <p>Stations can be numbered along each line, like Singapore's MRT (NS 1, NS 2…; idea by Aquaqua).</p>
+  <h3>Numbering a line</h3>
+  <ul>
+    <li>Select the line and type a <b>Station code</b> in its panel, like NS. Its stations are numbered in order from <b>First number</b> (1 unless you change it); bend points and stops the line passes without stopping are skipped.</li>
+    <li><b>Number from the other end</b> counts from the line's last station instead.</li>
+    <li>To give one station its own code, type it under <b>Number on …</b> in the station's panel (NS3A for an infill station, for example).</li>
+    <li><span class="ui">Renumber stations</span> (under the station code) writes the numbers in order along the line into every station, replacing ones typed by hand. Use it after adding a station in between, instead of retyping every station after it.</li>
+  </ul>
+  <h3>Codes as station marks</h3>
+  <ul>
+    <li>Turn on Map → Stations → <b>Station numbers</b>: <i>Codes as station marks</i>. Each numbered station is drawn as its codes in the lines' colours, side by side at interchanges (JS 1 | NS 4), and names move clear of them.</li>
+    <li><b>Code size (empty = automatic)</b> sets how big the codes are on the whole map.</li>
+    <li>Select a numbered station and drag one of the eight square handles around its codes to size that station's box: corners change width and height, edges one of them; it stays centred on the station (<kbd>Alt</kbd> for half steps). <span class="ui">Reset code size</span> in the station's panel undoes it.</li>
+    <li>In a narrow box, a code puts its letters above its number. Make the box taller and the codes stack in rows: A B C D E F, then A B C / D E F, then A B / C D / E F, then one per row, whichever makes the text biggest.</li>
+    <li>A station not in service shows its codes striped instead of crossed out.</li>
+  </ul>
 </article>
 
 <article id="lines" data-group="Drawing">
@@ -294,7 +317,9 @@ td:first-child{white-space:nowrap;font-weight:600}
   <p>Shows one or more lines as straight strips, for platform displays and station signs (idea by Paddy). Click the strip button next to <b>+</b> in the Lines panel, tick the lines and press <span class="ui">Show strip</span>. A panel opens at the bottom of the map; it redraws as you edit.</p>
   <ul>
     <li>Stations are evenly spaced with their names above; second names are smaller, end stations bold, stations not in service crossed.</li>
-    <li>Interchanges are ringed dots with short stubs in the other lines' colours and a small tag with each line's name. Stations joined by a transfer count too.</li>
+    <li>Interchanges are ringed dots with short stubs in the other lines' colours (a pill when there are three or more). Stations joined by a transfer count too.</li>
+    <li><b>Interchange style</b>: <span class="ui">Names</span> puts a small tag with each other line's name under the station (London style), <span class="ui">Codes</span> shows a coloured badge per line with its code (its station code, like NS, or else the initials of its name, like CC for Chiselsmith &amp; City Line), and <span class="ui">Dots</span> shows only the stubs.</li>
+    <li><span class="ui">Facilities</span> shows each station's facility icons under it (idea by Curt).</li>
     <li><b>Names</b>: <span class="ui">Auto</span> tilts them only when they don't fit, <span class="ui">Straight</span> keeps them level and spaces the stations wider, <span class="ui">Angled</span> always tilts them.</li>
     <li>Drag the slider under the strip (or the strip itself) to scroll along it. Drag the bar on top of the panel to make it taller or shorter; double-click the bar to reset.</li>
     <li><span class="ui">PNG</span> and <span class="ui">SVG</span> export just the strips. A loop line ends back at its first station.</li>
@@ -344,10 +369,25 @@ td:first-child{white-space:nowrap;font-weight:600}
   <h2>Lines side by side</h2>
   <p>Lines that share track run side by side on their own, and stay in the same order through stations so they don't swap places. <b>Line width</b> and <b>Gap between lines</b> (Map → Lines) set how far apart they are.</p>
   <h3>Reorder lines at stations <span class="tag a">Advanced</span></h3>
-  <p>Turn on <b>Reorder lines at stations</b> (in Map → Lines or in a station's panel), then select a station: a dot sits on each line's track just outside the station, in lane order. Drag one dot onto another to swap the two lines there. <span class="ui">Reset to automatic</span> undoes it. While reordering is on, Auto build is hidden so the dots and stubs don't overlap. A segment's panel also has <b>Line order on this segment</b>.</p>
+  <p>Turn on <b>Reorder lines at stations</b> (in Map → Lines or in a station's panel), then select a station: a dot sits on each line's track just outside the station, in lane order. Drag one dot onto another to swap the two lines there. <span class="ui">Reset to automatic</span> undoes it. While reordering is on, Auto build is hidden so the dots and stubs don't overlap.</p>
+  <ul>
+    <li>A swap holds along the whole stretch the two lines run together: orders set earlier at the other stations on that stretch swap too, so your latest choice wins.</li>
+    <li>Some swaps can't be drawn, for example a line between two lines that share the next segment. SNDT then leaves the order as it was and tells you why; swap them at a station where they run side by side.</li>
+    <li>A segment's panel also has <b>Line order on this segment</b> (↑ / ↓). Swapping dots clears that order on the stretch, and an order saved before another line joined the segment is ignored.</li>
+  </ul>
   <div class="demo" data-demo="lanes"><div class="demo-head">Reorder lines<span>drag a dot onto another</span></div><div class="stagebox"></div></div>
   <h3>Where lines cross</h3>
   <p>Where two lines cross, the one higher in the Lines list passes over. <b>Where lines cross</b>: Draw straight over, Small gap, Medium gap or Large gap cut into the line underneath; in Advanced, <b>Gap size (0 draws straight over)</b> sets it exactly. Change which line is on top with <span class="ui">Draw above</span> / <span class="ui">Draw below</span> in a line's Advanced settings.</p>
+</article>
+
+<article id="layout" data-group="Tracks">
+  <h2>Lane layout</h2>
+  <p>How SNDT fits lines that share track around stations. Switch it with <span class="ui">Lines</span> / <span class="ui">Stations</span> in the top bar (on phones, in the ☰ menu under <b>Lane layout</b>); each map keeps its own choice.</p>
+  <ul>
+    <li><b>Lines first</b>: lines stay straight in their lanes along whole runs, and each station's mark sits where its lines pass, so there are fewer little steps and jumps at stations. New maps start with it.</li>
+    <li><b>Stations first</b>: each station stays exactly on its point and the lines fit around it. Maps made before Lines first existed open with this one.</li>
+  </ul>
+  <p>Both use the same map: switching never changes your stations, lines or orders, only how the lanes are drawn. Where lines must swap sides, they cross once between stations instead of inside one.</p>
 </article>
 
 <article id="auto-build" data-group="Tracks">
@@ -372,13 +412,13 @@ td:first-child{white-space:nowrap;font-weight:600}
   <h3>Lines</h3>
   <p><a href="#bends">Bend types</a>, <a href="#auto-build">Auto build</a>, <a href="#bends">Corner rounding</a> (and <b>Corner radius</b> <span class="tag a">Advanced</span>), <a href="#parallel">Reorder lines at stations</a>, <a href="#parallel">Where lines cross</a> (and <b>Gap size</b> <span class="tag a">Advanced</span>), <b>Line width</b> and <b>Gap between lines</b> <span class="tag a">Advanced</span>.</p>
   <h3>Stations</h3>
-  <p><b>Single-line stops</b>: the shape of every station that has no shape of its own (see <a href="#stations">Stations</a>). <b>Station size</b> <span class="tag a">Advanced</span>.</p>
+  <p><b>Single-line stops</b>: the shape of every station that has no shape of its own (see <a href="#stations">Stations</a>). <b>Station numbers</b> and <b>Code size</b>: see <a href="#numbers">Station numbers</a>. <b>Station size</b> <span class="tag a">Advanced</span>.</p>
   <h3>Labels</h3>
-  <p><b>Label size</b>, <b>Label font</b> (Overpass, Figtree, Pixelify Sans, Arial, Georgia, Courier New), <b>Label halo</b> (an outline in the background colour so names stay readable over lines), <b>Keep station names off lines</b>, <b>Bigger Chinese, Japanese and Korean text</b> (with <b>CJK text size, times the normal size</b> in Advanced) and <b>Bold names at interchanges</b>.</p>
+  <p><b>Label size</b>, <b>Label font</b> (Overpass, Figtree, Pixelify Sans, Cianan Ur, Arial, Georgia, Courier New; Cianan Ur is embedded in exports so it shows everywhere), <b>Facility icons</b> (Top, Centre or Bottom beside the name) and <b>Icons per row (0 = all)</b> (more icons wrap onto new rows), <b>Label halo</b> (an outline in the background colour so names stay readable over lines), <b>Keep station names off lines</b>, <b>Bigger Chinese, Japanese and Korean text</b> (with <b>CJK text size, times the normal size</b> in Advanced) and <b>Bold names at interchanges</b>.</p>
   <h3>Grid</h3>
   <p><b>Placement</b> (also <span class="ui">Grid</span> / <span class="ui">Free</span> in the top bar): Grid snaps stations to the grid; Free places them precisely (to a tenth of a unit) and, while you drag, snaps the station under the pointer into line with other stations — same X, same Y or at 45° — showing a dashed guide (hold <kbd>Alt</kbd> to place without it). In Free, arrow keys move the selection by 1 unit, <kbd>Shift</kbd> + arrow by 0.1. <b>Grid size</b> sets the snapping step; <span class="ui">Snap all to grid</span> moves everything onto it. Hold <kbd>Alt</kbd> to place freely.</p>
   <h3>Legend</h3>
-  <p><b>Show legend</b>. The legend lists your lines grouped by type. MTR imports with more than 20 lines start with it hidden. Drag it anywhere; click it for its <b>Heading</b>, its <b>X</b> and <b>Y</b>, and <span class="ui">Hide legend</span>.</p>
+  <p><b>Show legend</b>. The legend lists your lines grouped by type. MTR imports with more than 20 lines start with it hidden. Drag it anywhere; click it for its <b>Heading</b>, <b>Items per column (0 = one column)</b> to split a long legend into columns, its <b>X</b> and <b>Y</b>, and <span class="ui">Hide legend</span>.</p>
   <h3>Game coordinates</h3>
   <p><b>Blocks per grid cell</b> links the map to your world, so in-game coordinates become map positions and distances. <b>Nether ×8</b> treats Nether coordinates as eight times further. <span class="ui">Place stations</span> moves every station with coordinates to its in-game spot.</p>
   <h3>Shortcuts</h3><p>The keyboard shortcuts; see <a href="#shortcuts">Shortcuts</a>.</p>
@@ -387,9 +427,12 @@ td:first-child{white-space:nowrap;font-weight:600}
 <article id="more-drawing" data-group="The map">
   <h2>Text, areas, water, nature and images</h2>
   <h3>Text <kbd>T</kbd></h3>
-  <p>Click to place text. <b>Text</b>, <b>Size</b>, <b>Colour</b>, <b>Rotation °</b>, <b>Align</b> (Left, Centre, Right), <b>X</b>, <b>Y</b>, <b>Font</b> (Same as labels, or one of the label fonts) and <b>Bold</b>, plus <span class="ui">Duplicate</span> and <span class="ui">Delete text</span>.</p>
+  <p>Click to place text. <b>Text</b>, <b>Size</b>, <b>Colour</b>, <b>Rotation °</b>, <b>Align</b> (Left, Centre, Right), <b>X</b>, <b>Y</b>, <b>Font</b> (Same as labels, or one of the label fonts), <b>Bold</b> and <b>Italic</b>, plus <span class="ui">Duplicate</span> and <span class="ui">Delete text</span>.</p>
   <h3>Areas <kbd>R</kbd></h3>
   <p>Drag to draw a district (the panel shows <b>Draw an area</b> while the tool is on). Select an area for <b>Label</b>, <b>Colour</b>, <b>Fill strength</b>, <b>Lock in place</b> (so clicks go through to what's on top), <b>Dashed border</b>, <b>X</b>, <b>Y</b>, <b>Width</b>, <b>Height</b>, <b>Corner radius</b>, <b>Label size</b> and <b>Gap where areas meet</b>. <span class="ui">Turn into free shape</span> lets you drag its corners into any outline; <span class="ui">Delete area</span> removes it.</p>
+  <p><b>Join areas</b>: select two or more areas (<kbd>Shift</kbd>+click) and press <span class="ui">Join into one area</span>. They become one area with one outline, in the look of the first one you selected, and move and select as one. Every part keeps its own corner points to drag. <span class="ui">Split into separate areas</span> in the area's panel undoes it.</p>
+  <h3>Fare zones</h3>
+  <p>Set an area's <b>Kind</b> to <span class="ui">Fare zone</span> to draw it like the Tube map's zones: a plain shaded area with no border (grey to start with) and its number. <b>Zone number</b> is the number shown, <b>How many numbers</b> (0 to 12) how often it appears, spread out over the zone where each fits inside it, and <b>Number size</b> how big. A bright zone colour gets darker numbers so they stay readable. Stack zones in alternating shades, one inside the other, and choose which keeps the overlap where they meet.</p>
   <h3>Water <kbd>W</kbd></h3>
   <p>Pick <span class="ui">River</span> to paint with a brush (<b>Brush size</b>), <span class="ui">Fill shape</span> to click a lake or sea outline, or <span class="ui">Eraser</span>. <b>Water colour</b> has presets (Map blue, Minecraft, Pale, Night). <b>Smooth corners</b> and <b>Smooth curves</b> round the shapes; <span class="ui">Remove last stroke</span> and <span class="ui">Clear all water</span> undo painting. Water's colour is also a map colour in Map → Colours.</p>
   <h3>Nature <kbd>N</kbd></h3>
