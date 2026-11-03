@@ -1,4 +1,7 @@
 {
+  "A line can’t run straight back to the station it just came from.": "Bir hat, az önce geldiği istasyona doğrudan geri dönemez.",
+  "Lines that double back": "Geri dönen hatlar",
+  "They run to a station and straight back over the same piece. The extra trip back is removed; the stations stay.": "Bir istasyona gidip aynı parçadan hemen geri dönerler. Fazla dönüş kaldırılır; istasyonlar kalır.",
   "Creators": "Yapımcılar",
   "the people who made SNDT": "SNDT’yi yapanlar",
   "Developer": "Geliştirici",
@@ -1077,6 +1080,7 @@
   "Renumbered": "Yeniden numaralandı:",
   "Renumber stations": "İstasyonları yeniden numarala",
   "Reset code size": "Kod boyutunu sıfırla",
+  "Show each station's code on this line above it": "Her istasyonun bu hattaki kodunu üstünde göster",
   "Show each station's facility icons under it": "Her istasyonun tesis simgelerini altında göster",
   "Split into separate areas": "Ayrı alanlara böl",
   "Station code": "İstasyon kodu",

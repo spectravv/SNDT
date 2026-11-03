@@ -1,4 +1,7 @@
 {
+  "A line can’t run straight back to the station it just came from.": "لا يمكن للخط أن يعود مباشرة إلى المحطة التي جاء منها للتو.",
+  "Lines that double back": "خطوط ترجع على نفسها",
+  "They run to a station and straight back over the same piece. The extra trip back is removed; the stations stay.": "تصل إلى محطة ثم تعود مباشرة على القطعة نفسها. تُزال رحلة العودة الزائدة وتبقى المحطات.",
   "Creators": "المبدعون",
   "the people who made SNDT": "الأشخاص الذين صنعوا SNDT",
   "Developer": "المطوّر",
@@ -1077,6 +1080,7 @@
   "Renumbered": "أُعيد ترقيم",
   "Renumber stations": "إعادة ترقيم المحطات",
   "Reset code size": "إعادة ضبط حجم الرمز",
+  "Show each station's code on this line above it": "إظهار رمز كل محطة على هذا الخط فوقها",
   "Show each station's facility icons under it": "إظهار أيقونات مرافق كل محطة تحتها",
   "Split into separate areas": "فصل إلى مناطق منفصلة",
   "Station code": "رمز المحطة",

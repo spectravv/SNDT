@@ -1,4 +1,7 @@
 {
+  "A line can’t run straight back to the station it just came from.": "Линия не может сразу вернуться на станцию, с которой только что пришла.",
+  "Lines that double back": "Линии, идущие обратно по себе",
+  "They run to a station and straight back over the same piece. The extra trip back is removed; the stations stay.": "Они доходят до станции и сразу возвращаются по тому же участку. Лишний обратный проход удаляется, станции остаются.",
   "Creators": "Создатели",
   "the people who made SNDT": "люди, создавшие SNDT",
   "Developer": "Разработчик",
@@ -1077,6 +1080,7 @@
   "Renumbered": "Перенумеровано",
   "Renumber stations": "Перенумеровать станции",
   "Reset code size": "Сбросить размер кода",
+  "Show each station's code on this line above it": "Показывать над каждой станцией её код на этой линии",
   "Show each station's facility icons under it": "Показывать значки удобств под каждой станцией",
   "Split into separate areas": "Разделить на отдельные области",
   "Station code": "Код станции",

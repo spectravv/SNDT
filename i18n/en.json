@@ -1,4 +1,7 @@
 {
+  "A line can’t run straight back to the station it just came from.": "A line can’t run straight back to the station it just came from.",
+  "Lines that double back": "Lines that double back",
+  "They run to a station and straight back over the same piece. The extra trip back is removed; the stations stay.": "They run to a station and straight back over the same piece. The extra trip back is removed; the stations stay.",
   "Creators": "Creators",
   "the people who made SNDT": "the people who made SNDT",
   "Developer": "Developer",
@@ -1077,6 +1080,7 @@
   "Renumbered": "Renumbered",
   "Renumber stations": "Renumber stations",
   "Reset code size": "Reset code size",
+  "Show each station's code on this line above it": "Show each station's code on this line above it",
   "Show each station's facility icons under it": "Show each station's facility icons under it",
   "Split into separate areas": "Split into separate areas",
   "Station code": "Station code",

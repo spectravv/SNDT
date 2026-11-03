@@ -1,4 +1,7 @@
 {
+  "A line can’t run straight back to the station it just came from.": "线路不能直接折返到刚经过的车站。",
+  "Lines that double back": "折返重叠的线路",
+  "They run to a station and straight back over the same piece. The extra trip back is removed; the stations stay.": "它们开到某站后又沿同一段直接返回。多余的折返会被移除，车站保留。",
   "Creators": "制作者",
   "the people who made SNDT": "制作 SNDT 的人们",
   "Developer": "开发者",
@@ -1077,6 +1080,7 @@
   "Renumbered": "已重新编号",
   "Renumber stations": "重新编号车站",
   "Reset code size": "重置代码大小",
+  "Show each station's code on this line above it": "在每个车站上方显示它在本线路的编号",
   "Show each station's facility icons under it": "在每个车站下方显示其设施图标",
   "Split into separate areas": "拆分为独立区域",
   "Station code": "车站代码",

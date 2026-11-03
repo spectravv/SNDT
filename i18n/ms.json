@@ -1,4 +1,7 @@
 {
+  "A line can’t run straight back to the station it just came from.": "Laluan tidak boleh terus berpatah balik ke stesen yang baru dilaluinya.",
+  "Lines that double back": "Laluan yang berpatah balik",
+  "They run to a station and straight back over the same piece. The extra trip back is removed; the stations stay.": "Ia ke sebuah stesen dan terus berpatah balik di bahagian yang sama. Perjalanan balik tambahan dibuang; stesen kekal.",
   "Creators": "Pembangun",
   "the people who made SNDT": "orang yang membina SNDT",
   "Developer": "Pembangun perisian",
@@ -1077,6 +1080,7 @@
   "Renumbered": "Dinomborkan semula",
   "Renumber stations": "Nomborkan semula stesen",
   "Reset code size": "Set semula saiz kod",
+  "Show each station's code on this line above it": "Tunjukkan kod setiap stesen pada laluan ini di atasnya",
   "Show each station's facility icons under it": "Tunjukkan ikon kemudahan setiap stesen di bawahnya",
   "Split into separate areas": "Pisahkan kepada kawasan berasingan",
   "Station code": "Kod stesen",

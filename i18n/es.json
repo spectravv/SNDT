@@ -1,4 +1,7 @@
 {
+  "A line can’t run straight back to the station it just came from.": "Una línea no puede volver directamente a la estación de la que acaba de venir.",
+  "Lines that double back": "Líneas que vuelven sobre sí mismas",
+  "They run to a station and straight back over the same piece. The extra trip back is removed; the stations stay.": "Van a una estación y vuelven por el mismo tramo. Se quita el viaje de vuelta sobrante; las estaciones se quedan.",
   "Creators": "Creadores",
   "the people who made SNDT": "las personas que hicieron SNDT",
   "Developer": "Desarrollador",
@@ -1077,6 +1080,7 @@
   "Renumbered": "Renumeradas",
   "Renumber stations": "Renumerar estaciones",
   "Reset code size": "Restablecer tamaño del código",
+  "Show each station's code on this line above it": "Muestra encima de cada estación su código en esta línea",
   "Show each station's facility icons under it": "Muestra los iconos de servicios de cada estación debajo de ella",
   "Split into separate areas": "Separar en áreas distintas",
   "Station code": "Código de estación",
