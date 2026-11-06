@@ -1,4 +1,4 @@
-# SNDT v1.0.6
+# SNDT v1.0.5.1 (hotfix)
 
 ## Fixes
 - Striped lines: the white blocks are now drawn as a dashed stroke along the line instead of separate boxes, so a block on a bend bends with the line instead of sticking out askew (player report 2026-11-02, "Line between stations").
