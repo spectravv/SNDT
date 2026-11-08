@@ -149,8 +149,8 @@ aside{background:var(--paper);overflow-y:auto;min-height:0}
 @media (hover:hover){.hsearch:hover{background:var(--paper);color:var(--ink)}}
 @media (max-width:1250px){.hsearch kbd{display:none}header #status{display:none}}
 @media (max-width:1499px){header #status{font-size:0;gap:0}}
-@media (max-width:1199px){header .seg.place:not(.lay){display:none}}
-@media (max-width:1099px){header .seg.lay{display:none}}
+@media (max-width:1359px){header .seg.place:not(.lay){display:none}}
+@media (max-width:1163px){header .seg.lay{display:none}}
 @media (max-width:1399px) and (min-width:901px){header .seg button{padding:0 7px}}
 @media (max-width:1299px) and (min-width:901px){header .mapname{max-width:110px}header #langSel{width:56px}header .hbtn{margin-left:3px}}
 @media (max-width:1100px) and (min-width:901px){header .seg button{padding:0 7px}header .hbtn{margin-left:4px}.logo{padding-right:10px;margin-right:6px}.mapname{max-width:140px}}
@@ -473,7 +473,7 @@ input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}
     <button class="hbtn icon" id="undoBtn" data-act="undo" aria-label="Undo" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/></svg></button>
     <button class="hbtn icon" id="redoBtn" data-act="redo" aria-label="Redo" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 000 11H13"/></svg></button>
     <div class="seg place hide-narrow" role="group" aria-label="Placement" title="Grid: stations snap to the grid. Free: place precisely, snapping into line with other stations"><button id="plGrid" data-act="place:grid" aria-pressed="true">Grid</button><button id="plFree" data-act="place:free" aria-pressed="false">Free</button></div>
-    <div class="seg place lay" role="group" aria-label="Lane layout" title="Lines first: lines stay straight in their lanes and stations sit where their lines pass. Stations first: each station stays on its point and the lines fit around it"><button id="lyLines" data-act="mlayout:lines" aria-pressed="true">Lines</button><button id="lyStations" data-act="mlayout:stations" aria-pressed="false">Stations</button></div>
+    <div class="seg place lay" role="group" aria-label="Lane layout" title="Lines first: lines stay straight in their lanes and stations sit where their lines pass. Stations first: each station stays on its point and the lines fit around it. Manual: the lanes stay where they are now, and you drag lines sideways yourself"><button id="lyLines" data-act="mlayout:lines" aria-pressed="true">Lines</button><button id="lyStations" data-act="mlayout:stations" aria-pressed="false">Stations</button><button id="lyManual" data-act="mlayout:manual" aria-pressed="false">Manual</button></div>
     <div class="seg ctl" role="group" aria-label="Control level">
       <button id="mSimple" data-act="mode:simple" aria-pressed="true">Simple</button>
       <button id="mAdv" data-act="mode:adv" aria-pressed="false">Advanced</button>
@@ -972,7 +972,7 @@ function geom(){
   // lines-first layout (settings.layout 'lines'): lanes are worked out along whole runs of lines and stations are drawn where their
   // lines pass. A segment whose stations are slightly out of line (up to one lane sideways) is laid on its axis from its first
   // station; how far its far end lands beside the station (corrB) goes to the lane solver as one more "run straight" rule
-  const linesFirst=M.settings.layout==='lines',NEAR_ROUTES=['oct1','oct2','straight','l1','l2','zigzag'];
+  const linesFirst=baseLay()==='lines',NEAR_ROUTES=['oct1','oct2','straight','l1','l2','zigzag'];
   const AXES=[{x:1,y:0},{x:0,y:1},{x:Math.SQRT1_2,y:Math.SQRT1_2},{x:Math.SQRT1_2,y:-Math.SQRT1_2}];
   const nearAxis=(t,P)=>{const A=st.get(t.a),B=st.get(t.b);if(!A||!B||A.kind==='waypoint'||B.kind==='waypoint')return null;
     const dx=B.x-A.x,dy=B.y-A.y;let u=AXES[0],al=0;for(const v of AXES){const k=dx*v.x+dy*v.y;if(Math.abs(k)>Math.abs(al)){al=k;u=v}}if(al<0){u={x:-u.x,y:-u.y};al=-al}
@@ -1049,6 +1049,8 @@ function geom(){
     const c=[t.a,t.b].filter(X=>lo.has(X)).map(X=>({X,r:lo.get(X),n:t.lines.filter(l=>lo.get(X).has(l)).length})).filter(o=>o.n>1).sort((p,q)=>q.n-p.n)[0];
     if(c){const k=sideOf(c.X,leave(t,c.X))*(c.X===t.a?1:-1);slotSort(t.lines,l=>c.r.has(l)?c.r.get(l)*k:null)}}
   for(const t of tracks.values())if(t.fit)t.pts=fitArc(t,tracks,st);
+  // the route before any lanes shift it: what manual lanes are measured from
+  const wantBase=manualLay()||geomBase;if(wantBase)for(const t of tracks.values())t.base=t.pts;
   // segments that leave a station in the same direction run side by side until they split; each such bundle is then
   // shifted sideways so lines that carry straight on through a station keep their lane instead of jumping
   {const dep=new Map();
@@ -1202,7 +1204,10 @@ function geom(){
     list.forEach((it,i)=>{let piece=C.slice(cuts[i],cuts[i+1]+1);if(piece.length<2)piece=[C[cuts[i]],C[Math.min(C.length-1,cuts[i]+1)]];
       it.t.pts=it.rev?piece.slice().reverse():piece;it.t.off=new Map();it.t.lines=it.rev?ordC.slice().reverse():ordC.slice()});
     ordC.forEach((lid,k)=>{const op=offsetPoly(C,(k-(n-1)/2)*sp);
-      list.forEach((it,i)=>{let piece=op.slice(cuts[i],cuts[i+1]+1);if(piece.length<2)piece=[op[cuts[i]],op[Math.min(op.length-1,cuts[i]+1)]];if(it.rev)piece=piece.slice().reverse();if(it.t.endOrd&&list.length===1)piece=swapPiece(it.t,lid);it.t.off.set(lid,piece);
+      // manual layout: frozen lanes, along the whole chain when every piece of it is frozen, else piece by piece
+      let man=null;if(manualLay()){const fz=list.filter(it=>laneOf(it.t.key,lid));if(fz.length)man=fz.length===list.length?manualPieces(list,lid,st,defR,bundleMin(head)):new Map(fz.flatMap(it=>[...manualPieces([{t:it.t,rev:false}],lid,st,defR,bundleMin(it.t))]))}
+      list.forEach((it,i)=>{let piece=op.slice(cuts[i],cuts[i+1]+1);if(piece.length<2)piece=[op[cuts[i]],op[Math.min(op.length-1,cuts[i]+1)]];if(it.rev)piece=piece.slice().reverse();if(it.t.endOrd&&list.length===1)piece=swapPiece(it.t,lid);
+        if(man&&man.has(it.t))piece=man.get(it.t);it.t.off.set(lid,piece);
         const t=it.t,P=t.pts,q=P.length,d0=unit(P[1].x-P[0].x,P[1].y-P[0].y),d1=unit(P[q-2].x-P[q-1].x,P[q-2].y-P[q-1].y);
         if(!ends.has(t.a))ends.set(t.a,[]);if(!ends.has(t.b))ends.set(t.b,[]);const pass=t.over&&t.over.get(lid);
         if(!pass||!pass.has(t.a))ends.get(t.a).push({x:piece[0].x,y:piece[0].y,lid,dir:d0});if(!pass||!pass.has(t.b))ends.get(t.b).push({x:piece[piece.length-1].x,y:piece[piece.length-1].y,lid,dir:d1})})});
@@ -1217,7 +1222,10 @@ function geom(){
 // a line of a segment whose lines swap sides: its own lane at each end, stepping across at 45° around the middle of the segment
 // (the middle of its longest straight stretch when that is long enough)
 function swapPiece(t,lid){const sp=M.settings.lineWidth+M.settings.lineGap,n=t.lines.length,P=dedupePts(t.pts),o=t.endOrd;
-  const La=o.at===t.a?o.lines:t.lines,Lb=o.at===t.b?o.lines:t.lines,oa=(La.indexOf(lid)-(n-1)/2)*sp,ob=(Lb.indexOf(lid)-(n-1)/2)*sp;
+  const La=o.at===t.a?o.lines:t.lines,Lb=o.at===t.b?o.lines:t.lines;
+  return stepPoly(P,(La.indexOf(lid)-(n-1)/2)*sp,(Lb.indexOf(lid)-(n-1)/2)*sp)}
+// a path beside P, oa to the side at its start and ob at its end, stepping across at 45° around the middle
+function stepPoly(P,oa,ob){const sp=M.settings.lineWidth+M.settings.lineGap;P=dedupePts(P);
   if(Math.abs(ob-oa)<.01||P.length<2)return offsetPoly(P,oa);
   const S=[0];for(let i=1;i<P.length;i++)S.push(S[i-1]+Math.hypot(P[i].x-P[i-1].x,P[i].y-P[i-1].y));const T=S[S.length-1],w=Math.min(Math.abs(ob-oa),T*.6);
   let li=0;for(let i=1;i<P.length-1;i++)if(S[i+1]-S[i]>S[li+1]-S[li])li=i;
@@ -1227,6 +1235,35 @@ function swapPiece(t,lid){const sp=M.settings.lineWidth+M.settings.lineGap,n=t.l
   for(let i=0;i<Q.length-1;i++){const u=unit(Q[i+1].x-Q[i].x,Q[i+1].y-Q[i].y);N.push({x:-u.y,y:u.x})}
   return Q.map((q,i)=>{const d=off(q.s);if(!i)return{x:q.x+N[0].x*d,y:q.y+N[0].y*d};if(i===Q.length-1)return{x:q.x+N[i-1].x*d,y:q.y+N[i-1].y*d};
     const a=N[i-1],b=N[i],den=1+a.x*b.x+a.y*b.y;return den<.05?{x:q.x+b.x*d,y:q.y+b.y*d}:{x:q.x+(a.x+b.x)*d/den,y:q.y+(a.y+b.y)*d/den}})}
+// manual layout: one line along a chain of frozen segments (joined at bend points), as a map of segment → path (a→b). Each segment's
+// unshifted route moves sideways by its lanes: a straight one steps across at 45° in the middle, a curved one eases across, one
+// with corners moves its first and last legs (the corners follow); then the corners are rounded around the same centres as the
+// automatic lanes, so the lines of a bundle stay evenly apart through them
+function manualPieces(list,lid,st,defR,minR){const sp=M.settings.lineWidth+M.settings.lineGap,Q=[],O=[],R=[],J=[];
+  // how far a corner's arc runs along its legs, for a line d off the middle of its lanes (o, O): a line on the inside of the turn gets a tighter arc
+  const rnd=(P,k,r,d)=>{if(!r)return 0;const a=P[k-1],b=P[k],c=P[k+1],u=unit(b.x-a.x,b.y-a.y),v=unit(c.x-b.x,c.y-b.y),tn=Math.tan(Math.acos(Math.max(-1,Math.min(1,u.x*v.x+u.y*v.y)))/2);
+    return Math.max(0,Math.max(r,minR*tn)-d*Math.sign(u.x*v.y-u.y*v.x)*tn)};
+  list.forEach((it,i)=>{const t=it.t,z=laneOf(t.key,lid),oa=z[0]*sp,ob=z[1]*sp,B=dedupePts(t.base||t.pts),sg=M.segs[t.key]||{},r=sg.radius??defR;
+    // the middle of the segment's frozen lanes, which the corners are rounded around
+    const Z=t.lines.map(l=>laneOf(t.key,l)).filter(Boolean),avg=k=>Z.reduce((a,v)=>a+(v[k]??(v[0]+v[1])/2),0)/Z.length*sp,ma=avg(0),mb=avg(1),mm=avg(2);
+    const smooth=t.route==='curve'||t.route==='arc'||t.route==='ring'||(t.route==='custom'&&(sg.smooth||(sg.pts||[]).some(p=>p.hx||p.hy)));
+    let P,o;
+    if(B.length<2){P=B.map(p=>({x:p.x,y:p.y}));o=P.map(()=>oa)}
+    else if(B.length===2){const u=unit(B[1].x-B[0].x,B[1].y-B[0].y),L=Math.hypot(B[1].x-B[0].x,B[1].y-B[0].y),j=Math.abs(ob-oa),at=(k,d)=>({x:B[0].x+u.x*k-u.y*d,y:B[0].y+u.y*k+u.x*d});
+      const ra=oa-ma,rb=ob-mb;if(j<.5){P=[at(0,oa),at(L,oa)];o=[ra,ra]}else if(L<j+sp*2){P=[at(0,oa),at(L,ob)];o=[ra,rb]}else{P=[at(0,oa),at((L-j)/2,oa),at((L+j)/2,ob),at(L,ob)];o=[ra,ra,rb,rb]}}
+    else if(smooth){const S=[0];for(let k=1;k<B.length;k++)S.push(S[k-1]+Math.hypot(B[k].x-B[k-1].x,B[k].y-B[k-1].y));const T=S[S.length-1]||1;o=S.map(v=>oa+(ob-oa)*v/T);
+      const N=[];for(let k=0;k<B.length-1;k++){const u=unit(B[k+1].x-B[k].x,B[k+1].y-B[k].y);N.push({x:-u.y,y:u.x})}
+      P=B.map((q,k)=>{const a=N[Math.max(0,k-1)],b=N[Math.min(N.length-1,k)],den=1+a.x*b.x+a.y*b.y,d=o[k];return den<.05?{x:q.x+b.x*d,y:q.y+b.y*d}:{x:q.x+(a.x+b.x)*d/den,y:q.y+(a.y+b.y)*d/den}})}
+    else{const n=B.length-1,om=z.length>2?z[2]*sp:(oa+ob)/2,ds=Array.from({length:n},(_,k)=>k===0?oa:k===n-1?ob:om);P=shiftPoly(B,ds);const ra=oa-ma,rb=ob-mb,rm=om-mm;o=P.map((_,k)=>k===0?ra:k===P.length-1?rb:n===2?(ra+rb)/2:k===1?(ra+rm)/2:k===P.length-2?(rm+rb)/2:rm)}
+    // corners inside the segment are rounded first, then the bend points between segments (as the automatic lanes are)
+    if(!smooth&&r>0)P=filletPts(P,k=>rnd(P,k,r,o[k]),null,0);
+    let oa2=o[0],ob2=o[o.length-1];if(it.rev){P.reverse();[oa2,ob2]=[-ob2,-oa2]}
+    if(Q.length){const l=Q[Q.length-1];if(Math.hypot(l.x-P[0].x,l.y-P[0].y)<.01)P.shift();J.push(Q.length-1);R.push((st.get(list[i-1].w)||{}).radius??defR);O.push((O.pop()+oa2)/2)}
+    Q.push(...P);O.push(ob2)});
+  // a corner's rounding is set by how far its arc runs along the legs; lines on the inside of the turn get a tighter arc
+  const jp=J.map(k=>({x:Q[k].x,y:Q[k].y})),jr=new Map(J.map((k,i)=>[k,i])),F=J.length?filletPts(Q,k=>jr.has(k)?rnd(Q,k,R[jr.get(k)],O[jr.get(k)]):0,new Set(J),0):Q;
+  const cuts=[0];let f0=0;for(const W of jp){let best=f0,bd=1e18;for(let k=f0;k<F.length;k++){const d=(F[k].x-W.x)**2+(F[k].y-W.y)**2;if(d<bd){bd=d;best=k}}cuts.push(best);f0=best}cuts.push(F.length-1);
+  const out=new Map();list.forEach((it,i)=>{let pc=F.slice(cuts[i],cuts[i+1]+1);if(pc.length<2)pc=[F[cuts[i]],F[Math.min(F.length-1,cuts[i]+1)]];out.set(it.t,it.rev?pc.reverse():pc)});return out}
 function filletPts(P,rad,only,minR=0){
   if(P.length<3)return P;const R=i=>(only&&!only.has(i))?0:rad(i),out=[P[0]];
   for(let i=1;i<P.length-1;i++){const prev=P[i-1],cur=P[i],next=P[i+1],r=R(i);
@@ -1403,15 +1440,34 @@ function numBadgesSVG(s,nb,c){const S=M.settings,x0=c.x-nb.W/2,y0=c.y-nb.h/2,r=M
   if(s.closed){const g=nb.h*.34,w=g*.45;let st='';for(let k=-nb.h;k<nb.W+nb.h;k+=g)st+=`M${f(x0+k)} ${f(y0+nb.h)}L${f(x0+k+nb.h)} ${f(y0)}`;o+=`<path d="${st}" stroke="${S.bg}" stroke-width="${f(w)}" stroke-opacity=".75" fill="none"/>`}
   o+=tx;
   return `<clipPath id="${id}"><rect x="${f(x0)}" y="${f(y0)}" width="${f(nb.W)}" height="${f(nb.h)}" rx="${f(r)}"/></clipPath><rect x="${f(x0-1)}" y="${f(y0-1)}" width="${f(nb.W+2)}" height="${f(nb.h+2)}" rx="${f(r+1)}" fill="${S.bg}"/><g clip-path="url(#${id})">${o}</g>`}
-// where a station's mark is drawn: its own point, or (lines first) the middle of the line ends it covers
-function markAt(s,G){if(M.settings.layout!=='lines'||s.kind==='waypoint'||ciconBox(s))return{x:s.x,y:s.y};const E=(G.ends.get(s.id)||[]).filter(e=>!passesAt(e.lid,s.id));if(!E.length)return{x:s.x,y:s.y};
+// lane layout: 'lines' first, 'stations' first, or 'manual' (lanes frozen from the layout the map had, layoutBase, saved per
+// segment as each line's sideways offset at both ends in lanes: seg.lanes {lid:[a,b]}, plus [a,b,m] for the legs in between on a
+// route with three or more legs); the automatic layout still runs underneath
+// for anything not frozen
+function manualLay(){return M.settings.layout==='manual'}
+function baseLay(){return(manualLay()?M.settings.layoutBase:M.settings.layout)==='lines'?'lines':'stations'}
+function marksFollow(){return M.settings.layout==='lines'||manualLay()}
+function laneOf(key,lid){const z=((M.segs[key]||{}).lanes||{})[lid];return Array.isArray(z)&&(z.length===2||z.length===3)&&z.every(v=>typeof v==='number'&&isFinite(v))?z:null}
+let geomBase=false;
+// freeze the automatic lanes (of the base layout) into seg.lanes, for all segments or only those in keys
+function freezeLanes(keys){const was=M.settings.layout;let G;M.settings.layout=baseLay();geomBase=true;try{G=geom()}finally{M.settings.layout=was;geomBase=false}
+  const sp=M.settings.lineWidth+M.settings.lineGap,r2=v=>Math.round(v*100)/100,nrm=(p,q)=>{const u=unit(q.x-p.x,q.y-p.y);return{x:-u.y,y:u.x}};
+  // a line's offset at an end = how far the bundle moved there (unrounded route against the route) + its own place in the bundle
+  for(const t of G.tracks.values()){const B=t.base&&dedupePts(t.base),W=t.raw&&dedupePts(t.raw);if(t.via||!B||!W||B.length<2||W.length<2||(keys&&!keys.includes(t.key)))continue;
+    const q=B.length,w=W.length,n0=nrm(B[0],B[1]),n1=nrm(B[q-2],B[q-1]),sa=(W[0].x-B[0].x)*n0.x+(W[0].y-B[0].y)*n0.y,sb=(W[w-1].x-B[q-1].x)*n1.x+(W[w-1].y-B[q-1].y)*n1.y,n=t.lines.length,o=t.endOrd,lz={};
+    const at=(lid,X)=>((o&&o.at===X?o.lines:t.lines).indexOf(lid)-(n-1)/2)*sp;
+    // the legs in between don't move with the bundle, only by the line's place in it
+    for(const lid of t.lines){lz[lid]=[r2((sa+at(lid,t.a))/sp),r2((sb+at(lid,t.b))/sp)];if(q>3)lz[lid].push(r2(at(lid,null)/sp))}
+    (M.segs[t.key]||(M.segs[t.key]={})).lanes=lz}}
+// where a station's mark is drawn: its own point, or (lines first, manual) the middle of the line ends it covers
+function markAt(s,G){if(!marksFollow()||s.kind==='waypoint'||ciconBox(s))return{x:s.x,y:s.y};const E=(G.ends.get(s.id)||[]).filter(e=>!passesAt(e.lid,s.id));if(!E.length)return{x:s.x,y:s.y};
   const [p,q]=farPair(E,s);return{x:(p.x+q.x)/2,y:(p.y+q.y)/2}}
 function stationSVG(s,G,editor){
   const S=M.settings,E=(G.ends.get(s.id)||[]).filter(e=>!passesAt(e.lid,s.id)),sz=stSize(s),lids=[...new Set(E.map(e=>e.lid))],k=s.kind||'stop';
   const [p,q]=farPair(E,s),one=Math.hypot(p.x-q.x,p.y-q.y)<.5,lineCol=lids.length===1?lnOf(lids[0]).color:S.ink;
   // lines first: the mark sits where the lines pass, so clicks and the one-way chevron go there too
   const mc=markAt(s,G),hr=Math.max(sz/2+5,10),cb=ciconBox(s);
-  const hit=editor&&(k!=='waypoint'||showBends)?(M.settings.layout==='lines'&&!one&&k!=='waypoint'&&!cb?`<line x1="${f(p.x)}" y1="${f(p.y)}" x2="${f(q.x)}" y2="${f(q.y)}" stroke="transparent" stroke-width="${f(hr*2)}" stroke-linecap="round"/>`:'')+`<circle cx="${f(mc.x)}" cy="${f(mc.y)}" r="${Math.max(hr,cb?Math.max(cb.w,cb.h)/2+3:0)}" fill="transparent"/>`:'';
+  const hit=editor&&(k!=='waypoint'||showBends)?(marksFollow()&&!one&&k!=='waypoint'&&!cb?`<line x1="${f(p.x)}" y1="${f(p.y)}" x2="${f(q.x)}" y2="${f(q.y)}" stroke="transparent" stroke-width="${f(hr*2)}" stroke-linecap="round"/>`:'')+`<circle cx="${f(mc.x)}" cy="${f(mc.y)}" r="${Math.max(hr,cb?Math.max(cb.w,cb.h)/2+3:0)}" fill="transparent"/>`:'';
   const shape=s.shape||S.stopStyle||'circle';
   const cap=(fill,stroke,size,sw,square)=>{
     if(!square&&shape!=='circle'&&shape!=='tick')return shapeSVG(shape,p,q,fill,stroke,size,sw,E[0]&&E[0].dir,E);
@@ -1879,7 +1935,7 @@ function natureAt(w){const A=M.nature||[];for(let i=A.length-1;i>=0;i--){const P
 function finishNature(){const d=natureDraft;if(!d)return;natureDraft=null;if(d.pts.length<3)M.nature=M.nature.filter(x=>x!==d);else sel=[{t:'nature',id:d.id}];updHint();changed()}
 function cancelNature(){if(!natureDraft)return;natureDraft=null;if(undoS.length){M=liveKeep(JSON.parse(undoS.pop()),undoQ.pop());updUndo()}updHint();render();renderInspector()}
 function renderWater(){const S=M.settings,key=JSON.stringify([M.water,S.water,S.shapeR]);if(key===waterKey)return;waterKey=key;$('#waterL').innerHTML=waterSVG()}
-function render(){if(drawTip&&drawLine!==drawTip.line)dropTip(true);draftClass();{const ln=M.settings.layout==='lines',a=document.getElementById('lyLines'),b=document.getElementById('lyStations');if(a){a.setAttribute('aria-pressed',String(ln));b.setAttribute('aria-pressed',String(!ln))}}{const fr=freePlace(),a=document.getElementById('plGrid'),b=document.getElementById('plFree');if(a){a.setAttribute('aria-pressed',String(!fr));b.setAttribute('aria-pressed',String(fr))}}document.body.classList.toggle('has-sel',sel.length>0);sheetSync();
+function render(){if(drawTip&&drawLine!==drawTip.line)dropTip(true);draftClass();{const v=manualLay()?'manual':baseLay();[['lyLines','lines'],['lyStations','stations'],['lyManual','manual']].forEach(([id,k])=>{const el=document.getElementById(id);if(el)el.setAttribute('aria-pressed',String(v===k))})}{const fr=freePlace(),a=document.getElementById('plGrid'),b=document.getElementById('plFree');if(a){a.setAttribute('aria-pressed',String(!fr));b.setAttribute('aria-pressed',String(fr))}}document.body.classList.toggle('has-sel',sel.length>0);sheetSync();
   const S=M.settings;ensureLayers();
   selColor=getComputedStyle(document.documentElement).getPropertyValue('--sel').trim()||'#e8590c';
   const {o,G}=mapSVG(true);lastG=G;
@@ -2070,6 +2126,14 @@ function passOver(L,G){const out=new Map(),stops=new Set(L.stops);
       for(let i=0;i<P.length-1;i++){const p=P[i],q=P[i+1],vx=q.x-p.x,vy=q.y-p.y,k=Math.max(0,Math.min(1,((s.x-p.x)*vx+(s.y-p.y)*vy)/(vx*vx+vy*vy||1)));
         if(Math.hypot(p.x+vx*k-s.x,p.y+vy*k-s.y)<lim){out.set(s.id,s);break}}}}
   return[...out.values()]}
+// manual layout: each line's lanes on a segment (sideways offset at both ends, in lanes; + is the left side going from start to end)
+function lanesPane(t){const A=stOf(t.a),B=stOf(t.b),nm=s=>esc(s.kind==='waypoint'?tr('bend point'):String(s.name).replace(/\n/g,' ')),lz=(M.segs[t.key]||{}).lanes||{};
+  const row=lid=>{const l=lnOf(lid),z=laneOf(t.key,lid);if(!l)return '';
+    const box=(k,lab)=>`<label class="fld"><span>${lab}</span><input type="number" step="0.5" id="f-lane-${lid}-${k}" data-obj="seg" data-id="${t.key}" data-prop="lanes.${lid}.${k}" data-type="num" value="${z[k]}"></label>`;
+    return `<div class="fld"><span data-nt style="display:flex;align-items:center;gap:6px">${swatchSVG(l)}${esc(l.name)}</span>${z?`<div class="grid2">${box(0,esc(tr('At'))+' '+nm(A))}${box(1,esc(tr('At'))+' '+nm(B))}</div>${z.length>2?box(2,esc(tr('In between'))):''}`:`<p class="sub">${esc(tr('Not fixed yet: it follows the automatic layout.'))}</p>`}</div>`};
+  return `<div class="fld"><span>${esc(tr('Lanes on this segment'))}</span></div>${t.lines.map(row).join('')}
+    <p class="sub">${esc(tr('How far each line sits to the side of the route, in lanes. Drag a line on the map to move it; hold Shift to move only the nearer end.'))}</p>
+    <div class="btns"><button class="btn" data-act="lanes-auto">${esc(tr('Back to the automatic lanes here'))}</button></div>`}
 function inspLine(L,segK){
   if(!L)return inspMap();
   const md=MODES[modeKey(L)],spd=L.speed||md.speed;
@@ -2089,7 +2153,8 @@ function inspLine(L,segK){
     ${t.route==='arc'?`<div class="fld"><span>Arc shape</span><div class="opts"><button class="opt" data-act="arc-fit" aria-pressed="${t.fit}">Fit to neighbours</button><button class="opt" data-act="arc-manual" aria-pressed="${!t.fit}">Manual degrees</button></div></div>${t.fit?'<p class="sub">The curve lines up with the track on both sides, so it joins them without a kink. Any leftover distance becomes a straight run.</p>':`<div class="fld"><span>Arc depth</span><div class="opts">${[45,90,135,180].map(a=>`<button class="opt" data-act="arc-angle:${a}" aria-pressed="${(sg.arc||90)===a}">${a}°</button>`).join('')}<button class="opt" data-act="arc-flip">Flip side</button></div></div>
     <div class="arcman"><input type="range" id="f-seg-arc-range" aria-label="Arc degrees" data-obj="seg" data-id="${segK}" data-prop="arc" data-type="num" min="5" max="180" step="1" value="${sg.arc||90}"><label class="fld"><span>Degrees</span><input type="number" id="f-seg-arc" data-obj="seg" data-id="${segK}" data-prop="arc" data-type="num" min="5" max="180" step="1" value="${sg.arc||90}"></label></div>`}`:''}
     ${sg.route==='custom'?`<p class="sub">Drag the round handles on the map to reshape this segment. Drag a small white handle to add a bend, and double-click a handle to remove it. Hold Alt to place off the grid.</p><div class="btns"><button class="btn" data-act="seg-smooth">${sg.smooth?'Make angular':'Make smooth'}</button><button class="btn" data-act="seg-clear">Remove all bends</button></div>`:'<p class="sub">Or drag the handles on the map to shape it freely.</p>'}
-    ${t.lines.length>1?`<div class="fld"><span>Line order on this segment</span><div class="list">${t.lines.map((lid,i)=>{const l=lnOf(lid);return `<div class="stop"><span class="n">${i+1}</span><span class="nm" data-nt style="display:flex;align-items:center;gap:6px">${swatchSVG(l)}${esc(l.name)}</span><span class="b"><button data-act="ord-up:${lid}" ${i?'':'disabled'} aria-label="Move earlier">↑</button><button data-act="ord-down:${lid}" ${i<t.lines.length-1?'':'disabled'} aria-label="Move later">↓</button></span></div>`}).join('')}</div></div>`:''}
+    ${manualLay()?lanesPane(t):''}
+    ${t.lines.length>1&&!manualLay()?`<div class="fld"><span>Line order on this segment</span><div class="list">${t.lines.map((lid,i)=>{const l=lnOf(lid);return `<div class="stop"><span class="n">${i+1}</span><span class="nm" data-nt style="display:flex;align-items:center;gap:6px">${swatchSVG(l)}${esc(l.name)}</span><span class="b"><button data-act="ord-up:${lid}" ${i?'':'disabled'} aria-label="Move earlier">↑</button><button data-act="ord-down:${lid}" ${i<t.lines.length-1?'':'disabled'} aria-label="Move later">↓</button></span></div>`}).join('')}</div></div>`:''}
     <div class="btns"><button class="btn" data-act="ins-st">Insert station</button><button class="btn" data-act="ins-wp">Insert bend point</button></div>
     <div class="btns"><button class="btn" data-act="sel-whole">Select the whole line</button><button class="btn" data-act="del-seg">Delete this segment</button></div></div>`}}
   return `<div class="pane"><h3>Line</h3>${fld('Name',inp('line',L.id,'name',L.name,'text','data-relist="1"'))}
@@ -2397,7 +2462,10 @@ function act(name,arg,el){
     case 'mcorner':pushUndo();M.settings.cornerR=+arg;changed();break;
     case 'mgap':pushUndo();M.settings.crossGap=+arg;changed();break;
     case 'num-size-reset':if(curSt){pushUndo();delete curSt.numW;delete curSt.numH;delete curSt.numSize;changed()}break;
-    case 'mlayout':{const v=arg==='lines'?'lines':'stations';if(M.settings.layout===v)break;pushUndo();M.settings.layout=v;changed();toast(tr(v==='lines'?'Lines first: lines stay straight in their lanes, and each station sits where its lines pass.':'Stations first: each station stays on its point, and the lines fit around it.'));break}
+    case 'mlayout':{const v=arg==='lines'||arg==='manual'?arg:'stations';if(M.settings.layout===v)break;pushUndo();
+      // manual freezes the lanes as they are drawn now; leaving it drops them, back to the automatic layout
+      if(v==='manual'){M.settings.layoutBase=baseLay();freezeLanes()}else{delete M.settings.layoutBase;for(const k in M.segs){delete M.segs[k].lanes;if(!Object.keys(M.segs[k]).length)delete M.segs[k]}}
+      M.settings.layout=v;changed();toast(tr(v==='manual'?'Manual: the lanes stay where they are now. Drag a line sideways to move it, or set its lanes in the segment panel.':v==='lines'?'Lines first: lines stay straight in their lanes, and each station sits where its lines pass.':'Stations first: each station stays on its point, and the lines fit around it.'));break}
     case 'arc-angle':case 'arc-flip':if(one&&one.seg){pushUndo();const sg=M.segs[one.seg]||(M.segs[one.seg]={});if(!sg.route)sg.route='arc';if(name==='arc-flip')sg.flip=!sg.flip;else{sg.arc=+arg;sg.fit=false}changed()}break;
     case 'arc-fit':case 'arc-manual':if(one&&one.seg){pushUndo();const sg=M.segs[one.seg]||(M.segs[one.seg]={});if(!sg.route)sg.route='arc';sg.fit=name==='arc-fit';if(!sg.fit&&sg.arc==null)sg.arc=90;changed()}break;
     case 'lstatus':if(curL){pushUndo();if(arg)curL.status=arg;else delete curL.status;changed()}break;
@@ -2415,6 +2483,7 @@ function act(name,arg,el){
     case 'ab-mode':abMode=arg;requestOverlay();break;
     case 'autobuild':autoBuild=arg==='on';lsSet('sndt:autobuild',autoBuild?'1':'0');renderInspector();requestOverlay();break;
     case 'oneway':if(curL&&one.seg){pushUndo();curL.segs=curL.segs||{};const o=curL.segs[one.seg]||(curL.segs[one.seg]={});if(arg)o.oneway=arg;else delete o.oneway;if(!Object.keys(o).length)delete curL.segs[one.seg];changed()}break;
+    case 'lanes-auto':if(one&&one.seg&&manualLay()){pushUndo();freezeLanes([one.seg]);changed()}break;
     case 'sreset':if(curL&&one.seg&&curL.segs&&curL.segs[one.seg]){pushUndo();delete curL.segs[one.seg].color;delete curL.segs[one.seg].style;changed()}break;
     case 'seg-smooth':if(one&&one.seg&&M.segs[one.seg]){pushUndo();M.segs[one.seg].smooth=!M.segs[one.seg].smooth;changed()}break;
     case 'seg-clear':if(one&&one.seg&&M.segs[one.seg]){pushUndo();M.segs[one.seg].pts=[];changed()}break;
@@ -2746,8 +2815,10 @@ function pointerDown(e){if(multiAdd&&e.pointerType!=='mouse'&&dtapSel)Object.def
     drag=moveDrag(w,free);
     return;
   }
-  if(h&&h.kind==='line'){
-    if(e.shiftKey)select(sel.concat([{t:'line',id:h.id,seg:h.key}]));else select([{t:'line',id:h.id,seg:h.key}]);return}
+  if(h&&h.kind==='line'){const was=sel.some(s=>s.t==='line'&&s.id===h.id&&s.seg===h.key);
+    if(e.shiftKey)select(sel.concat([{t:'line',id:h.id,seg:h.key}]));else select([{t:'line',id:h.id,seg:h.key}]);
+    // manual layout: dragging a line moves it sideways (on touch only once it is selected, so a swipe across lines still pans)
+    if(manualLay()){if(e.pointerType==='touch'&&!was){drag=touchPan(e);return}drag={type:'mlane',key:h.key,lid:h.id,start:w,moved:false}}return}
   if(!h){const wa=waterAt(w),a=wa||natureAt(w),st=wa?'water':'nature';if(a){if(isSel(st,a.id)&&sel.length>1){drag=moveDrag(w,e.altKey);return}if(!isSel(st,a.id)){select([{t:st,id:a.id}]);if(e.pointerType==='touch'){drag=touchPan(e);return}}drag={type:'nmove',a,start:w,orig:a.pts.map(p=>p.slice()),moved:false};return}}
   const add=e.shiftKey;
   if(e.pointerType==='touch'&&!dblHold(e)&&!dtapSel){drag=touchPan(e,{clear:!add&&!multiAdd});return}
@@ -2755,6 +2826,21 @@ function pointerDown(e){if(multiAdd&&e.pointerType!=='mouse'&&dtapSel)Object.def
   drag={type:'marquee',a:w,b:w,add,moved:false};
   if(!add&&sel.length){sel=[];render();renderLists();renderInspector()}
 }
+// manual layout: start dragging a line sideways. It moves along its whole segment and on through bend points where the same lines
+// carry on (or, endOnly, just the end of this segment nearer the pointer); segments not frozen yet are frozen first
+function mlaneStart(d,endOnly){const G=lastG||geom(),t=G.tracks.get(d.key),P=t&&t.off&&t.off.get(d.lid);if(!P||P.length<2||t.via)return false;
+  let bi=0,bd=1e18;for(let i=0;i+1<P.length;i++){const a=P[i],b=P[i+1],vx=b.x-a.x,vy=b.y-a.y,l2=vx*vx+vy*vy;if(!l2)continue;const k=Math.max(0,Math.min(1,((d.start.x-a.x)*vx+(d.start.y-a.y)*vy)/l2)),q=Math.hypot(a.x+vx*k-d.start.x,a.y+vy*k-d.start.y);if(q<bd){bd=q;bi=i}}
+  const u=unit(P[bi+1].x-P[bi].x,P[bi+1].y-P[bi].y);d.N={x:-u.y,y:u.x};d.sp=M.settings.lineWidth+M.settings.lineGap;
+  const chain=[{key:t.key,sgn:1}];
+  if(endOnly){const a=P[0],b=P[P.length-1];chain[0].only=Math.hypot(d.start.x-a.x,d.start.y-a.y)<=Math.hypot(d.start.x-b.x,d.start.y-b.y)?0:1}
+  else{const at=new Map();for(const u of G.tracks.values())if(!u.via&&u.lines.includes(d.lid))for(const X of [u.a,u.b]){if(!at.has(X))at.set(X,[]);at.get(X).push(u)}
+    for(const from of [t.b,t.a]){let cur=t,node=from,sgn=1,g=0;
+      while(g++<500){const W=G.st.get(node),us=at.get(node)||[];if(!W||W.kind!=='waypoint'||us.length!==2)break;const nx=us.find(x=>x!==cur);if(!nx||chain.some(c=>c.key===nx.key))break;
+        // the same way round as the segment before it if it starts where that one ended
+        sgn=(cur.b===node)===(nx.a===node)?sgn:-sgn;chain.push({key:nx.key,sgn});cur=nx;node=nx.a===node?nx.b:nx.a}}}
+  const miss=chain.filter(c=>!laneOf(c.key,d.lid)).map(c=>c.key);
+  pushUndo();if(miss.length)freezeLanes(miss);
+  d.chain=chain.filter(c=>laneOf(c.key,d.lid));for(const c of d.chain)c.orig=laneOf(c.key,d.lid).slice();return d.chain.length>0}
 function insertTrackOnly(key,s){
   const [a,b]=key.split('~');M.stations.push(s);
   M.lines.forEach(L=>{for(let i=L.stops.length-1;i>=0;i--){const n=L.stops.length,j=(i+1)%n;if(j===0&&!(L.loop&&n>2))continue;const x=L.stops[i],y=L.stops[j];if((x===a&&y===b)||(x===b&&y===a))L.stops.splice(i+1,0,s.id)}});
@@ -2785,6 +2871,9 @@ svg.addEventListener('pointermove',e=>{
     if(!drag.moved){if(Math.hypot(dx,dy)*view.k<2)return;pushUndo();const sg=makeCustom(drag.key);if(!sg){drag=null;return}
       if(drag.type==='cpadd'){sg.pts.splice(drag.i,0,{x:0,y:0});drag.type='cp'}drag.moved=true}
     M.segs[drag.key].pts[drag.i]=Object.assign({},M.segs[drag.key].pts[drag.i],{x:snap(w.x-drag.off.x,e.altKey),y:snap(w.y-drag.off.y,e.altKey)});requestRender();return}
+  if(drag.type==='mlane'){if(!drag.moved){if(Math.hypot(dx,dy)*view.k<3)return;if(!mlaneStart(drag,e.shiftKey)){drag=null;return}drag.moved=true}
+    const st=e.altKey?.01:freePlace()?.1:.5,v=Math.round(((w.x-drag.start.x)*drag.N.x+(w.y-drag.start.y)*drag.N.y)/drag.sp/st)*st;
+    for(const c of drag.chain){const z=M.segs[c.key].lanes[drag.lid];c.orig.forEach((o,k)=>{if(c.only==null||c.only===k)z[k]=Math.round((o+v*c.sgn)*100)/100})}requestRender();return}
   if(drag.type==='lane'){if(!drag.moved&&Math.hypot(dx,dy)*view.k<3)return;drag.moved=true;drag.at=w;requestOverlay();return}
   if(drag.type==='hdl'){const sg=M.segs[drag.key],q=sg&&sg.pts[drag.i];if(!q)return;if(!drag.moved){if(Math.hypot(dx,dy)*view.k<2)return;pushUndo();drag.moved=true}
     q.hx=Math.round((w.x-drag.off.x-q.x)*drag.s);q.hy=Math.round((w.y-drag.off.y-q.y)*drag.s);if(Math.hypot(q.hx,q.hy)<3){delete q.hx;delete q.hy}requestRender();return}
@@ -2810,7 +2899,7 @@ function endPointer(e){
   if(!d.moved&&d.type==='cp'){anchorSel={kind:'cp',key:d.key,i:d.i};requestOverlay();return}
   if(!d.moved&&d.type==='nvx'){const coll=d.a===shapeOf({t:'region',id:d.a.id})?'region':(M.water||[]).includes(d.a)?'water':'nature';anchorSel={kind:'vx',coll,id:d.a.id,i:d.i};requestOverlay();return}
   if(d.type==='lane'){if(d.moved)laneDrop(d);requestOverlay();return}
-  if(d.type==='hdl'){if(d.moved)changed();return}
+  if(d.type==='hdl'||d.type==='mlane'){if(d.moved)changed();return}
   if(d.type==='move'||d.type==='label'||d.type==='resize'||d.type==='iresize'||d.type==='nbresize'||d.type==='cp'||d.type==='cpadd'||d.type==='nvx'||d.type==='nmid'||d.type==='nmove'){if(d.moved){anchorSel=null;changed()}return}
   if(d.type==='marquee'){if(d.moved){const x0=Math.min(d.a.x,d.b.x),x1=Math.max(d.a.x,d.b.x),y0=Math.min(d.a.y,d.b.y),y1=Math.max(d.a.y,d.b.y);
     const inside=p=>p.x>=x0&&p.x<=x1&&p.y>=y0&&p.y<=y1;

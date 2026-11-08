@@ -97,7 +97,7 @@ Still open from this list: Manual layout (below, moved to v1.0.6); hand-drawn ro
 v1.0.5.1 hotfix released 2026-11-07 (ILVF station numbers, striped lines bend, no A›B›A, Clean up "Lines that double back"; log CHANGES-v1.0.5.1.md).
 
 ## v1.0.6 (next)
-- Manual layout (step 2 of the precision plan), carried over from v1.0.5.
+- Manual layout (step 2 of the precision plan), carried over from v1.0.5. First pass done 2026-11-08 (see CHANGES-v1.0.6.md).
 - Bugs from players (2026-11-02):
   - "Line between stations": a striped (white blocks inside the line) line's blocks go askew around a bend (screenshot only; which map and style isn't known yet).
   - Isolated line view, large interchanges (Chrome and the mobile app): at a station with many lines (Stopton Central, 6 lines) the coloured ticks below the station bunch up against each other and the circle, the black ones merging.
