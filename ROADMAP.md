@@ -120,7 +120,7 @@ v1.0.5.1 hotfix released 2026-11-07 (ILVF station numbers, striped lines bend, n
 - Manual layout (step 2 of the precision plan; moved here from v1.2 by the user on 2026-10-31): a "Manual layout" switch per map (Free mode then means precise + manual) that freezes the automatic layout into per-line, per-segment sideways offsets, which the user then sets by dragging or typing; the automatic bundling/reordering leaves them alone; switching back returns to automatic; a single segment can be re-frozen from the automatic layout.
 
 ## v1.0.7 (next)
-- Unique nicknames (user decision 2026-11-12): no two accounts can have the same nickname, case-insensitive ("Spectra" and "spectra" count as the same). Plan: unique index on lower(btrim(nickname)) in profiles (check for existing duplicates first), and a clear message in the Account panel when a nickname is taken. Maybe also reserve "Anonymous".
+- DONE quietly on 2026-11-12 (live on sndt.cc, no announcement): unique nicknames, case-insensitive (unique index on lower(btrim(nickname))); every new account gets its own placeholder Anonymous_N (trigger on auth.users, sequence anon_nick_seq); nobody can pick Anonymous or Anonymous_N themselves (trigger profiles_nick_guard, error 23514); "That nickname is taken / reserved" messages in all 11 languages.
 - Hairline seam where two touching areas with gap 0 meet (from the v1.0.6 district-outline fix; see the CHTR title box on curt-tung-sha maps).
 
 ## Accounts (planned 2026-11-12, user decisions)

@@ -259,3 +259,33 @@ language sql security definer set search_path = public stable as $$
   where m.share_slug = slug and m.visibility in ('link','public')
 $$;
 grant execute on function public.get_shared_map(text) to anon, authenticated;
+
+
+-- UNIQUE NICKNAMES (migration accounts_unique_nicknames, 2026-11-12): no two accounts share a nickname, ignoring case and
+-- spaces around it; "Anonymous" is what the gallery shows without a nickname, so nobody can take it
+create unique index profiles_nickname_unique on public.profiles (lower(btrim(nickname)));
+alter table public.profiles add constraint profiles_nickname_not_reserved check (lower(btrim(nickname)) <> 'anonymous');
+
+
+-- PLACEHOLDER NICKNAMES (migration accounts_anonymous_numbers, 2026-11-12): every new account gets Anonymous_N (its own number)
+-- until the person picks a nickname; nobody can choose Anonymous or Anonymous_N themselves (only keep the one they were given)
+create sequence public.anon_nick_seq;
+create function public.profile_for_new_user() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles(id, nickname) values (new.id, 'Anonymous_' || nextval('public.anon_nick_seq')) on conflict (id) do nothing;
+  return new;
+end $$;
+create trigger profile_for_new_user after insert on auth.users for each row execute function public.profile_for_new_user();
+create function public.profiles_nick_guard() returns trigger
+language plpgsql set search_path = public as $$
+begin
+  if current_user in ('authenticated', 'anon') and new.nickname ~* '^\s*anonymous(_\d+)?\s*$'
+     and (tg_op = 'INSERT' or lower(btrim(new.nickname)) is distinct from lower(btrim(old.nickname))) then
+    raise exception 'nickname_reserved' using errcode = '23514';
+  end if;
+  return new;
+end $$;
+create trigger profiles_nick_guard before insert or update of nickname on public.profiles for each row execute function public.profiles_nick_guard();
+insert into public.profiles(id, nickname)
+  select u.id, 'Anonymous_' || nextval('public.anon_nick_seq') from (select id from auth.users where id not in (select id from public.profiles) order by created_at) u;

@@ -725,7 +725,9 @@ const DONATE_URL='https://ko-fi.com/spectra_vv';
 (()=>{const a=document.getElementById('donateBtn');if(a&&DONATE_URL){a.href=DONATE_URL;a.hidden=false}})();
 const DISCORD_URL='https://discord.gg/jTycUK7Uvs';
 (()=>{const a=document.getElementById('discordBtn');if(a&&DISCORD_URL){a.href=DISCORD_URL;a.hidden=false}})();
-const L10N=[["Main font", "主字体", "Fuente principal", "Police principale", "Hauptschrift", "Основной шрифт", "Carattere principale", "Fonte principal", "Fon utama", "الخط الرئيسي", "Ana yazı tipi"],
+const L10N=[["That nickname is taken. Try another one.", "这个昵称已被使用。请换一个。", "Ese apodo ya está en uso. Prueba otro.", "Ce pseudo est déjà pris. Essayez-en un autre.", "Dieser Spitzname ist schon vergeben. Versuche einen anderen.", "Этот ник уже занят. Попробуйте другой.", "Questo nickname è già in uso. Provane un altro.", "Esse apelido já está em uso. Tente outro.", "Nama samaran itu sudah digunakan. Cuba yang lain.", "هذا الاسم المستعار مستخدم بالفعل. جرّب اسمًا آخر.", "Bu takma ad alınmış. Başka bir tane dene."],
+["That nickname is reserved. Try another one.", "这个昵称是保留的。请换一个。", "Ese apodo está reservado. Prueba otro.", "Ce pseudo est réservé. Essayez-en un autre.", "Dieser Spitzname ist reserviert. Versuche einen anderen.", "Этот ник зарезервирован. Попробуйте другой.", "Questo nickname è riservato. Provane un altro.", "Esse apelido é reservado. Tente outro.", "Nama samaran itu dikhaskan. Cuba yang lain.", "هذا الاسم المستعار محجوز. جرّب اسمًا آخر.", "Bu takma ad ayrılmış. Başka bir tane dene."],
+["Main font", "主字体", "Fuente principal", "Police principale", "Hauptschrift", "Основной шрифт", "Carattere principale", "Fonte principal", "Fon utama", "الخط الرئيسي", "Ana yazı tipi"],
 ["CJK text", "中日韩文字", "Texto CJK", "Texte CJK", "CJK-Text", "Текст CJK", "Testo CJK", "Texto CJK", "Teks CJK", "نص CJK", "CJK metni"],
 ["Same as main", "与主字体相同", "Igual que la principal", "Comme la principale", "Wie Hauptschrift", "Как основной", "Come il principale", "Igual à principal", "Sama seperti utama", "مثل الرئيسي", "Ana yazı tipiyle aynı"],
 ["Subtitles", "副标题", "Subtítulos", "Sous-titres", "Untertitel", "Подписи", "Sottotitoli", "Legendas", "Sari kata", "العناوين الفرعية", "Alt yazılar"],
@@ -4472,7 +4474,8 @@ async function authAct(name){const sb=await authClient();try{
   if(name==='auth-email'){const em=(($('#authEmail')||{}).value||'').trim();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){toast(tr('That doesn’t look like an email address.'));return}
     const {error}=await sb.auth.signInWithOtp({email:em,options:{emailRedirectTo:authHere(),shouldCreateUser:true}});if(error)throw error;toast(tr('Sign-in link sent. Check your email, and open the link in this browser.'));closeModal();return}
   if(name==='auth-nick'){const n=(($('#authNick')||{}).value||'').trim();if(n.length<2||n.length>30){toast(tr('A nickname is 2 to 30 characters.'));return}
-    const {error}=await sb.from('profiles').upsert({id:authUser.id,nickname:n});if(error)throw error;authNick=n;accountUI();toast(tr('Nickname saved.'));return}
+    if(/^anonymous(_\d+)?$/i.test(n)&&n.toLowerCase()!==String(authNick||'').toLowerCase()){toast(tr('That nickname is reserved. Try another one.'));return}
+    const {error}=await sb.from('profiles').upsert({id:authUser.id,nickname:n});if(error){if(error.code==='23505'){toast(tr('That nickname is taken. Try another one.'));return}if(error.code==='23514'){toast(tr('That nickname is reserved. Try another one.'));return}throw error}authNick=n;accountUI();toast(tr('Nickname saved.'));return}
   if(name==='auth-out'){await sb.auth.signOut();lsDel('sndt:cloud');closeModal();toast(tr('Signed out. Your maps stay in this browser.'));return}
   if(name==='auth-delete'){try{const {data:fl}=await sb.storage.from('thumbs').list(authUser.id,{limit:1000});if(fl&&fl.length)await sb.storage.from('thumbs').remove(fl.map(f=>authUser.id+'/'+f.name))}catch(e){}
     const {error}=await sb.rpc('delete_me');if(error)throw error;await sb.auth.signOut();lsDel('sndt:cloud');closeModal();toast(tr('Your account and cloud maps are deleted. Maps in this browser are kept.'));return}
@@ -4552,7 +4555,7 @@ function shareRender(){const r=shareRow;if(!r)return;const v=r.visibility,url=r.
     <p class="sub">${v==='private'?tr('Only you can open this map.'):v==='link'?tr('Anyone with the link can look at the map and make their own copy. It isn’t listed anywhere.'):tr('Listed in the gallery for everyone, with a picture of the map and your nickname. Anyone can look at it and make their own copy.')}</p>
     ${url?`<div class="fld"><span>${tr('Link')}</span><div style="display:flex;gap:6px"><input id="shareUrl" readonly value="${esc(url)}" style="flex:1;min-width:0"><button class="btn" data-act="share-copy">${tr('Copy')}</button></div></div>`:''}
     ${v==='public'&&r.code!=null?`<p class="sub">${tr('Gallery ID:')} <b class="gal-id">#${r.code}</b>. ${tr('People can find the map by searching for it in the gallery.')}</p>`:''}
-    ${v==='public'&&!authNick?`<p class="sub"><b>${tr('Set a nickname in your account')}</b> ${tr('so the gallery can show who made it (until then it says Anonymous).')}</p>`:''}
+    ${v==='public'&&(!authNick||/^anonymous_\d+$/i.test(authNick))?`<p class="sub"><b>${tr('Set a nickname in your account')}</b> ${tr('so the gallery can show who made it (until then it says Anonymous).')}</p>`:''}
     <p class="sub">${v==='private'?'':tr('People see the map as it is in your account, so your later changes show up too. Making it private again turns the link off; sharing again makes a new link.')}</p>
     <div class="btns"><button class="btn" data-act="close-modal">${tr('Done')}</button></div></div>`)}
 async function shareSet(v){const r=shareRow;if(!r||r.visibility===v)return;const sb=await authClient(),up={visibility:v};
