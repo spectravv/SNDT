@@ -39,3 +39,9 @@
   - Deleting a map or the account also removes its gallery pictures.
   - Privacy page at sndt.cc/privacy (linked from the Account panel): what is kept and why, sharing and reports, where it is stored, how to delete it. The offline cache keeps it apart from the app (service worker cache v3).
   - Moderation: SQL for listing reports and taking a map down is in supabase/accounts.sql (migration accounts_share applied 2026-11-12).
+- Gallery update (migration accounts_gallery_ids applied 2026-11-12):
+  - Share and Gallery are now their own buttons in the top bar (Share next to the map name, Gallery before Live room; Gallery moves into the phone menu); they left the maps menu. On phones the map name shortens to make room.
+  - Gallery IDs: a map gets a short number (#1, #2…) the first time it goes in the gallery and keeps it, even if it's taken out and published again. Shown on gallery cards, in the Share window and on the shared-map banner. Can't be set by hand (the database assigns it).
+  - Gallery search: by map name, maker's nickname or #ID (with or without #); an exact ID match comes first.
+  - Your own gallery maps are in their own "Your maps in the gallery" section (not mixed into the list), each with an × that takes it out of the gallery (asks "Remove?" first; the map stays in your maps). Opening one opens your own map, not a copy.
+  - The gallery window is bigger (up to 1100 × 860), cards 200 px+; two per row on phones.

@@ -59,6 +59,7 @@ a.hbtn{color:inherit;text-decoration:none}a.hbtn[hidden]{display:none}
 #mapsBtn{margin-left:0;border-left:0;padding:0 6px}
 .mapname-in{height:32px;width:220px;max-width:46vw;border:2px solid var(--ink);padding:0 8px;font:700 12px/1 inherit;font-family:inherit;background:var(--paper);color:var(--ink)}
 .mapname{max-width:220px;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:900px){header .mapgrp{min-width:0;flex:0 1 auto}header #mapNameBtn{min-width:0;flex:0 1 auto;overflow:hidden}header .mapgrp>.hbtn.icon{flex:none}}
 .spacer{flex:1}
 .hsel{height:32px;border:2px solid var(--ink);background:var(--paper);color:var(--ink);font:inherit;font-size:11px;letter-spacing:.06em;padding:0 6px;margin-left:6px;cursor:pointer}
 @media (hover:hover){.hsel:hover{background:var(--paper-2)}}
@@ -83,12 +84,22 @@ header .hbtn.icon{justify-content:center}
 @media (min-width:901px){header .hbtn.icon{width:auto;min-width:36px;flex-direction:column;gap:2px;padding:0 7px;font-size:8.5px;letter-spacing:.06em;line-height:1}
 header .hbtn.icon svg{order:-1;width:16px;height:16px}
 header .hbtn.icon .hl{display:block}}
-.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;max-height:60vh;overflow:auto;margin:8px 0}
-.gal-card{display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:0 0 8px;border:2px solid var(--ink);background:var(--paper);text-align:left;cursor:pointer}
-.gal-card img,.gal-card .gal-ph{display:block;width:100%;aspect-ratio:8/5;object-fit:cover;background:var(--line,#ddd)}
-.gal-card b,.gal-card small{padding:0 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.gal-card small{color:var(--muted)}
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin:4px 0 8px}
+.gal-card{position:relative;border:2px solid var(--ink);background:var(--paper)}
 .gal-card:hover{outline:2px solid var(--red)}
-#galModal{min-width:min(640px,86vw)}
+.gal-open{display:flex;flex-direction:column;align-items:stretch;gap:3px;width:100%;padding:0 0 8px;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.gal-open img,.gal-open .gal-ph{display:block;width:100%;aspect-ratio:8/5;object-fit:cover;background:var(--line,#ddd)}
+.gal-open b,.gal-open small{padding:0 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.gal-open small{color:var(--muted)}
+.gal-id{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--ink)}
+.gal-x{position:absolute;top:6px;right:6px;min-width:28px;height:28px;padding:0 6px;border:2px solid var(--ink);background:var(--paper);color:var(--ink);font:inherit;font-size:16px;font-weight:700;line-height:1;cursor:pointer}
+.gal-x:hover,.gal-x.armed{background:var(--red);border-color:var(--red);color:#fff}.gal-x.armed{font-size:12px}
+.modal:has(#galModal){width:min(1100px,100%);height:min(860px,100%)}
+#galModal{display:flex;flex-direction:column;gap:10px;min-height:0;flex:1}
+#galModal .gal-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}#galModal .gal-top h2{margin:0;flex:1}
+#galQ{flex:0 1 360px;min-width:0;width:100%;height:34px;border:2px solid var(--ink);background:var(--field);color:var(--ink);padding:0 10px;font:inherit;font-size:13px}
+#galBody{flex:1;min-height:0;overflow:auto}
+#galBody h3{margin:6px 0 4px}
+@media (max-width:600px){.gal{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.gal-open b{font-size:12px}.gal-open small{font-size:10px}}
 #accountBtn{position:relative}#accountBtn .acc-dot{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:#2f9e5b}#accountBtn .acc-dot[hidden]{display:none}
 @media (min-width:901px){header .hbtn.icon,header .hbtn.stack,header .seg{flex-shrink:0}}
 @media (min-width:1520px){header .hsearch{min-width:150px}}
@@ -488,12 +499,13 @@ input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}
   <header>
     <button class="hbtn icon only-narrow" data-act="drawer:navMenu" aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
     <div class="logo"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" style="fill:var(--ink)"/><path d="M5 21H12L20 13H28" fill="none" style="stroke:var(--paper)" stroke-width="3.2" stroke-linejoin="miter"/><path d="M5 17V25" style="stroke:var(--paper)" stroke-width="3.2"/><path d="M19 3V29" fill="none" style="stroke:var(--red)" stroke-width="3.2"/><circle cx="19" cy="14" r="3.7" style="fill:var(--paper);stroke:var(--ink)" stroke-width="1.8"/></svg><span class="word">SNDT</span></div>
-    <div class="mapgrp"><button class="hbtn" id="mapNameBtn" data-act="rename-map" title="Rename this map"><span class="mapname" id="mapName" data-nt>Map</span></button><button class="hbtn icon" id="mapsBtn" data-act="maps-menu" aria-haspopup="true" aria-label="Your maps" title="Your maps"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button></div>
+    <div class="mapgrp"><button class="hbtn" id="mapNameBtn" data-act="rename-map" title="Rename this map"><span class="mapname" id="mapName" data-nt>Map</span></button><button class="hbtn icon" id="mapsBtn" data-act="maps-menu" aria-haspopup="true" aria-label="Your maps" title="Your maps"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button><button class="hbtn icon" id="shareBtn" data-act="share" aria-label="Share" title="Share and publish this map"><span class="hl">Share</span><svg viewBox="0 0 24 24"><circle cx="17" cy="5.5" r="2.5"/><circle cx="6.5" cy="12" r="2.5"/><circle cx="17" cy="18.5" r="2.5"/><path d="M8.7 10.7l6.1-3.9M8.7 13.3l6.1 3.9"/></svg></button></div>
     <span class="status hide-narrow" id="status">Loading</span>
     <div class="spacer"></div>
     <label class="hbtn hsearch" id="searchBtn" data-act="search" title="Search tools and settings (Ctrl+K)"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5.5 5.5"/></svg><input id="hSearch" type="search" placeholder="Search tools and settings" autocomplete="off" aria-label="Search tools and settings" aria-controls="cmdkList"><kbd>Ctrl K</kbd><span class="nm-lbl">Search</span></label>
     <a class="hbtn icon" id="discordBtn" target="_blank" rel="noopener" aria-label="Discord" title="Join the SNDT Discord" hidden><span class="hl">Discord</span><span class="nm-lbl">Discord</span><svg viewBox="0 0 24 24" class="brand"><path d="M20.317 4.37a19.79 19.79 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.74 19.74 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.1 13.1 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.3 12.3 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.84 19.84 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></a>
     <a class="hbtn icon" id="donateBtn" target="_blank" rel="noopener" aria-label="Support SNDT" title="Support SNDT" hidden><span class="hl">Support</span><span class="nm-lbl">Support SNDT</span><svg viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0112 7.6 4.3 4.3 0 0119.5 10c0 5.4-7.5 10-7.5 10z" style="stroke:var(--red)"/></svg></a>
+    <button class="hbtn icon" id="galleryBtn" data-act="gallery" aria-label="Gallery" title="Gallery: maps people share"><span class="hl">Gallery</span><span class="nm-lbl">Gallery</span><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg></button>
     <button class="hbtn icon" id="liveBtn" data-act="live" aria-label="Live room" title="Live room"><span class="hl">Live room</span><span class="nm-lbl">Live room</span><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.6 2.7-6 6-6s6 2.4 6 6"/><circle cx="17" cy="9" r="2.6"/><path d="M16 14.2c2.9.1 5 2.3 5 5.8"/></svg><span class="lv" data-nt></span></button>
     <button class="hbtn icon" id="accountBtn" data-act="account" aria-label="Account" title="Account: keep your maps in the cloud"><span class="hl" id="accountHl">Account</span><span class="nm-lbl" id="accountLbl">Account</span><svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20c1.2-3.6 4-5.4 7.5-5.4s6.3 1.8 7.5 5.4"/></svg><i class="acc-dot" hidden></i></button>
     <button class="hbtn icon" id="installBtn" data-act="install" aria-label="Install app" title="Install app" hidden><span class="hl">Install</span><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span class="nm-lbl">Install app</span></button>
@@ -517,7 +529,7 @@ input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}
     <div class="nm-sec"><div class="nm-k">Map</div><button class="hbtn" data-act="sheet-map"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span class="nm-lbl">Map settings</span></button><div class="nm-slot" data-slot="export"></div></div>
     <div class="nm-sec"><div class="nm-k">Lane layout</div><div class="nm-slot" data-slot="layout"></div></div>
     <div class="nm-sec"><div class="nm-k">View</div><div class="nm-slot" data-slot="mode"></div><div class="nm-slot" data-slot="section"></div></div>
-    <div class="nm-sec"><div class="nm-slot" data-slot="search"></div><div class="nm-slot" data-slot="install"></div><div class="nm-slot" data-slot="live"></div><div class="nm-slot" data-slot="account"></div><div class="nm-slot" data-slot="tour"></div><div class="nm-slot" data-slot="theme"></div>
+    <div class="nm-sec"><div class="nm-slot" data-slot="search"></div><div class="nm-slot" data-slot="install"></div><div class="nm-slot" data-slot="gallery"></div><div class="nm-slot" data-slot="live"></div><div class="nm-slot" data-slot="account"></div><div class="nm-slot" data-slot="tour"></div><div class="nm-slot" data-slot="theme"></div>
       <label class="nm-row"><span class="nm-k">Language</span><span class="nm-slot" data-slot="lang"></span></label>
       <div class="nm-slot" data-slot="donate"></div><div class="nm-slot" data-slot="discord"></div></div>
     <div class="nm-slot nm-foot" data-slot="status"></div>
@@ -2676,8 +2688,10 @@ function act(name,arg,el){
     case 'share':closePop();shareModal();break;
     case 'share-set':shareSet(arg);break;
     case 'share-copy':{const el=$('#shareUrl');if(el){el.select();try{navigator.clipboard.writeText(el.value).then(()=>toast(tr('Link copied.')),()=>{document.execCommand('copy');toast(tr('Link copied.'))})}catch(e){document.execCommand('copy');toast(tr('Link copied.'))}}break}
-    case 'gallery':closePop();galleryModal(false);break;
-    case 'gallery-more':galleryModal(true);break;
+    case 'gallery':closePop();galleryModal();break;
+    case 'gallery-more':galLoad(true);break;
+    case 'gal-own':closeModal();openMap(arg);break;
+    case 'gal-unpub':galUnpublish(arg);break;
     case 'open-shared':closeModal();history.pushState(null,'','/?m='+arg);openShared(arg);break;
     case 'report-shared':reportModal();break;
     case 'report-send':reportSend();break;
@@ -2690,7 +2704,7 @@ function act(name,arg,el){
 let actShift=false;
 document.addEventListener('click',e=>{
   const el=e.target.closest('[data-act]');if(!el||el.disabled)return;
-  if(el.dataset.confirm&&!el.classList.contains('armed')){el.classList.add('armed');el.dataset.orig=el.textContent;el.textContent='Click again to delete';setTimeout(()=>{if(el.isConnected){el.classList.remove('armed');el.textContent=el.dataset.orig}},3000);return}
+  if(el.dataset.confirm&&!el.classList.contains('armed')){el.classList.add('armed');el.dataset.orig=el.textContent;el.textContent=el.dataset.confirmText||'Click again to delete';setTimeout(()=>{if(el.isConnected){el.classList.remove('armed');el.textContent=el.dataset.orig}},3000);return}
   const [n,...rest]=el.dataset.act.split(':');actShift=e.shiftKey||e.ctrlKey||e.metaKey;try{act(n,rest.join(':'),el)}finally{actShift=false}
 });
 function copyText(t,el){
@@ -3168,7 +3182,7 @@ document.addEventListener('keyup',e=>{if(e.key===' '){spaceDown=false;svg.style.
 $('#stFilter').addEventListener('input',renderLists);
 
 /* ---------- drawers, popovers, modal, toast ---------- */
-const NAV=[['header [data-act="export-menu"]','export'],['header .seg.lay','layout'],['header .seg:not(.ctl):not(.place)','section'],['header .seg.ctl','mode'],['#installBtn','install'],['#liveBtn','live'],['#accountBtn','account'],['#searchBtn','search'],['#tourBtn','tour'],['#themeBtn','theme'],['#langSel','lang'],['#donateBtn','donate'],['#discordBtn','discord'],['#status','status']]
+const NAV=[['header [data-act="export-menu"]','export'],['header .seg.lay','layout'],['header .seg:not(.ctl):not(.place)','section'],['header .seg.ctl','mode'],['#installBtn','install'],['#galleryBtn','gallery'],['#liveBtn','live'],['#accountBtn','account'],['#searchBtn','search'],['#tourBtn','tour'],['#themeBtn','theme'],['#langSel','lang'],['#donateBtn','donate'],['#discordBtn','discord'],['#status','status']]
   .map(([q,slot])=>{const el=document.querySelector(q),ph=document.createComment(slot);el.before(ph);return{el,ph,slot}});
 let navNarrow=null;
 function navPlace(){const n=window.innerWidth<=900;if(n===navNarrow)return;navNarrow=n;for(const o of NAV){if(n)document.querySelector(`#navMenu [data-slot="${o.slot}"]`).appendChild(o.el);else o.ph.after(o.el)}}
@@ -3420,7 +3434,7 @@ async function openMapsMenu(anchor){
   openPop(anchor,'<div class="lbl">Your maps</div><p class="sub" style="padding:4px 10px">Loading…</p>');
   const maps=await listMaps();if(!popEl)return;
   popEl.innerHTML=`<div class="lbl">Your maps</div>${maps.length?maps.map(m=>`<button class="row ${m.id===mapId?'on':''}" data-act="open-map:${m.id}"><span class="nm" data-nt>${esc(m.name)}</span>${m.updatedAt?`<small>${ago(m.updatedAt)}</small>`:''}</button>`).join(''):'<p class="sub" style="padding:4px 10px">No saved maps yet. Your first edit saves this one.</p>'}
-  <hr><button class="row" data-act="new-map">New blank map</button><button class="row" data-act="dup-map">Duplicate this map</button><button class="row" data-act="share">${tr('Share and publish…')}</button><button class="row" data-act="gallery">${tr('Gallery…')}</button><button class="row" data-act="mtr-import">Import from MTR…</button><button class="row" data-act="import">Import from JSON file…</button><button class="row" data-act="paste-import">Paste JSON…</button>${isExample?'':'<hr><button class="row" data-act="del-map" data-confirm="1" style="color:var(--danger)">Delete this map</button>'}
+  <hr><button class="row" data-act="new-map">New blank map</button><button class="row" data-act="dup-map">Duplicate this map</button><button class="row" data-act="mtr-import">Import from MTR…</button><button class="row" data-act="import">Import from JSON file…</button><button class="row" data-act="paste-import">Paste JSON…</button>${isExample?'':'<hr><button class="row" data-act="del-map" data-confirm="1" style="color:var(--danger)">Delete this map</button>'}
   <p class="sub" style="padding:6px 10px">${store?'Maps save automatically to this artifact.':'Saving to this browser only. Export JSON to keep a backup.'}</p>`;
   m.querySelectorAll('[data-mtr-type]').forEach(e=>e.addEventListener('change',()=>{mtrTypeCfg(e.dataset.mtrType).on=e.checked;mtrShowRoutes()}));
   m.querySelectorAll('[data-mtr-type-mode]').forEach(e=>e.addEventListener('change',()=>{mtrTypeCfg(e.dataset.mtrTypeMode).mode=e.value}));
@@ -4350,7 +4364,7 @@ async function openShared(slug){try{const sb=await liveClient(),{data,error}=awa
     if(error||!data||!data.length){toast(tr('This shared map isn’t available any more.'));return false}
     const r=data[0],keep=lsGet('blockline:last');await flushNow();shared=null;loadInto(JSON.parse(r.data),null);if(keep)lsSet('blockline:last',keep);
     mapId=null;isExample=true;shared={slug,name:r.name,nick:r.nickname};const b=$('#banner');if(!bannerHTML)bannerHTML=b.innerHTML;
-    b.innerHTML=`<span><b data-nt>${esc(r.name||tr('Shared map'))}</b>${r.nickname?` · ${tr('by')} <span data-nt>${esc(r.nickname)}</span>`:''}. ${tr('Edit anything to make your own copy.')}</span><button class="btn" data-act="report-shared">${tr('Report')}</button>`;
+    b.innerHTML=`<span><b data-nt>${esc(r.name||tr('Shared map'))}</b>${r.nickname?` · ${tr('by')} <span data-nt>${esc(r.nickname)}</span>`:''}${r.code!=null?` · <span class="gal-id">#${r.code}</span>`:''}. ${tr('Edit anything to make your own copy.')}</span><button class="btn" data-act="report-shared">${tr('Report')}</button>`;
     b.hidden=false;status(tr('Shared map, not saved'),'#9aa');return true}
   catch(e){toast(tr('This shared map couldn’t be opened.'));return false}}
 const shareSlug=()=>{const a=new Uint8Array(10);crypto.getRandomValues(a);return [...a].map(x=>'abcdefghjkmnpqrstuvwxyz23456789'[x%31]).join('')};
@@ -4364,18 +4378,19 @@ async function shareModal(){
   if(isExample||!mapId){toast(tr('Edit the map first, so it is yours and saved, then share it.'));return}
   modal(`<div id="shareModal"><h2>${tr('Share')}</h2><p class="sub">${tr('Saving the map to your account…')}</p></div>`);
   if(!await cloudEnsure(mapId)){modal(`<div id="shareModal"><h2>${tr('Share')}</h2><p class="sub">${tr('The map couldn’t be saved to your account, so it can’t be shared yet.')}</p><div class="btns"><button class="btn" data-act="close-modal">${tr('Close')}</button></div></div>`);return}
-  const sb=await authClient(),{data}=await sb.from('maps').select('id,local_id,visibility,share_slug,thumb_path').eq('owner',authUser.id).eq('local_id',mapId).single();shareRow=data;shareRender()}
+  const sb=await authClient(),{data}=await sb.from('maps').select('id,local_id,visibility,share_slug,thumb_path,code').eq('owner',authUser.id).eq('local_id',mapId).single();shareRow=data;shareRender()}
 function shareRender(){const r=shareRow;if(!r)return;const v=r.visibility,url=r.share_slug?shareUrl(r.share_slug):'';
   modal(`<div id="shareModal"><h2>${tr('Share')}: <span data-nt>${esc(M.name)}</span></h2>
     <div class="opts">${[['private','Only me'],['link','Anyone with the link'],['public','In the gallery']].map(([k,l])=>`<button class="opt" data-act="share-set:${k}" aria-pressed="${v===k}">${tr(l)}</button>`).join('')}</div>
     <p class="sub">${v==='private'?tr('Only you can open this map.'):v==='link'?tr('Anyone with the link can look at the map and make their own copy. It isn’t listed anywhere.'):tr('Listed in the gallery for everyone, with a picture of the map and your nickname. Anyone can look at it and make their own copy.')}</p>
     ${url?`<div class="fld"><span>${tr('Link')}</span><div style="display:flex;gap:6px"><input id="shareUrl" readonly value="${esc(url)}" style="flex:1;min-width:0"><button class="btn" data-act="share-copy">${tr('Copy')}</button></div></div>`:''}
+    ${v==='public'&&r.code!=null?`<p class="sub">${tr('Gallery ID:')} <b class="gal-id">#${r.code}</b>. ${tr('People can find the map by searching for it in the gallery.')}</p>`:''}
     ${v==='public'&&!authNick?`<p class="sub"><b>${tr('Set a nickname in your account')}</b> ${tr('so the gallery can show who made it (until then it says Anonymous).')}</p>`:''}
     <p class="sub">${v==='private'?'':tr('People see the map as it is in your account, so your later changes show up too. Making it private again turns the link off; sharing again makes a new link.')}</p>
     <div class="btns"><button class="btn" data-act="close-modal">${tr('Done')}</button></div></div>`)}
 async function shareSet(v){const r=shareRow;if(!r||r.visibility===v)return;const sb=await authClient(),up={visibility:v};
   if(v==='private')up.share_slug=null;else if(!r.share_slug)up.share_slug=shareSlug();
-  const {data,error}=await sb.from('maps').update(up).eq('id',r.id).select('id,local_id,visibility,share_slug,thumb_path,updated_at').single();if(error){toast(tr('That didn’t work:')+' '+error.message);return}
+  const {data,error}=await sb.from('maps').update(up).eq('id',r.id).select('id,local_id,visibility,share_slug,thumb_path,updated_at,code').single();if(error){toast(tr('That didn’t work:')+' '+error.message);return}
   shareRow=data;cloudSetSeen(data.local_id,data.updated_at);if(v==='public')await thumbUpload(data.id,data.local_id);shareRender()}
 // the gallery picture: the whole map fitted into 640 × 400, saved under the owner's folder; refreshed when the map changes (at most every 10 min)
 async function thumbUpload(rowId,localId){try{const sb=await authClient(),{svg,w,h}=exportSVG(true),img=new Image();
@@ -4385,16 +4400,36 @@ async function thumbUpload(rowId,localId){try{const sb=await authClient(),{svg,w
     const path=authUser.id+'/'+rowId+'.webp',{error}=await sb.storage.from('thumbs').upload(path,blob,{upsert:true,contentType:'image/webp'});if(error)throw error;
     const {data}=await sb.from('maps').update({thumb_path:path}).eq('id',rowId).select('updated_at').single();if(data&&localId)cloudSetSeen(localId,data.updated_at);thumbAt.set(rowId,Date.now())}
   catch(e){}}
-// the gallery: newest first, 30 at a time, open to everyone (signed in or not)
-let galRows=[];
-async function galleryModal(more){if(!more)modal(`<div id="galModal"><h2>${tr('Gallery')}</h2><p class="sub">${tr('Loading…')}</p></div>`);
-  try{const sb=await liveClient(),before=more&&galRows.length?galRows[galRows.length-1].published_at:null,{data,error}=await sb.rpc('list_gallery',{lim:30,before});if(error)throw error;
-    galRows=more?galRows.concat(data):data;
-    const img=r=>r.thumb_path?`<img loading="lazy" alt="" src="${LIVE_URL}/storage/v1/object/public/thumbs/${esc(r.thumb_path)}?v=${encodeURIComponent(r.updated_at)}">`:'<i class="gal-ph"></i>';
-    modal(`<div id="galModal"><h2>${tr('Gallery')}</h2><p class="sub">${tr('Maps people chose to share with everyone. Open one to look at it, or edit it to make your own copy.')}</p>
-      ${galRows.length?`<div class="gal">${galRows.map(r=>`<button class="gal-card" data-act="open-shared:${esc(r.share_slug)}">${img(r)}<b data-nt>${esc(r.name||tr('Untitled'))}</b><small data-nt>${esc(r.nickname)} · ${ago(Date.parse(r.published_at))}</small></button>`).join('')}</div>`:`<p class="sub">${tr('Nothing here yet. Share a map with "In the gallery" to be the first.')}</p>`}
-      <div class="btns">${data.length===30?`<button class="btn" data-act="gallery-more">${tr('Show more')}</button>`:''}<button class="btn" data-act="close-modal">${tr('Close')}</button></div></div>`)}
-  catch(e){modal(`<div id="galModal"><h2>${tr('Gallery')}</h2><p class="sub">${tr('The gallery couldn’t be loaded. Check your connection and try again.')}</p><div class="btns"><button class="btn" data-act="close-modal">${tr('Close')}</button></div></div>`)}}
+// the gallery: newest first, 30 at a time, open to everyone (signed in or not); searchable by name, maker or #ID;
+// the signed-in person's own gallery maps are listed on their own, each with an × to take it out of the gallery
+let galRows=[],galMine=[],galQ='',galMore=false,galSeq=0,galTimer=0;
+const galImg=r=>r.thumb_path?`<img loading="lazy" alt="" src="${LIVE_URL}/storage/v1/object/public/thumbs/${esc(r.thumb_path)}?v=${encodeURIComponent(r.updated_at)}">`:'<i class="gal-ph"></i>';
+const galId=c=>c!=null?`<span class="gal-id">#${c}</span>`:'';
+async function galleryModal(){galRows=[];galMine=[];galQ='';
+  modal(`<div id="galModal"><div class="gal-top"><h2>${tr('Gallery')}</h2><input id="galQ" type="search" autocomplete="off" placeholder="${esc(tr('Search by name, maker or #ID'))}" aria-label="${esc(tr('Search the gallery'))}"></div>
+    <p class="sub">${tr('Maps people chose to share with everyone. Open one to look at it, or edit it to make your own copy.')}</p>
+    <div id="galBody"><p class="sub">${tr('Loading…')}</p></div>
+    <div class="btns"><button class="btn" data-act="share">${tr('Share this map…')}</button><button class="btn" data-act="close-modal">${tr('Close')}</button></div></div>`);
+  const q=$('#galQ');q.addEventListener('input',()=>{clearTimeout(galTimer);galTimer=setTimeout(()=>{galQ=q.value.trim();galLoad(false)},300)});
+  await Promise.all([galMineLoad(),galLoad(false)])}
+async function galMineLoad(){if(!authUser){galMine=[];return}
+  try{const sb=await authClient(),{data,error}=await sb.from('maps').select('id,local_id,name,thumb_path,share_slug,code,published_at,updated_at').eq('owner',authUser.id).eq('visibility','public').order('published_at',{ascending:false});if(error)throw error;galMine=data||[]}
+  catch(e){galMine=[]}galRender()}
+async function galLoad(more){const seq=++galSeq;
+  try{const sb=authUser?await authClient():await liveClient(),before=more&&galRows.length?galRows[galRows.length-1].published_at:null;
+    const {data,error}=await sb.rpc('list_gallery',{lim:30,before,q:galQ||null});if(error)throw error;if(seq!==galSeq)return;
+    galRows=more?galRows.concat(data):data;galMore=data.length===30;galRender()}
+  catch(e){if(seq!==galSeq)return;const b=$('#galBody');if(b)b.innerHTML=`<p class="sub">${tr('The gallery couldn’t be loaded. Check your connection and try again.')}</p>`}}
+function galRender(){const b=$('#galBody');if(!b)return;
+  const q=galQ.toLowerCase(),qid=/^#?\d+$/.test(galQ)?+galQ.replace('#',''):null;
+  const mine=galMine.filter(r=>!q||(r.name||'').toLowerCase().includes(q)||(qid!=null&&r.code===qid));
+  const mineH=mine.length?`<h3>${tr('Your maps in the gallery')}</h3><div class="gal">${mine.map(r=>`<div class="gal-card"><button class="gal-open" data-act="gal-own:${esc(r.local_id)}">${galImg(r)}<b data-nt>${esc(r.name||tr('Untitled'))}</b><small>${galId(r.code)} · ${ago(Date.parse(r.published_at))}</small></button><button class="gal-x" data-act="gal-unpub:${esc(r.id)}" data-confirm="1" data-confirm-text="${esc(tr('Remove?'))}" aria-label="${esc(tr('Remove from the gallery'))}" title="${esc(tr('Remove from the gallery (the map stays in your maps)'))}">×</button></div>`).join('')}</div>`:'';
+  const allH=galRows.length?`<div class="gal">${galRows.map(r=>`<div class="gal-card"><button class="gal-open" data-act="open-shared:${esc(r.share_slug)}">${galImg(r)}<b data-nt>${esc(r.name||tr('Untitled'))}</b><small>${galId(r.code)} · <span data-nt>${esc(r.nickname)}</span> · ${ago(Date.parse(r.published_at))}</small></button></div>`).join('')}</div>`
+    :`<p class="sub">${galQ?tr('No maps found. Try another name, or the map’s #ID.'):tr('Nothing here yet. Share a map with "In the gallery" to be the first.')}</p>`;
+  b.innerHTML=mineH+(mineH?`<h3>${tr('From everyone')}</h3>`:'')+allH+(galMore?`<div class="btns"><button class="btn" data-act="gallery-more">${tr('Show more')}</button></div>`:'')}
+async function galUnpublish(id){try{const sb=await authClient(),{data,error}=await sb.from('maps').update({visibility:'private',share_slug:null}).eq('id',id).select('local_id,updated_at').single();if(error)throw error;
+    cloudSetSeen(data.local_id,data.updated_at);galMine=galMine.filter(r=>r.id!==id);galRender();toast(tr('Taken out of the gallery. The map is still in your maps.'))}
+  catch(e){toast(tr('That didn’t work:')+' '+(e.message||e))}}
 function reportModal(){if(!shared)return;if(!authUser){if(AUTH_OK()){toast(tr('Sign in to report a map.'));accountModal()}else toast(tr('Reporting works on sndt.cc.'));return}
   modal(`<div id="reportModal"><h2>${tr('Report this map')}</h2><p class="sub" data-nt>${esc(shared.name||'')}</p><div class="fld"><span>${tr('What’s wrong with it?')}</span><textarea id="reportWhy" rows="4" maxlength="1000" placeholder="${esc(tr('e.g. offensive names, someone else’s map posted as their own'))}"></textarea></div>
     <div class="btns"><button class="btn warn" data-act="report-send">${tr('Send report')}</button><button class="btn" data-act="close-modal">${tr('Cancel')}</button></div></div>`)}
