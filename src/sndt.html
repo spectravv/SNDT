@@ -3333,6 +3333,7 @@ const IDB=(()=>{let dbp=null;const open=()=>dbp||(dbp=new Promise((res,rej)=>{tr
     all:()=>open().then(db=>new Promise((res,rej)=>{const out=[],c=db.transaction('maps').objectStore('maps').openCursor();c.onsuccess=()=>{const cur=c.result;if(cur){out.push(Object.assign({id:cur.key},cur.value));cur.continue()}else res(out)};c.onerror=()=>rej(c.error)}))}})();
 let idbOk=null,localQ=Promise.resolve();
 function localPut(id,m){if(EMBED||!id)return localQ;const json=JSON.stringify(m),v={name:m.name,updatedAt:Date.now(),json};
+  cloudQueue(id);
   return localQ=localQ.then(async()=>{if(idbOk!==false){try{await IDB.put(id,v);idbOk=true;lsDel('blockline:map:'+id);return}catch(e){idbOk=false}}
     try{localStorage.setItem('blockline:map:'+id,json)}catch(e){status('Not saved: browser storage is full','#b42318');toast('This browser’s storage is full, so the map could not be saved here. Export a JSON backup, or delete an old map.')}})}
 async function localGet(id){if(idbOk!==false){try{const v=await IDB.get(id);if(v)return JSON.parse(v.json)}catch(e){}}const ls=lsGet('blockline:map:'+id);return ls?JSON.parse(ls):null}
@@ -3389,7 +3390,7 @@ async function deleteMap(){
   if(isExample){toast('The example is not saved, so there is nothing to delete.');return}
   const id=mapId;clearTimeout(saveT);saveT=null;
   if(store){try{await store.doc('maps/'+id).delete()}catch(e){toast('Could not delete the map.');return}}
-  await localDel(id);
+  await localDel(id);cloudDelete(id);
   const rest=(await listMaps()).filter(m=>m.id!==id);
   if(rest.length)openMap(rest[0].id);else{M=sampleMap();mapId=null;isExample=true;sel=[];$('#banner').hidden=false;render();renderLists();renderInspector();fit();status(store?'Example, not saved':'Example','#9aa')}
   toast('Map deleted.');
@@ -4250,8 +4251,9 @@ async function authClient(){if(authSb)return authSb;await liveLoadLib();
   authSb=window.supabase.createClient(LIVE_URL,LIVE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce',storageKey:'sndt:auth'}});
   authSb.auth.onAuthStateChange((ev,ses)=>{const was=authUser&&authUser.id;authUser=ses&&ses.user||null;if(authUser&&authUser.id!==was)authLoadNick();if(!authUser)authNick=null;accountUI();
     // back from Google or the email link: take the code out of the address
-    if(ev==='SIGNED_IN'&&/[?&](code|error)=/.test(location.search)){history.replaceState(null,'',location.pathname+location.hash);toast(tr('Signed in.'))}});
-  const {data}=await authSb.auth.getSession();authUser=data&&data.session&&data.session.user||null;accountUI();if(authUser)authLoadNick();return authSb}
+    if(ev==='SIGNED_IN'&&/[?&](code|error)=/.test(location.search)){history.replaceState(null,'',location.pathname+location.hash);toast(tr('Signed in.'))}
+    if(authUser&&authUser.id!==was)setTimeout(cloudPull,0);if(!authUser&&was)lsDel('sndt:cloud')});
+  const {data}=await authSb.auth.getSession();const had=authUser;authUser=data&&data.session&&data.session.user||null;accountUI();if(authUser){authLoadNick();if(!had)setTimeout(cloudPull,0)}return authSb}
 async function authLoadNick(){try{const sb=await authClient(),{data}=await sb.from('profiles').select('nickname').eq('id',authUser.id).maybeSingle();authNick=data&&data.nickname||null}catch(e){}accountUI();if($('#acctModal'))accountModal()}
 // restore a session on start only when there is one (or the address carries a sign-in code), so most visits don't load the library
 function authBoot(){if(EMBED)return;let has=false;try{has=!!localStorage.getItem('sndt:auth')}catch(e){}if(has||/[?&]code=/.test(location.search))authClient().catch(()=>{})}
@@ -4266,6 +4268,7 @@ function accountModal(){
     <p class="sub">${tr('Open the link in this same browser.')}</p>${priv}<div class="btns"><button class="btn" data-act="close-modal">${tr('Close')}</button></div></div>`);return}
   modal(`<div id="acctModal"><h2>${tr('Account')}</h2><p class="sub" data-nt>${tr('Signed in as')} <b>${esc(authUser.email||'')}</b></p>
     <div class="fld"><span>${tr('Nickname (shown with maps you put in the gallery)')}</span><div style="display:flex;gap:6px"><input id="authNick" type="text" maxlength="30" value="${esc(authNick||'')}" placeholder="${esc(tr('2 to 30 characters'))}" style="flex:1;min-width:0"><button class="btn" data-act="auth-nick">${tr('Save')}</button></div></div>
+    <p class="sub">${tr('Your maps are kept in your account and open on any device where you sign in (up to 50 maps, 5 MB each).')}</p>
     ${priv}<div class="btns"><button class="btn" data-act="auth-out">${tr('Sign out')}</button><button class="btn warn" data-act="auth-delete" data-confirm="1">${tr('Delete my account and cloud maps')}</button></div>
     <div class="btns"><button class="btn" data-act="close-modal">${tr('Close')}</button></div></div>`)}
 const authHere=()=>location.origin+location.pathname;
@@ -4275,9 +4278,53 @@ async function authAct(name){const sb=await authClient();try{
     const {error}=await sb.auth.signInWithOtp({email:em,options:{emailRedirectTo:authHere(),shouldCreateUser:true}});if(error)throw error;toast(tr('Sign-in link sent. Check your email, and open the link in this browser.'));closeModal();return}
   if(name==='auth-nick'){const n=(($('#authNick')||{}).value||'').trim();if(n.length<2||n.length>30){toast(tr('A nickname is 2 to 30 characters.'));return}
     const {error}=await sb.from('profiles').upsert({id:authUser.id,nickname:n});if(error)throw error;authNick=n;accountUI();toast(tr('Nickname saved.'));return}
-  if(name==='auth-out'){await sb.auth.signOut();closeModal();toast(tr('Signed out. Your maps stay in this browser.'));return}
-  if(name==='auth-delete'){const {error}=await sb.rpc('delete_me');if(error)throw error;await sb.auth.signOut();closeModal();toast(tr('Your account and cloud maps are deleted. Maps in this browser are kept.'));return}
+  if(name==='auth-out'){await sb.auth.signOut();lsDel('sndt:cloud');closeModal();toast(tr('Signed out. Your maps stay in this browser.'));return}
+  if(name==='auth-delete'){const {error}=await sb.rpc('delete_me');if(error)throw error;await sb.auth.signOut();lsDel('sndt:cloud');closeModal();toast(tr('Your account and cloud maps are deleted. Maps in this browser are kept.'));return}
  }catch(e){toast(tr('That didn’t work:')+' '+(e&&e.message||e))}}
+// cloud sync (signed in): every save here also goes to the account a few seconds later (ids waiting to go up are kept in sndt:cloudDirty,
+// so a closed tab still sends them next time). On sign-in and on start, maps newer in the account come down and maps only here go up.
+// sndt:cloud remembers the account's updated_at for each map as last synced here: when the account's copy changed since (saved on another
+// device), the later save wins and the other version goes into map_backups, so nothing is lost
+const jget=k=>{try{return JSON.parse(lsGet(k)||'null')}catch(e){return null}};
+const cloudSeen=()=>jget('sndt:cloud')||{},cloudSetSeen=(id,at)=>{const c=cloudSeen();if(at)c[id]=at;else delete c[id];lsSet('sndt:cloud',JSON.stringify(c))};
+const cloudDirtyIds=()=>new Set(jget('sndt:cloudDirty')||[]),cloudSetDirty=(id,on)=>{const d=cloudDirtyIds();if(on)d.add(id);else d.delete(id);lsSet('sndt:cloudDirty',JSON.stringify([...d]))};
+let cloudT=null,cloudBusy=false,cloudErr='';
+function cloudQueue(id){if(EMBED||!id)return;cloudSetDirty(id,true);if(!authUser)return;clearTimeout(cloudT);cloudT=setTimeout(cloudPush,2500)}
+function cloudFail(e){const m=String(e&&e.message||e);const msg=/map_too_large/.test(m)?tr('This map is over 5 MB, too big for your account. It is kept in this browser.'):/too_many_maps/.test(m)?tr('Your account holds 50 maps. Delete one to keep new maps in the cloud.'):/account_full/.test(m)?tr('Your account is full (50 MB). Delete a map to keep saving to the cloud.'):'';
+  if(msg&&msg!==cloudErr){cloudErr=msg;toast(msg)}status(msg?tr('Saved in this browser only'):tr('Not synced, retrying'),'#b42318');return!!msg}
+// keep the account's current copy of a map as a backup (before something replaces it)
+async function cloudBackup(sb,rowId){const {data}=await sb.from('maps').select('data').eq('id',rowId).single();if(data)await sb.from('map_backups').insert({map_id:rowId,owner:authUser.id,data:data.data})}
+async function cloudPush(){if(!authUser||cloudBusy)return;cloudBusy=true;let retry=false;
+  try{const sb=await authClient();
+    for(const id of cloudDirtyIds()){const m=await localGet(id);if(!m){cloudSetDirty(id,false);continue}
+      try{const {data:cur}=await sb.from('maps').select('id,updated_at').eq('owner',authUser.id).eq('local_id',id).maybeSingle();
+        if(cur&&cloudSeen()[id]!==cur.updated_at)await cloudBackup(sb,cur.id);
+        const {data,error}=await sb.from('maps').upsert({owner:authUser.id,local_id:id,name:m.name||'',data:JSON.stringify(m)},{onConflict:'owner,local_id'}).select('updated_at').single();if(error)throw error;
+        cloudSetSeen(id,data.updated_at);cloudSetDirty(id,false);cloudErr='';if(id===mapId)status(tr('Saved to your account'),'#2f9e5b')}
+      catch(e){if(!cloudFail(e))retry=true}}}
+  catch(e){retry=true}
+  cloudBusy=false;if(retry){clearTimeout(cloudT);cloudT=setTimeout(cloudPush,15000)}}
+let cloudPulling=false;
+async function cloudPull(){if(!authUser||EMBED||cloudPulling)return;cloudPulling=true;cloudLastPull=Date.now();try{await cloudPull0()}catch(e){}cloudPulling=false}
+async function cloudPull0(){let sb;try{sb=await authClient()}catch(e){return}
+  const {data:rows,error}=await sb.from('maps').select('id,local_id,name,updated_at').eq('owner',authUser.id);if(error)return;
+  const seen=cloudSeen(),dirty=cloudDirtyIds(),local=await localList(),byId=new Map(rows.map(r=>[r.local_id,r]));let got=0,reload=false;
+  for(const r of rows){if(seen[r.local_id]===r.updated_at)continue;const here=local.find(x=>x.id===r.local_id);
+    // changed in the account since this browser last synced it: download, unless this browser has newer unsent work (then that goes up
+    // and the account's copy is kept as a backup by cloudPush)
+    if(here&&dirty.has(r.local_id)&&here.updatedAt>Date.parse(r.updated_at))continue;
+    const {data:full}=await sb.from('maps').select('data').eq('id',r.id).single();if(!full)continue;
+    if(here&&dirty.has(r.local_id)){const mine=await localGet(r.local_id);if(mine)await sb.from('map_backups').insert({map_id:r.id,owner:authUser.id,data:JSON.stringify(mine)})}
+    try{await IDB.put(r.local_id,{name:r.name,updatedAt:Date.parse(r.updated_at),json:full.data})}catch(e){continue}
+    cloudSetSeen(r.local_id,r.updated_at);cloudSetDirty(r.local_id,false);got++;if(r.local_id===mapId)reload=true}
+  // maps only in this browser go up; a map deleted from the account on another device goes here too, unless it changed here since
+  for(const x of local){if(byId.has(x.id))continue;if(seen[x.id]&&!dirty.has(x.id)){await localDel(x.id);cloudSetSeen(x.id,null);if(x.id===mapId)reload=true;continue}cloudSetDirty(x.id,true)}
+  if(reload&&mapId){const m=await localGet(mapId);if(m)loadInto(m,mapId);else{const L=await localList();if(L.length)openMap(L[0].id)}}
+  if(got)toast(got===1?tr('1 map came from your account.'):got+' '+tr('maps came from your account.'));
+  cloudPush()}
+// coming back to the tab (e.g. after editing on another device) checks the account again, at most every 30 s
+let cloudLastPull=0;document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&authUser&&Date.now()-cloudLastPull>30000){cloudLastPull=Date.now();cloudPull()}});
+async function cloudDelete(id){cloudSetDirty(id,false);if(!authUser)return;try{const sb=await authClient();await sb.from('maps').delete().eq('owner',authUser.id).eq('local_id',id);cloudSetSeen(id,null)}catch(e){}}
 async function liveRpc(fn,args){const sb=await liveClient(),{data,error}=await sb.rpc(fn,args);if(error)throw error;return data}
 // the map as independent pieces: every station, line, area, segment, plus settings, timeline, name and the order of each list
 function liveSnap(m){const s=new Map();for(const c of LIVE_COLLS){for(const o of m[c]||[])s.set(c+LIVE_SEP+o.id,JSON.stringify(o));s.set('ord'+LIVE_SEP+c,JSON.stringify((m[c]||[]).map(o=>o.id)))}
