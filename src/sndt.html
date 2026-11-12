@@ -76,14 +76,14 @@ header .hbtn.stack{flex-direction:column;justify-content:center;gap:2px;height:4
 header .hbtn.stack .hide-narrow{display:inline}
 .hbtn svg.brand{fill:currentColor;stroke:none}
 /* every control in the bar as tall as the icon-and-name switches */
-header .hbtn,header .hsel,header .mapname-in{height:40px}
+@media (min-width:901px){header .hbtn,header .hsel,header .mapname-in{height:40px}}
 header .hbtn.icon{justify-content:center}
 /* the icon buttons in the bar have a small name below too (.hl; the phone menu shows its own longer name, .nm-lbl) */
 .hl{display:none}
-header .hbtn.icon{width:auto;min-width:36px;flex-direction:column;gap:2px;padding:0 7px;font-size:8.5px;letter-spacing:.06em;line-height:1}
+@media (min-width:901px){header .hbtn.icon{width:auto;min-width:36px;flex-direction:column;gap:2px;padding:0 7px;font-size:8.5px;letter-spacing:.06em;line-height:1}
 header .hbtn.icon svg{order:-1;width:16px;height:16px}
-header .hbtn.icon .hl{display:block}
-header .hbtn.icon,header .hbtn.stack,header .seg{flex-shrink:0}
+header .hbtn.icon .hl{display:block}}
+@media (min-width:901px){header .hbtn.icon,header .hbtn.stack,header .seg{flex-shrink:0}}
 @media (min-width:1380px){header .hsearch{min-width:150px}}
 @media (max-width:1060px) and (min-width:901px){header .hbtn.icon .hl{display:none}header .hbtn.icon{min-width:32px}}
 @media (max-width:980px) and (min-width:901px){html header .seg button span{font-size:7.5px;letter-spacing:.02em}html header .seg button{padding:0 3px;min-width:34px}html header .hbtn,html header .seg,html header .hsel{margin-left:2px}html header .mapname{max-width:96px}html header #langSel{width:48px}}
