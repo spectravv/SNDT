@@ -1812,8 +1812,10 @@ function mapSVG(editor){
   if(editor){o+='<g>';const sp=S.lineWidth+S.lineGap;for(const t of G.tracks.values())for(const lid of t.lines)if(!(t.over&&t.over.has(lid)))o+=`<path data-kind="line" data-id="${lid}" data-key="${t.key}" d="${dOf(t.off.get(lid))}" fill="none" stroke="transparent" stroke-width="${Math.max(12,sp+2)}"/>`;o+='</g>'}
   G.auto=editor&&drag&&drag.moved&&lastAuto?lastAuto:autoLabels(G);if(editor)lastAuto=G.auto;
   o+='<g>'+(M.transfers||[]).map(xferSVG).join('')+'</g>';
-  o+='<g>'+M.stations.map(s=>stationSVG(s,G,editor)).join('')+'</g>';
-  o+=`<g font-family="${esc(S.labelFont)}, Overpass, 'Helvetica Neue', Arial, sans-serif">`+M.stations.map(s=>labelSVG(s,G)).join('')+M.texts.map(textSVG).join('')+legendSVG()+'</g>'+'<g>'+imagesSVG('top',editor)+'</g>';
+  // (while parts are picked in Manual, stations off the lines being edited fade with their lines)
+  const onKeep=keep&&new Set(M.lines.filter(L=>keep.has(L.id)).flatMap(L=>L.stops)),dim=(s,h)=>h&&onKeep&&!onKeep.has(s.id)?`<g opacity=".15">${h}</g>`:h;
+  o+='<g>'+M.stations.map(s=>dim(s,stationSVG(s,G,editor))).join('')+'</g>';
+  o+=`<g font-family="${esc(S.labelFont)}, Overpass, 'Helvetica Neue', Arial, sans-serif">`+M.stations.map(s=>dim(s,labelSVG(s,G))).join('')+M.texts.map(textSVG).join('')+legendSVG()+'</g>'+'<g>'+imagesSVG('top',editor)+'</g>';
   return{o,G};
 }
 let selColor='#e8590c';
