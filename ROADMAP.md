@@ -102,6 +102,19 @@ v1.0.5.1 hotfix released 2026-11-07 (ILVF station numbers, striped lines bend, n
   - "Line between stations": a striped (white blocks inside the line) line's blocks go askew around a bend (screenshot only; which map and style isn't known yet).
   - Isolated line view, large interchanges (Chrome and the mobile app): at a station with many lines (Stopton Central, 6 lines) the coloured ticks below the station bunch up against each other and the circle, the black ones merging.
   - "Interchange lines not connecting correctly" (user, 2026-11-02, ~/Downloads/ct-lake-network.json, copied to test-maps/ct-lake-network.json): between Ivybridge (140,-120) and Ivybridge Market (240,-105), cyan and magenta vanish for a stretch. Both layouts. Cause: the segment has a hand-drawn route (175,-115 / 185,-95 / 205,-95 / 240,-90) that dives under the blue/red/orange/green bundle at a shallow angle; each crossing cuts a gap in the line underneath and the four gaps merge into one long hole. With the hand route removed cyan runs clean, but magenta still has to cross blue/red/orange to reach its lane between orange and lime at Ivybridge Market, and is drawn with a long slanted gap plus a small hook right of the station. Left as it is (user decision 2026-11-03, after a mockup of a thin strand through long gaps vs the single line drawn over the bundle).
+- Bugs from players (fetched 2026-11-12):
+  - Curt, 2026-11-11, "One-way arrows appearing where they shouldn't": a one-way branch marked the two-way stops it shares (Yelloway, Spawn). FIXED: a stop gets the chevron only when every line stopping there runs one way through it, all the same way.
+  - Curt, 2026-11-07, "I froze SNDT": a fare zone with 200 numbers and number size 1. FIXED: the number search tries at most ~80×80 spots and the count is capped at 12 (61 ms for that case).
+  - Curt, 2026-11-05, "Outlines on districts overlap each other": screenshot expired; overlapping districts already cut around each other. Needs the screenshot or the map.
+- Ideas from players (fetched 2026-11-12):
+  - Plentk, 2026-11-01: renumber stations after an infill station. Already done in v1.0.5 (line panel: Renumber stations); the Discord post can be closed.
+  - Absolutely Nobody, 2026-11-06: remember that the tutorial was taken or skipped, and a button to open it again. Already so (sndt:tour in the browser; Help opens it); it only comes back when site data is cleared or in a private window.
+  - waterberry507, 2026-11-07: a desktop version for Windows 11. SNDT installs as an app (Install button, PWA).
+  - VoltedFromMatrix, 2026-11-10: a Discord link in the empty bottom-left corner.
+  - StarlightPixels, 2026-11-04: Helvetica (normal and bold) as a font.
+  - Curt, 2026-11-05: separate fonts for CJK, non-CJK and secondary text (e.g. MTR: Noto Serif HK for Chinese, Noto Sans HK for English), with one main font as the default.
+  - Absolutely Nobody, 2026-11-07: cloud storage / accounts to edit the same maps on several devices.
+  - MatMat, 2026-11-09: add the Traindex bot to the Discord server (server admin, not the app).
 - Ideas from players (2026-11-02): all done in v1.0.5 (fare zones as an area Kind, ILVF interchange styles Names/Codes/Dots, Renumber stations).
 - Manual layout (step 2 of the precision plan; moved here from v1.2 by the user on 2026-10-31): a "Manual layout" switch per map (Free mode then means precise + manual) that freezes the automatic layout into per-line, per-segment sideways offsets, which the user then sets by dragging or typing; the automatic bundling/reordering leaves them alone; switching back returns to automatic; a single segment can be re-frozen from the automatic layout.
 
