@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light only">
+<title>Welcome to SNDT</title>
+</head>
+<body style="margin:0;padding:0;background:#efede7;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">Confirm your email to finish creating your SNDT account.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#efede7;">
+<tr><td align="center" style="padding:32px 16px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;background:#f8f7f3;border:2px solid #0b0b0b;">
+<tr><td style="padding:28px 28px 0 28px;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+<td style="padding-right:12px;"><img src="https://sndt.cc/icons/icon-192.png" width="40" height="40" alt="" style="display:block;border:0;"></td>
+<td style="font-family:Helvetica,Arial,sans-serif;font-size:20px;font-weight:700;letter-spacing:1px;color:#0b0b0b;">SNDT</td>
+</tr></table>
+</td></tr>
+<tr><td style="padding:24px 28px 0 28px;"><div style="height:4px;width:48px;background:#e61919;font-size:0;line-height:0;">&nbsp;</div></td></tr>
+<tr><td style="padding:16px 28px 0 28px;font-family:Helvetica,Arial,sans-serif;font-size:24px;line-height:30px;font-weight:700;color:#0b0b0b;">Welcome to SNDT</td></tr>
+<tr><td style="padding:12px 28px 0 28px;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:22px;color:#0b0b0b;">Confirm your email to finish creating your account. After that, your maps sync across your devices and you can share them.</td></tr>
+<tr><td style="padding:24px 28px 0 28px;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+<td bgcolor="#e61919" style="background:#e61919;">
+<a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;font-family:Helvetica,Arial,sans-serif;font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;">Confirm and sign in</a>
+</td></tr></table>
+</td></tr>
+<tr><td style="padding:24px 28px 0 28px;font-family:Helvetica,Arial,sans-serif;font-size:13px;line-height:19px;color:#55524c;">
+Button not working? Copy this link into your browser:<br>
+<a href="{{ .ConfirmationURL }}" style="color:#0b0b0b;word-break:break-all;">{{ .ConfirmationURL }}</a>
+</td></tr>
+<tr><td style="padding:24px 28px 28px 28px;font-family:Helvetica,Arial,sans-serif;font-size:13px;line-height:19px;color:#55524c;border-bottom:0;">
+The link works once and expires in 1 hour. If you didn't ask for this email, you can ignore it. Nobody can sign in without the link.
+</td></tr>
+</table>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;">
+<tr><td style="padding:16px 4px;font-family:Helvetica,Arial,sans-serif;font-size:12px;line-height:18px;color:#55524c;">
+Sent to {{ .Email }} by <a href="https://sndt.cc" style="color:#55524c;">sndt.cc</a> &middot; <a href="https://sndt.cc/privacy/" style="color:#55524c;">Privacy</a>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>
