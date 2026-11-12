@@ -58,8 +58,12 @@ a.hbtn{color:inherit;text-decoration:none}a.hbtn[hidden]{display:none}
 #mapNameBtn{margin-left:0;text-transform:none;letter-spacing:0;font-weight:700;font-size:12px;cursor:text}
 #mapsBtn{margin-left:0;border-left:0;padding:0 6px}
 .mapname-in{height:32px;width:220px;max-width:46vw;border:2px solid var(--ink);padding:0 8px;font:700 12px/1 inherit;font-family:inherit;background:var(--paper);color:var(--ink)}
-.mapname{max-width:220px;overflow:hidden;text-overflow:ellipsis}
-@media (max-width:900px){header .mapgrp{min-width:0;flex:0 1 auto}header #mapNameBtn{min-width:0;flex:0 1 auto;overflow:hidden}header .mapgrp>.hbtn.icon{flex:none}}
+.mapname{max-width:200px;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:1959px) and (min-width:901px){header .seg.pub button span{display:none}header .seg.pub button{min-width:36px;padding:0 4px}}
+@media (max-width:1239px) and (min-width:901px){html header .mapname{max-width:90px}}
+@media (max-width:1100px) and (min-width:901px){html header .hbtn.icon{min-width:30px;padding:0 2px}html header .hbtn,html header .seg,html header .hsel{margin-left:2px}html header .seg.pub button{min-width:30px;padding:0 2px}}
+@media (max-width:980px) and (min-width:901px){html header .mapname{max-width:56px}html header .hbtn.icon,html header .seg.pub button{min-width:28px;padding:0 1px}}
+@media (max-width:900px){header .mapgrp{min-width:0;flex:0 1 auto}header #mapNameBtn{min-width:0;flex:0 1 auto;overflow:hidden}header .mapgrp>.hbtn.icon{flex:none}header .seg.pub{flex:none;height:32px;margin-left:4px}header .seg.pub button{min-width:34px;padding:0 4px}header .seg.pub button span{display:none}}
 .spacer{flex:1}
 .hsel{height:32px;border:2px solid var(--ink);background:var(--paper);color:var(--ink);font:inherit;font-size:11px;letter-spacing:.06em;padding:0 6px;margin-left:6px;cursor:pointer}
 @media (hover:hover){.hsel:hover{background:var(--paper-2)}}
@@ -103,7 +107,7 @@ header .hbtn.icon .hl{display:block}}
 #accountBtn{position:relative}#accountBtn .acc-dot{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:#2f9e5b}#accountBtn .acc-dot[hidden]{display:none}
 @media (min-width:901px){header .hbtn.icon,header .hbtn.stack,header .seg{flex-shrink:0}}
 @media (min-width:1520px){header .hsearch{min-width:150px}}
-@media (max-width:1080px) and (min-width:901px){header .hbtn.icon .hl{display:none}header .hbtn.icon{min-width:32px}}
+@media (max-width:1239px) and (min-width:901px){header .hbtn.icon .hl{display:none}header .hbtn.icon{min-width:32px}}
 @media (max-width:980px) and (min-width:901px){html header .seg button span{font-size:7.5px;letter-spacing:.02em}html header .seg button{padding:0 3px;min-width:34px}html header .hbtn,html header .seg,html header .hsel{margin-left:2px}html header .mapname{max-width:96px}html header #langSel{width:48px}}
 @media (max-width:1399px) and (min-width:901px){header .hbtn,header .seg,header .hsel{margin-left:3px}header .hbtn.icon{padding:0 4px}header .hbtn.stack{padding:0 4px}}
 .status{font-size:10px;color:var(--muted);white-space:nowrap;display:flex;align-items:center;gap:7px;text-transform:uppercase;letter-spacing:.1em;margin-left:12px}
@@ -189,8 +193,8 @@ aside{background:var(--paper);overflow-y:auto;min-height:0}
 @media (hover:hover){.hsearch:hover{background:var(--paper);color:var(--ink)}}
 @media (max-width:1250px){.hsearch kbd{display:none}header #status{display:none}}
 @media (max-width:1799px){header #status{font-size:0;gap:0}}
-@media (max-width:1619px){header .seg.place:not(.lay){display:none}}
-@media (max-width:1309px){header .seg.lay{display:none}}
+@media (max-width:1779px){header .seg.place:not(.lay){display:none}}
+@media (max-width:1469px){header .seg.lay{display:none}}
 @media (max-width:1399px) and (min-width:901px){header .seg button{padding:0 7px}}
 @media (max-width:1299px) and (min-width:901px){header .mapname{max-width:110px}header #langSel{width:56px}header .hbtn{margin-left:3px}}
 @media (max-width:1100px) and (min-width:901px){header .seg button{padding:0 7px}header .hbtn{margin-left:4px}.logo{padding-right:10px;margin-right:6px}.mapname{max-width:140px}}
@@ -499,13 +503,12 @@ input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}
   <header>
     <button class="hbtn icon only-narrow" data-act="drawer:navMenu" aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
     <div class="logo"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" style="fill:var(--ink)"/><path d="M5 21H12L20 13H28" fill="none" style="stroke:var(--paper)" stroke-width="3.2" stroke-linejoin="miter"/><path d="M5 17V25" style="stroke:var(--paper)" stroke-width="3.2"/><path d="M19 3V29" fill="none" style="stroke:var(--red)" stroke-width="3.2"/><circle cx="19" cy="14" r="3.7" style="fill:var(--paper);stroke:var(--ink)" stroke-width="1.8"/></svg><span class="word">SNDT</span></div>
-    <div class="mapgrp"><button class="hbtn" id="mapNameBtn" data-act="rename-map" title="Rename this map"><span class="mapname" id="mapName" data-nt>Map</span></button><button class="hbtn icon" id="mapsBtn" data-act="maps-menu" aria-haspopup="true" aria-label="Your maps" title="Your maps"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button><button class="hbtn icon" id="shareBtn" data-act="share" aria-label="Share" title="Share and publish this map"><span class="hl">Share</span><svg viewBox="0 0 24 24"><circle cx="17" cy="5.5" r="2.5"/><circle cx="6.5" cy="12" r="2.5"/><circle cx="17" cy="18.5" r="2.5"/><path d="M8.7 10.7l6.1-3.9M8.7 13.3l6.1 3.9"/></svg></button></div>
+    <div class="mapgrp"><button class="hbtn" id="mapNameBtn" data-act="rename-map" title="Rename this map"><span class="mapname" id="mapName" data-nt>Map</span></button><button class="hbtn icon" id="mapsBtn" data-act="maps-menu" aria-haspopup="true" aria-label="Your maps" title="Your maps"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button></div><div class="seg pub" role="group" aria-label="Share and gallery"><button id="shareBtn" data-act="share" aria-label="Share" title="Share and publish this map"><svg viewBox="0 0 24 24"><circle cx="17" cy="5.5" r="2.5"/><circle cx="6.5" cy="12" r="2.5"/><circle cx="17" cy="18.5" r="2.5"/><path d="M8.7 10.7l6.1-3.9M8.7 13.3l6.1 3.9"/></svg><span>Share</span></button><button id="galleryBtn" data-act="gallery" aria-label="Gallery" title="Gallery: maps people share"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg><span>Gallery</span></button></div>
     <span class="status hide-narrow" id="status">Loading</span>
     <div class="spacer"></div>
     <label class="hbtn hsearch" id="searchBtn" data-act="search" title="Search tools and settings (Ctrl+K)"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5.5 5.5"/></svg><input id="hSearch" type="search" placeholder="Search tools and settings" autocomplete="off" aria-label="Search tools and settings" aria-controls="cmdkList"><kbd>Ctrl K</kbd><span class="nm-lbl">Search</span></label>
     <a class="hbtn icon" id="discordBtn" target="_blank" rel="noopener" aria-label="Discord" title="Join the SNDT Discord" hidden><span class="hl">Discord</span><span class="nm-lbl">Discord</span><svg viewBox="0 0 24 24" class="brand"><path d="M20.317 4.37a19.79 19.79 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.74 19.74 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.1 13.1 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.3 12.3 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.84 19.84 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></a>
     <a class="hbtn icon" id="donateBtn" target="_blank" rel="noopener" aria-label="Support SNDT" title="Support SNDT" hidden><span class="hl">Support</span><span class="nm-lbl">Support SNDT</span><svg viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0112 7.6 4.3 4.3 0 0119.5 10c0 5.4-7.5 10-7.5 10z" style="stroke:var(--red)"/></svg></a>
-    <button class="hbtn icon" id="galleryBtn" data-act="gallery" aria-label="Gallery" title="Gallery: maps people share"><span class="hl">Gallery</span><span class="nm-lbl">Gallery</span><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg></button>
     <button class="hbtn icon" id="liveBtn" data-act="live" aria-label="Live room" title="Live room"><span class="hl">Live room</span><span class="nm-lbl">Live room</span><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.6 2.7-6 6-6s6 2.4 6 6"/><circle cx="17" cy="9" r="2.6"/><path d="M16 14.2c2.9.1 5 2.3 5 5.8"/></svg><span class="lv" data-nt></span></button>
     <button class="hbtn icon" id="accountBtn" data-act="account" aria-label="Account" title="Account: keep your maps in the cloud"><span class="hl" id="accountHl">Account</span><span class="nm-lbl" id="accountLbl">Account</span><svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20c1.2-3.6 4-5.4 7.5-5.4s6.3 1.8 7.5 5.4"/></svg><i class="acc-dot" hidden></i></button>
     <button class="hbtn icon" id="installBtn" data-act="install" aria-label="Install app" title="Install app" hidden><span class="hl">Install</span><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span class="nm-lbl">Install app</span></button>
@@ -529,7 +532,7 @@ input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}
     <div class="nm-sec"><div class="nm-k">Map</div><button class="hbtn" data-act="sheet-map"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span class="nm-lbl">Map settings</span></button><div class="nm-slot" data-slot="export"></div></div>
     <div class="nm-sec"><div class="nm-k">Lane layout</div><div class="nm-slot" data-slot="layout"></div></div>
     <div class="nm-sec"><div class="nm-k">View</div><div class="nm-slot" data-slot="mode"></div><div class="nm-slot" data-slot="section"></div></div>
-    <div class="nm-sec"><div class="nm-slot" data-slot="search"></div><div class="nm-slot" data-slot="install"></div><div class="nm-slot" data-slot="gallery"></div><div class="nm-slot" data-slot="live"></div><div class="nm-slot" data-slot="account"></div><div class="nm-slot" data-slot="tour"></div><div class="nm-slot" data-slot="theme"></div>
+    <div class="nm-sec"><div class="nm-slot" data-slot="search"></div><div class="nm-slot" data-slot="install"></div><div class="nm-slot" data-slot="live"></div><div class="nm-slot" data-slot="account"></div><div class="nm-slot" data-slot="tour"></div><div class="nm-slot" data-slot="theme"></div>
       <label class="nm-row"><span class="nm-k">Language</span><span class="nm-slot" data-slot="lang"></span></label>
       <div class="nm-slot" data-slot="donate"></div><div class="nm-slot" data-slot="discord"></div></div>
     <div class="nm-slot nm-foot" data-slot="status"></div>
@@ -3182,7 +3185,7 @@ document.addEventListener('keyup',e=>{if(e.key===' '){spaceDown=false;svg.style.
 $('#stFilter').addEventListener('input',renderLists);
 
 /* ---------- drawers, popovers, modal, toast ---------- */
-const NAV=[['header [data-act="export-menu"]','export'],['header .seg.lay','layout'],['header .seg:not(.ctl):not(.place)','section'],['header .seg.ctl','mode'],['#installBtn','install'],['#galleryBtn','gallery'],['#liveBtn','live'],['#accountBtn','account'],['#searchBtn','search'],['#tourBtn','tour'],['#themeBtn','theme'],['#langSel','lang'],['#donateBtn','donate'],['#discordBtn','discord'],['#status','status']]
+const NAV=[['header [data-act="export-menu"]','export'],['header .seg.lay','layout'],['header .seg:not(.ctl):not(.place):not(.pub)','section'],['header .seg.ctl','mode'],['#installBtn','install'],['#liveBtn','live'],['#accountBtn','account'],['#searchBtn','search'],['#tourBtn','tour'],['#themeBtn','theme'],['#langSel','lang'],['#donateBtn','donate'],['#discordBtn','discord'],['#status','status']]
   .map(([q,slot])=>{const el=document.querySelector(q),ph=document.createComment(slot);el.before(ph);return{el,ph,slot}});
 let navNarrow=null;
 function navPlace(){const n=window.innerWidth<=900;if(n===navNarrow)return;navNarrow=n;for(const o of NAV){if(n)document.querySelector(`#navMenu [data-slot="${o.slot}"]`).appendChild(o.el);else o.ph.after(o.el)}}
