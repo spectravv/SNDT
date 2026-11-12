@@ -569,6 +569,7 @@ input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}
 </div>
 <input type="file" id="fileIn" accept=".json,application/json" hidden>
 <input type="file" id="iconIn" accept="image/png,image/svg+xml,image/webp,image/jpeg,.svg,.png" hidden>
+<input type="file" id="fontIn" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" hidden>
 <input type="file" id="imgIn" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,.svg" multiple hidden>
 <input type="file" id="tlAudioIn" accept="audio/*,.mp3,.ogg,.wav,.m4a" hidden>
 <svg id="measure" width="0" height="0" style="position:absolute;left:-9999px;top:0" xmlns="http://www.w3.org/2000/svg"></svg>
@@ -588,14 +589,37 @@ const ROUTES=[['oct1','Straight, then 45°'],['oct2','45°, then straight'],['st
 const KINDS=[['stop','Station'],['local','Local stop'],['interchange','Interchange'],['hub','Hub'],['terminus','Terminus'],['train','Rail station'],['hsr','HSR station'],['tram','Tram stop'],['bus','Bus stop'],['arrow','To another city'],['waypoint','Bend point']];
 const KN=Object.fromEntries(KINDS);
 const DIRS={n:[0,-1],ne:[.7071,-.7071],e:[1,0],se:[.7071,.7071],s:[0,1],sw:[-.7071,.7071],w:[-1,0],nw:[-.7071,-.7071]};
-const FONTS=['Overpass','Figtree','Pixelify Sans','Arial','Georgia','Courier New','Cianan Ur'];
+const FONTS=['Overpass','Figtree','Pixelify Sans','Helvetica','Arial','Georgia','Courier New','Cianan Ur'];
 // fonts that come with SNDT rather than Google Fonts (Cianán Ùr by Feòrag, SIL Open Font License 1.1, requested by Paddy)
 const LOCAL_FONTS={'Cianan Ur':['fonts/cianan-ur.otf','font/otf']},localFontCache=new Map();
 // @font-face rules with the font file inside, so exported SVG/PNG/video show the font without SNDT around
 async function localFontCSS(names){let out='';for(const n of new Set(names)){const lf=LOCAL_FONTS[n];if(!lf)continue;let css=localFontCache.get(n);
     if(css==null){css='';try{const u8=new Uint8Array(await(await fetch(lf[0])).arrayBuffer());let bin='';for(let i=0;i<u8.length;i+=8192)bin+=String.fromCharCode.apply(null,u8.subarray(i,i+8192));
       css=`@font-face{font-family:'${n}';src:url(data:${lf[1]};base64,${btoa(bin)})}`}catch(e){}localFontCache.set(n,css)}out+=css}return out}
-function usedFonts(){return[M.settings.labelFont,...M.texts.map(t=>t.font).filter(Boolean)]}
+// fonts: the built-in list, Google Fonts added to the map by name (settings.gfonts [{name,spec}]) and font files uploaded into the map
+// (M.fonts [{name,data}]). Helvetica isn't free to ship, so it uses the computer's own Helvetica, with Arimo (same letter widths) as the
+// stand-in that also goes into exports. The map has a main font, and can set one for Chinese/Japanese/Korean text (cjkFont) and one for
+// subtitles (subFont)
+const GOOGLE_BUILTIN={'Overpass':'wght@400;500;600;700;800','Figtree':'wght@400;500;600;700','Pixelify Sans':'wght@500;700','Arimo':'wght@400;500;700'},GOOGLE_STATIC=new Set(['Overpass','Figtree','Pixelify Sans']);
+const fontName=n=>String(n||'').replace(/[^\p{L}\p{N} \-]/gu,'').replace(/\s+/g,' ').trim().slice(0,60);
+function allFonts(){return[...FONTS,...(M.settings.gfonts||[]).map(g=>g.name),...(M.fonts||[]).map(x=>x.name)].filter((v,i,a)=>v&&a.indexOf(v)===i)}
+function famStack(n){n=n||'Overpass';return n==='Helvetica'?`'Helvetica Neue', Helvetica, Arimo, Arial, sans-serif`:`'${n}', Overpass, 'Helvetica Neue', Arial, sans-serif`}
+function gSpec(n){if(n==='Helvetica')n='Arimo';if(GOOGLE_BUILTIN[n])return{name:n,spec:GOOGLE_BUILTIN[n]};const g=(M.settings.gfonts||[]).find(x=>x.name===n);return g?{name:n,spec:g.spec}:null}
+const gUrl=(g,text)=>`https://fonts.googleapis.com/css2?family=${encodeURIComponent(g.name).replace(/%20/g,'+')}${g.spec?':'+g.spec:''}&display=swap${text?'&text='+encodeURIComponent(text):''}`;
+function usedFonts(){const S=M.settings;return[...new Set([S.labelFont,S.cjkFont,S.subFont,...M.texts.map(t=>t.font)].filter(Boolean))]}
+// the fonts this map uses, loaded into the editor (a Google stylesheet each, @font-face for uploaded files); text is measured again once they arrive
+const fontLinks=new Set();let upFontKey='';
+function syncFonts(){const again=()=>{try{document.fonts.ready.then(()=>{measureCache.clear();requestRender()})}catch(e){}};
+  for(const n of usedFonts()){const g=gSpec(n);if(!g||GOOGLE_STATIC.has(g.name)||fontLinks.has(g.name))continue;fontLinks.add(g.name);const l=document.createElement('link');l.rel='stylesheet';l.href=gUrl(g);l.onload=again;document.head.appendChild(l)}
+  const k=(M.fonts||[]).map(x=>x.name+':'+String(x.data||'').length).join('|');if(k!==upFontKey){upFontKey=k;let st=document.getElementById('upFonts');if(!st){st=document.createElement('style');st.id='upFonts';document.head.appendChild(st)}
+    st.textContent=(M.fonts||[]).map(x=>`@font-face{font-family:'${x.name}';src:url(${x.data})}`).join('');again()}}
+// @font-face rules with the font files inside, for exports: local and uploaded fonts whole, Google fonts cut down to the letters this map
+// uses (so a Chinese font stays small)
+async function fontCSS(names){let out=await localFontCSS(names);const chars=[...new Set(JSON.stringify(Object.assign({},M,{fonts:null,images:null}))+'0123456789')].join('');
+  for(const n of new Set(names)){const up=(M.fonts||[]).find(x=>x.name===n);if(up){out+=`@font-face{font-family:'${up.name}';src:url(${up.data})}`;continue}
+    const g=gSpec(n);if(!g)continue;try{let css=await(await fetch(gUrl(g,chars))).text();
+      for(const u of [...new Set(css.match(/https:[^)'"]+/g)||[])]){const u8=new Uint8Array(await(await fetch(u)).arrayBuffer());let bin='';for(let i=0;i<u8.length;i+=8192)bin+=String.fromCharCode.apply(null,u8.subarray(i,i+8192));css=css.split(u).join('data:font/woff2;base64,'+btoa(bin))}
+      out+=css}catch(e){}}return out}
 const PORTAL='#6a2fb0';
 const TOOLS=[
  ['select','V','Select and move','<path d="M5 3l13 7.5-5.6 1.6L9.5 18z"/>'],
@@ -1559,14 +1583,14 @@ let measureEl=null;
 const CJK_SRC='[\\u1100-\\u11FF\\u2E80-\\u2FDF\\u3000-\\u303F\\u3040-\\u30FF\\u3100-\\u312F\\u3130-\\u318F\\u31A0-\\u31FF\\u3200-\\u32FF\\u3400-\\u4DBF\\u4E00-\\u9FFF\\uA960-\\uA97F\\uAC00-\\uD7AF\\uF900-\\uFAFF\\uFE30-\\uFE4F\\uFF00-\\uFFEF]|[\\uD840-\\uD87E][\\uDC00-\\uDFFF]',
   CJK_RE=new RegExp(CJK_SRC),CJK_SPLIT=new RegExp('((?:'+CJK_SRC+')+)');
 function cjkK(){const S=M.settings;return S.cjkBig?Math.min(3,Math.max(1,+S.cjkScale||1.25)):1}
-function cjkT(str){str=String(str??'');const k=cjkK();if(k===1||!CJK_RE.test(str))return esc(str);return str.split(CJK_SPLIT).map((p,i)=>!p?'':i%2?`<tspan font-size="${k}em">${esc(p)}</tspan>`:esc(p)).join('')}
+function cjkT(str){str=String(str??'');const k=cjkK(),cf=M.settings.cjkFont;if((k===1&&!cf)||!CJK_RE.test(str))return esc(str);const at=(k!==1?` font-size="${k}em"`:'')+(cf?` font-family="${esc(famStack(cf))}"`:'');return str.split(CJK_SPLIT).map((p,i)=>!p?'':i%2?`<tspan${at}>${esc(p)}</tspan>`:esc(p)).join('')}
 function cjkFs(rows,fs){const k=cjkK();return k>1&&rows.some(r=>CJK_RE.test(r))?fs*k:fs}
-function textW(str,fs,weight,italic){str=String(str??'');const k=cjkK();if(k===1||!CJK_RE.test(str))return textW0(str,fs,weight,italic);let w=0;str.split(CJK_SPLIT).forEach((p,i)=>{if(p)w+=textW0(p,i%2?fs*k:fs,weight,italic)});return w}
-function textW0(str,fs,weight,italic){const S=M.settings,key=[str,fs,weight,italic?1:0,S.labelFont].join('|');let w=measureCache.get(key);if(w!=null)return w;
+function textW(str,fs,weight,italic,fam){str=String(str??'');const k=cjkK(),cf=M.settings.cjkFont;if((k===1&&!cf)||!CJK_RE.test(str))return textW0(str,fs,weight,italic,fam);let w=0;str.split(CJK_SPLIT).forEach((p,i)=>{if(p)w+=textW0(p,i%2?fs*k:fs,weight,italic,i%2&&cf?cf:fam)});return w}
+function textW0(str,fs,weight,italic,fam){const S=M.settings;fam=fam||S.labelFont;const key=[str,fs,weight,italic?1:0,fam].join('|');let w=measureCache.get(key);if(w!=null)return w;
   try{if(!measureEl||!measureEl.isConnected){const host=document.getElementById('measure');measureEl=document.createElementNS('http://www.w3.org/2000/svg','text');host.appendChild(measureEl)}
-    measureEl.setAttribute('font-family',`${S.labelFont}, Overpass, 'Helvetica Neue', Arial, sans-serif`);measureEl.setAttribute('font-size',fs);measureEl.setAttribute('font-weight',weight);measureEl.setAttribute('font-style',italic?'italic':'normal');measureEl.textContent=str;
+    measureEl.setAttribute('font-family',famStack(fam));measureEl.setAttribute('font-size',fs);measureEl.setAttribute('font-weight',weight);measureEl.setAttribute('font-style',italic?'italic':'normal');measureEl.textContent=str;
     w=measureEl.getComputedTextLength();if(!(w>0)&&str)throw 0}
-  catch(e){try{if(!measureCtx)measureCtx=document.createElement('canvas').getContext('2d');measureCtx.font=`${italic?'italic ':''}${weight} ${fs}px "${S.labelFont}", Overpass, Arial, sans-serif`;w=measureCtx.measureText(str).width}catch(x){w=str.length*fs*(weight>=700?.6:.56)}}
+  catch(e){try{if(!measureCtx)measureCtx=document.createElement('canvas').getContext('2d');measureCtx.font=`${italic?'italic ':''}${weight} ${fs}px ${famStack(fam)}`;w=measureCtx.measureText(str).width}catch(x){w=str.length*fs*(weight>=700?.6:.56)}}
   if(italic)w+=fs*.12;
   if(measureCache.size>4000)measureCache.clear();measureCache.set(key,w);return w}
 function contrastOn(hex){const [r,g,b]=hexRgb(hex);return(.299*r+.587*g+.114*b)/255>.6?'#1d2226':'#ffffff'}
@@ -1579,7 +1603,7 @@ function labelBox(s,G,dk,push=0){
   const subRows=s.sub?String(s.sub).split('\n'):[],sfs=Math.round(fs*.8*10)/10,ssz=subRows.map(r=>cjkFs([r],sfs)),sfe=ssz[0]||sfs,sdys=subRows.map((r,i)=>i?ssz[i-1]*.35+ssz[i]*.85:0),sh=subRows.length?ssz.reduce((a,v)=>a+v*1.2,0)+fs*.1:0,H=h+sh;
   const anchor=dir[0]>.3?'start':dir[0]<-.3?'end':'middle';
   const bold=s.bold!=null&&s.bold!=='auto'?s.bold==='bold':(s.kind==='terminus'||s.kind==='hub'||(S.boldInter&&(s.kind==='interchange'||s.kind==='portal')));
-  const tw=Math.max(...rows.map(r=>textW(r,fs,bold?700:500,s.kind==='arrow')),...subRows.map(r=>textW(r,sfs,400,true)),0),icons=(s.icons||[]).filter(k=>ICONS[k]),isz=fs*1.15*(s.iconScale||100)/100,
+  const tw=Math.max(...rows.map(r=>textW(r,fs,bold?700:500,s.kind==='arrow')),...subRows.map(r=>textW(r,sfs,400,true,M.settings.subFont)),0),icons=(s.icons||[]).filter(k=>ICONS[k]),isz=fs*1.15*(s.iconScale||100)/100,
     // facility icons wrap after "icons per row" (0 = one row) and sit at the top, middle or bottom of the name (idea by Curt)
     cols=Math.max(1,Math.min(icons.length,S.iconRow>0?Math.round(S.iconRow):icons.length)),irows=Math.ceil(icons.length/cols)||1,iw=icons.length?cols*(isz+2)-2:0,ih=irows*(isz+2)-2;
   let x=x0,top=dir[1]<-.3?y0-H:dir[1]>.3?y0:y0-H/2,ix=0,iy=0;
@@ -1601,7 +1625,7 @@ function labelSVG(s,G){
   const tc=s.lcolor||(s.lbg?contrastOn(s.lbg):s.closed?mix(S.ink,S.bg,.5):S.ink);
   const halo=S.halo&&!s.lbg?` stroke="${S.bg}" stroke-width="3.5" stroke-linejoin="round" paint-order="stroke"`:'';
   const bg=s.lbg?`<rect x="${f(b.tb.x0)}" y="${f(b.tb.y0)}" width="${f(b.tb.x1-b.tb.x0)}" height="${f(b.tb.y1-b.tb.y0)}" rx="3" fill="${s.lbg}"/>`:'';
-  const sub=b.subRows.length?`<text x="${f(b.x)}" y="${f(b.subY)}" text-anchor="${b.anchor}" font-size="${b.sfs}" font-weight="400" font-style="italic" fill="${s.lbg?tc:mix(S.ink,S.bg,.45)}"${s.lbg?' fill-opacity=".85"':''}${halo}>${b.subRows.map((r,i)=>`<tspan x="${f(b.x)}" dy="${f(b.sdys[i])}">${cjkT(r)||' '}</tspan>`).join('')}</text>`:'';
+  const sub=b.subRows.length?`<text x="${f(b.x)}" y="${f(b.subY)}" text-anchor="${b.anchor}"${S.subFont?` font-family="${esc(famStack(S.subFont))}"`:''} font-size="${b.sfs}" font-weight="400" font-style="italic" fill="${s.lbg?tc:mix(S.ink,S.bg,.45)}"${s.lbg?' fill-opacity=".85"':''}${halo}>${b.subRows.map((r,i)=>`<tspan x="${f(b.x)}" dy="${f(b.sdys[i])}">${cjkT(r)||' '}</tspan>`).join('')}</text>`:'';
   return `<g data-kind="label" data-id="${s.id}"${tr}>${bg}<text x="${f(b.x)}" y="${f(b.y)}" text-anchor="${b.anchor}" font-size="${b.fs}" font-weight="${b.bold?700:500}"${s.kind==='arrow'?' font-style="italic"':''} fill="${tc}"${halo}>${b.rows.map((r,i)=>`<tspan x="${f(b.x)}" dy="${f(b.dys[i])}">${cjkT(r)||' '}</tspan>`).join('')}</text>${sub}${b.icons.map((k,i)=>iconSVG(k,b.ix+i%b.cols*(b.isz+2),b.iy+Math.floor(i/b.cols)*(b.isz+2),b.isz)).join('')}</g>`;
 }
 const ovl=(a,b)=>a.x0<b.x1&&b.x0<a.x1&&a.y0<b.y1&&b.y0<a.y1;
@@ -1640,7 +1664,7 @@ function textSVG(t){
   const S=M.settings,fs=t.size||16,rows=String(t.text||'').split('\n'),lh=cjkFs(rows,fs)*1.2;
   const tr=t.rot?` transform="rotate(${t.rot} ${t.x} ${t.y})"`:'';
   const anchor=t.align==='center'?'middle':t.align==='right'?'end':'start';
-  return `<text data-kind="text" data-id="${t.id}" x="${t.x}" y="${t.y}" font-size="${fs}" font-weight="${t.bold?800:500}"${t.italic?' font-style="italic"':''} fill="${t.color||S.ink}" text-anchor="${anchor}"${t.font?` font-family="${esc(t.font)}"`:''}${tr}>${rows.map((r,i)=>`<tspan x="${t.x}" dy="${i?f(lh):0}">${cjkT(r)||' '}</tspan>`).join('')}</text>`;
+  return `<text data-kind="text" data-id="${t.id}" x="${t.x}" y="${t.y}" font-size="${fs}" font-weight="${t.bold?800:500}"${t.italic?' font-style="italic"':''} fill="${t.color||S.ink}" text-anchor="${anchor}"${t.font?` font-family="${esc(famStack(t.font))}"`:''}${tr}>${rows.map((r,i)=>`<tspan x="${t.x}" dy="${i?f(lh):0}">${cjkT(r)||' '}</tspan>`).join('')}</text>`;
 }
 // whether a point is inside an area (its free shape, its rectangles, or any part joined to it)
 function regionHas(r,x,y){const inPoly=P=>{let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const [xi,yi]=P[i],[xj,yj]=P[j];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)c=!c}return c},
@@ -1842,7 +1866,7 @@ function mapSVG(editor){
   // (while parts are picked in Manual, stations off the lines being edited fade with their lines)
   const onKeep=keep&&new Set(M.lines.filter(L=>keep.has(L.id)).flatMap(L=>L.stops)),dim=(s,h)=>h&&onKeep&&!onKeep.has(s.id)?`<g opacity=".15">${h}</g>`:h;
   o+='<g>'+M.stations.map(s=>dim(s,stationSVG(s,G,editor))).join('')+'</g>';
-  o+=`<g font-family="${esc(S.labelFont)}, Overpass, 'Helvetica Neue', Arial, sans-serif">`+M.stations.map(s=>dim(s,labelSVG(s,G))).join('')+M.texts.map(textSVG).join('')+legendSVG()+'</g>'+'<g>'+imagesSVG('top',editor)+'</g>';
+  o+=`<g font-family="${esc(famStack(S.labelFont))}">`+M.stations.map(s=>dim(s,labelSVG(s,G))).join('')+M.texts.map(textSVG).join('')+legendSVG()+'</g>'+'<g>'+imagesSVG('top',editor)+'</g>';
   return{o,G};
 }
 let selColor='#e8590c';
@@ -1994,7 +2018,7 @@ function natureAt(w){const A=M.nature||[];for(let i=A.length-1;i>=0;i--){const P
 function finishNature(){const d=natureDraft;if(!d)return;natureDraft=null;if(d.pts.length<3)M.nature=M.nature.filter(x=>x!==d);else sel=[{t:'nature',id:d.id}];updHint();changed()}
 function cancelNature(){if(!natureDraft)return;natureDraft=null;if(undoS.length){M=liveKeep(JSON.parse(undoS.pop()),undoQ.pop());updUndo()}updHint();render();renderInspector()}
 function renderWater(){const S=M.settings,key=JSON.stringify([M.water,S.water,S.shapeR]);if(key===waterKey)return;waterKey=key;$('#waterL').innerHTML=waterSVG()}
-function render(){if(drawTip&&drawLine!==drawTip.line)dropTip(true);draftClass();{const v=manualLay()?'manual':baseLay();[['lyLines','lines'],['lyStations','stations'],['lyManual','manual']].forEach(([id,k])=>{const el=document.getElementById(id);if(el)el.setAttribute('aria-pressed',String(v===k))})}{const fr=freePlace(),a=document.getElementById('plGrid'),b=document.getElementById('plFree');if(a){a.setAttribute('aria-pressed',String(!fr));b.setAttribute('aria-pressed',String(fr))}}document.body.classList.toggle('has-sel',sel.length>0);sheetSync();
+function render(){syncFonts();if(drawTip&&drawLine!==drawTip.line)dropTip(true);draftClass();{const v=manualLay()?'manual':baseLay();[['lyLines','lines'],['lyStations','stations'],['lyManual','manual']].forEach(([id,k])=>{const el=document.getElementById(id);if(el)el.setAttribute('aria-pressed',String(v===k))})}{const fr=freePlace(),a=document.getElementById('plGrid'),b=document.getElementById('plFree');if(a){a.setAttribute('aria-pressed',String(!fr));b.setAttribute('aria-pressed',String(fr))}}document.body.classList.toggle('has-sel',sel.length>0);sheetSync();
   const S=M.settings;ensureLayers();
   selColor=getComputedStyle(document.documentElement).getPropertyValue('--sel').trim()||'#e8590c';
   const {o,G}=mapSVG(true);lastG=G;
@@ -2096,7 +2120,12 @@ function inspMap(){
    ${chk('settings','s','labelAvoid',S.labelAvoid!==false,'Keep station names off lines')}
    ${chk('settings','s','cjkBig',S.cjkBig,'Bigger Chinese, Japanese and Korean text')}${S.cjkBig?fld('CJK text size, times the normal size',inp('settings','s','cjkScale',S.cjkScale??1.25,'num','min="1" max="3" step="0.05"')):''}
    <div class="adv-only">${fld('Label size',inp('settings','s','labelSize',S.labelSize,'num','min="6" max="60"'))}
-   ${fld('Label font',selectF('settings','s','labelFont',S.labelFont,FONTS.map(x=>[x,x])))}
+   ${fld(tr('Main font'),selectF('settings','s','labelFont',S.labelFont,allFonts().map(x=>[x,x])))}
+   <div class="grid2">${fld(tr('CJK text'),selectF('settings','s','cjkFont',S.cjkFont||'',[['',tr('Same as main')],...allFonts().map(x=>[x,x])]))}${fld(tr('Subtitles'),selectF('settings','s','subFont',S.subFont||'',[['',tr('Same as main')],...allFonts().map(x=>[x,x])]))}</div>
+   <div class="fld"><span>${tr('Add a font')}</span><div style="display:flex;gap:6px"><input id="gfontIn" type="text" placeholder="${esc(tr('Google Fonts name, e.g. Noto Serif HK'))}" style="flex:1;min-width:0"><button class="btn" data-act="gfont-add">${tr('Add')}</button></div></div>
+   <div class="btns"><button class="btn" data-act="font-upload">${tr('Upload a font file')}</button></div>
+   ${[...(S.gfonts||[]).map(g=>[g.name,'Google Fonts']),...(M.fonts||[]).map(x=>[x.name,tr('uploaded')])].map(([n,k])=>`<div style="display:flex;align-items:center;gap:8px;margin:6px 0"><span data-nt style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(n)} <span style="color:var(--muted)">· ${esc(k)}</span></span><button class="btn" style="height:26px;padding:0 8px" data-act="font-del:${esc(n)}" aria-label="${esc(tr('Remove'))} ${esc(n)}">×</button></div>`).join('')}
+   <p class="sub">${tr('Any font from fonts.google.com can be added by its name. An uploaded font is saved inside this map, so it travels with the map when you share or export it: only upload fonts whose licence allows that.')}</p>
    ${chk('settings','s','boldInter',S.boldInter,'Bold names at interchanges')}</div>
    <div class="grid2">${fld('Facility icons',selectF('settings','s','iconAlign',S.iconAlign||'top',[['top','Top'],['middle','Centre'],['bottom','Bottom']]))}${fld('Icons per row (0 = all)',inp('settings','s','iconRow',S.iconRow||0,'num','min="0" max="20"'))}</div></div>
   <div class="pane"><h3>Grid</h3>
@@ -2286,7 +2315,7 @@ function inspNature(a){if(!a)return inspMap();return `<div class="pane"><h3>Natu
   <div class="btns"><button class="btn" data-act="nz:up">Bring forward</button><button class="btn" data-act="nz:down">Send back</button><button class="btn warn" data-act="del-sel" data-confirm="1">Delete area</button></div></div>`}
 function inspText(t){if(!t)return inspMap();return `<div class="pane"><h3>Text</h3>${fld('Text',area('text',t.id,'text',t.text,'rows="3"'))}
   <div class="grid2">${fld('Size',inp('text',t.id,'size',t.size||16,'num','min="6"'))}${fld('Colour',inp('text',t.id,'color',t.color||M.settings.ink,'color'))}</div>
-  ${fld('Font',selectF('text',t.id,'font',t.font||'',[['','Same as labels'],...FONTS.map(x=>[x,x])]))}
+  ${fld('Font',selectF('text',t.id,'font',t.font||'',[['','Same as labels'],...allFonts().map(x=>[x,x])]))}
   <div class="grid2">${chk('text',t.id,'bold',!!t.bold,'Bold')}${chk('text',t.id,'italic',!!t.italic,'Italic')}</div>
   <div class="grid2 adv-only">${fld('Rotation °',inp('text',t.id,'rot',t.rot||0,'num','step="15"'))}${fld('Align',selectF('text',t.id,'align',t.align||'left',[['left','Left'],['center','Centre'],['right','Right']]))}${fld('X',inp('text',t.id,'x',t.x,'num'))}${fld('Y',inp('text',t.id,'y',t.y,'num'))}</div>
   <div class="btns"><button class="btn" data-act="dup">Duplicate</button><button class="btn warn" data-act="del-sel" data-confirm="1">Delete text</button></div></div>`}
@@ -2554,6 +2583,11 @@ function act(name,arg,el){
     case 'ab-mode':abMode=arg;requestOverlay();break;
     case 'autobuild':autoBuild=arg==='on';lsSet('sndt:autobuild',autoBuild?'1':'0');renderInspector();requestOverlay();break;
     case 'oneway':if(curL&&one.seg){pushUndo();curL.segs=curL.segs||{};const o=curL.segs[one.seg]||(curL.segs[one.seg]={});if(arg)o.oneway=arg;else delete o.oneway;if(!Object.keys(o).length)delete curL.segs[one.seg];changed()}break;
+    case 'gfont-add':{const el=document.getElementById('gfontIn'),n=fontName(el&&el.value);if(!n)break;if(allFonts().includes(n)){toast(tr('That font is already in the list.'));break}
+      (async()=>{let spec=null;for(const sp of ['wght@400;500;700;800','wght@400;700','']){try{const r=await fetch(gUrl({name:n,spec:sp}));if(r.ok){spec=sp;break}}catch(e){}}
+        if(spec==null){toast(tr('Google Fonts has no font called')+' '+n);return}pushUndo();M.settings.gfonts=(M.settings.gfonts||[]).concat([{name:n,spec}]);changed();toast(tr('Added')+' '+n)})();break}
+    case 'font-upload':$('#fontIn').click();break;
+    case 'font-del':{const n=arg;pushUndo();M.settings.gfonts=(M.settings.gfonts||[]).filter(g=>g.name!==n);M.fonts=(M.fonts||[]).filter(x=>x.name!==n);const S=M.settings;if(S.labelFont===n)S.labelFont='Overpass';if(S.cjkFont===n)delete S.cjkFont;if(S.subFont===n)delete S.subFont;M.texts.forEach(t=>{if(t.font===n)delete t.font});changed();break}
     case 'lanes-drop':if(one&&one.seg&&M.segs[one.seg]&&M.segs[one.seg].lanes){pushUndo();delete M.segs[one.seg].lanes;changed()}break;
     case 'lanes-auto':if(one&&one.seg&&manualLay()){pushUndo();freezeLanes([one.seg]);changed()}break;
     case 'sreset':if(curL&&one.seg&&curL.segs&&curL.segs[one.seg]){pushUndo();delete curL.segs[one.seg].color;delete curL.segs[one.seg].style;changed()}break;
@@ -2952,6 +2986,14 @@ function mergeLines(ids){const Ls=ids.map(lnOf).filter(L=>L&&L.stops.length>1);i
     for(const k of Object.keys(o)){let v=o[k];if(typeof v==='string')o[k]=swap(v);else if(v&&typeof v==='object')walk(v);const nk=swap(k);if(nk!==k){if(!(nk in o))o[nk]=o[k];delete o[k]}}};
   for(const k of Object.keys(M))if(k!=='lines'&&M[k]&&typeof M[k]==='object')walk(M[k]);walk(M.lines);
   sel=[{t:'line',id:keep.id}];changed();toast(tr('Merged into')+' '+keep.name)}
+// an uploaded font file goes into the map (as data), checked first by loading it
+document.getElementById('fontIn').addEventListener('change',async e=>{const fl=e.target.files&&e.target.files[0];e.target.value='';if(!fl)return;
+  if(fl.size>8e6){toast(tr('That font file is over 8 MB, too big to keep inside a map.'));return}
+  const n=fontName(fl.name.replace(/\.[^.]+$/,''))||'Uploaded font';if(allFonts().includes(n)){toast(tr('That font is already in the list.'));return}
+  const buf=await fl.arrayBuffer();try{const ff=new FontFace(n,buf);await ff.load()}catch(err){toast(tr('That file isn’t a font SNDT can read.'));return}
+  const u8=new Uint8Array(buf);let bin='';for(let i=0;i<u8.length;i+=8192)bin+=String.fromCharCode.apply(null,u8.subarray(i,i+8192));
+  const ext=(fl.name.match(/\.(\w+)$/)||[])[1]||'ttf',type={otf:'font/otf',woff:'font/woff',woff2:'font/woff2'}[ext.toLowerCase()]||'font/ttf';
+  pushUndo();M.fonts=(M.fonts||[]).concat([{name:n,data:`data:${type};base64,${btoa(bin)}`}]);changed();toast(tr('Added')+' '+n)});
 function insertTrackOnly(key,s){
   const [a,b]=key.split('~');M.stations.push(s);
   M.lines.forEach(L=>{for(let i=L.stops.length-1;i>=0;i--){const n=L.stops.length,j=(i+1)%n;if(j===0&&!(L.loop&&n>2))continue;const x=L.stops[i],y=L.stops[j];if((x===a&&y===b)||(x===b&&y===a))L.stops.splice(i+1,0,s.id)}});
@@ -3231,8 +3273,8 @@ function ilvfSVG(lids,mode,font){const S=M.settings,fs=Math.max(11,S.labelSize||
       else o+=`<text x="${f(x)}" y="${f(b?ty-fs2*1.3:ty)}" text-anchor="middle" font-size="${fs}" font-weight="${wt}" fill="${dim}">${esc(a)}</text>`+(b?`<text x="${f(x)}" y="${f(ty)}" text-anchor="middle" font-size="${f(fs2)}" font-style="italic" fill="${mix(dim,S.bg,.3)}">${esc(b)}</text>`:'')});
     W=Math.max(W,angled?Math.max(...P.map((st,i)=>xs[i]+2+aOf(st)*Math.cos(ang)+fs*Math.sin(ang)))+pad:xs[xs.length-1]+gap/2+pad);y=low+pad+8}
   const H=Math.ceil(y),w=Math.ceil(Math.max(W,320)),fam=esc(S.labelFont||'Overpass');
-  return{svg:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${H}" width="${w}" height="${H}">${font||''}<rect width="${w}" height="${H}" fill="${S.bg}"/><g font-family="${fam}, Overpass, 'Helvetica Neue', Arial, sans-serif">${o}</g></svg>`,w,h:H}}
-async function ilvfExport(kind){const S=M.settings,base=fileBase()+'-strip',lfc=await localFontCSS([S.labelFont]),lst=lfc?`<style>${lfc}</style>`:'';
+  return{svg:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${H}" width="${w}" height="${H}">${font||''}<rect width="${w}" height="${H}" fill="${S.bg}"/><g font-family="${esc(famStack(S.labelFont))}">${o}</g></svg>`,w,h:H}}
+async function ilvfExport(kind){const S=M.settings,base=fileBase()+'-strip',lfc=await fontCSS(usedFonts()),lst=lfc?`<style>${lfc}</style>`:'';
   if(kind==='svg'){const fam=lst+['Overpass','Figtree','Pixelify Sans'].includes(S.labelFont)?`<style>@import url('https://fonts.googleapis.com/css2?family=${S.labelFont.replace(/ /g,'+')}:wght@400;600;700;800&display=swap');</style>`:'',{svg}=ilvfSVG(ilvfLines,ilvfNames,fam);offer(base+'.svg',svg,()=>showText('SVG code',svg));return}
   const {svg,w,h}=ilvfSVG(ilvfLines,ilvfNames,lst),sc=2,img=new Image();
   img.onload=()=>{const c=document.createElement('canvas');c.width=w*sc;c.height=h*sc;const x=c.getContext('2d');x.scale(sc,sc);x.drawImage(img,0,0);
@@ -3404,7 +3446,7 @@ async function offer(filename,data,fallback){
 async function doExport(kind,pngSc){
   if(kind==='json'){const t=JSON.stringify(M,null,1);offer(fileBase()+'.json',t,()=>showText('JSON backup',t));return}
   if(kind==='copy'){const t=JSON.stringify(M);showText('Map JSON',t);return}
-  const lfc=await localFontCSS(usedFonts());
+  const lfc=await fontCSS(usedFonts());
   if(kind==='svg'){const {svg:s}=exportSVG(false,lfc);offer(fileBase()+'.svg',s,()=>showText('SVG code',s));return}
   const scale=kind==='png4'?4:kind==='png'&&pngSc>0?pngSc:2,{svg:s,w,h}=exportSVG(true,lfc);
   const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=w*scale;c.height=h*scale;const x=c.getContext('2d');x.scale(scale,scale);x.drawImage(img,0,0);
@@ -3715,7 +3757,7 @@ function tlEndLegendOn(){const S=TLS();return !!S.endLegend&&!!tlCache&&tlCache.
 function tlBoardList(T){const out=tlBoardsAt(T);if(tlEndLegendOn()&&T>tlCache.total){const S=TLS(),a=Math.min(1,(T-tlCache.total-.4)/1);if(a>0)out.push({legend:true,corner:S.legendCorner||S.boardCorner||'tl',a})}return out}
 function tlBoardFor(x,H,W){return x.legend?tlLegendBoardSVG(H,W||H*16/9):tlBoardSVG(x.L,H,W,x.rng)}
 // the map legend as an end-of-video board, same look as the line boards
-function tlLegendBoardSVG(H,W){const S=M.settings,lg=S.legend,lbs=TLS().lineBoards||{},ink=S.ink,ff=`${esc(S.labelFont)}, Overpass, 'Helvetica Neue', Arial, sans-serif`;
+function tlLegendBoardSVG(H,W){const S=M.settings,lg=S.legend,lbs=TLS().lineBoards||{},ink=S.ink,ff=esc(famStack(S.labelFont));
   const ls=linesAZ(M.lines).filter(l=>!l.hidden&&!l.noLegend&&l.stops.length>1),ms=[...new Set(ls.map(modeKey))],grouped=ms.length>1;
   const rows=grouped?Object.keys(MODES).filter(k=>ms.includes(k)).flatMap(k=>[{h:tr(MODES[k].label)}].concat(ls.filter(l=>modeKey(l)===k).map(l=>({l})))):ls.map(l=>({l}));
   rows.push(...legendExtraRows(lg,ls,grouped));
@@ -3739,7 +3781,7 @@ function tlLegendBoardSVG(H,W){const S=M.settings,lg=S.legend,lbs=TLS().lineBoar
   const m=2*Math.round(24*H/720),k0=H/720*1.15*Math.min(2.5,Math.max(.4,+TLS().legendScale||1)),b=build(k0),fit=Math.min(1,(H-m)/b.h,(W-m)/b.w);return fit<1?build(k0*fit):b}
 // the board itself, in screen pixels with its top-left at 0,0
 function tlBoardSVG(L,H,W,rng){W=W||H*16/9;const m=2*Math.round(24*H/720),k0=H/720*Math.min(2.5,Math.max(.4,+TLS().boardScale||1)),b=tlBoardSVG0(L,H,k0,rng),fit=Math.min(1,(H-m)/b.h,(W-m)/b.w);return fit<1?tlBoardSVG0(L,H,k0*fit,rng):b}
-function tlBoardSVG0(L,H,k,rng){const S=M.settings,lb=(TLS().lineBoards||{})[L.id]||{},ink=S.ink,ff=`${esc(S.labelFont)}, Overpass, 'Helvetica Neue', Arial, sans-serif`;
+function tlBoardSVG0(L,H,k,rng){const S=M.settings,lb=(TLS().lineBoards||{})[L.id]||{},ink=S.ink,ff=esc(famStack(S.labelFont));
   const part=rng&&rng!=='loop'?L.stops.slice(+rng.split(':')[0],+rng.split(':')[1]+1):L.stops,stops=part.map(stOf).filter(x=>x&&x.kind!=='waypoint'),nm=x=>String(x.name||'').replace(/\n/g,' ');
   const dest=stops.length?rng==='loop'?nm(stops[0])+' ↻':stops[0]===stops[stops.length-1]?nm(stops[0])+' ↻':nm(stops[0])+' – '+nm(stops[stops.length-1]):'';
   const notes=String(lb.notes||'').split('\n').map(x=>x.trim()).filter(Boolean),n2=String(lb.name2||'').trim();
@@ -3790,7 +3832,7 @@ function tlScene(T,missing,live){const c=tlCache,G=c.G,S=M.settings;let lines=''
   if(missing){const cov=tlCoverage();for(const e of cov.edges){const P=tlEdgePts(G,e),L=lnOf(e.line);if(P&&L)miss+=`<path d="${dOf(P)}" fill="none" stroke="${L.color}" stroke-width="${lw(L)}" stroke-opacity=".28" stroke-dasharray="5 5"/>`}
     for(const id of cov.nodes){const st=stOf(id);if(st)miss+=`<circle cx="${st.x}" cy="${st.y}" r="7" fill="none" stroke="${S.ink}" stroke-opacity=".4" stroke-dasharray="2 2"/>`}}
   const legend=c.segs.length&&T>c.total&&!tlEndLegendOn()?`<g opacity="${f(Math.min(1,(T-c.total)/1.5))}">${legendSVG()}</g>`:'';
-  return '<g>'+natureSVG()+waterSVG()+'</g><g>'+M.regions.map(regionSVG).join('')+imagesSVG('bottom',live)+'</g><g>'+miss+lines+'</g><g>'+nodes+'</g>'+`<g font-family="${esc(S.labelFont)}, Overpass, 'Helvetica Neue', Arial, sans-serif">`+labels+M.texts.map(textSVG).join('')+legend+'</g><g>'+imagesSVG('top',live)+'</g>'}
+  return '<g>'+natureSVG()+waterSVG()+'</g><g>'+M.regions.map(regionSVG).join('')+imagesSVG('bottom',live)+'</g><g>'+miss+lines+'</g><g>'+nodes+'</g>'+`<g font-family="${esc(famStack(S.labelFont))}">`+labels+M.texts.map(textSVG).join('')+legend+'</g><g>'+imagesSVG('top',live)+'</g>'}
 function tlFrameInner(T,W,H,missing,live){const cam=tlCam(T,W,H);return `<rect width="${W}" height="${H}" fill="${M.settings.bg}"/><g transform="translate(${f(W/2-cam.x*cam.k)} ${f(H/2-cam.y*cam.k)}) scale(${f(cam.k*10000)/10000})">${tlScene(T,missing,live)}</g>`+
   tlBoardList(T).map(x=>{const b=tlBoardFor(x,H,W),q=tlBoardPos(b,x.corner,W,H);return `<g transform="translate(${q.x} ${q.y})" opacity="${f(x.a)}">${b.svg}</g>`}).join('')}
 function renderTimeline(){if(section!=='timeline')return;tlPrepare();renderTlTrack();renderTlSide();tlDraw()}
@@ -3867,17 +3909,13 @@ function setSection(sc){section=sc==='timeline'?'timeline':'map';document.body.c
   $('#secMap').setAttribute('aria-pressed',section==='map');$('#secTl').setAttribute('aria-pressed',section==='timeline');closePop();
   if(section==='timeline'){if(drawLine)finishDraw();renderTimeline()}else{tlPlay(false);render();requestAnimationFrame(()=>render())}}
 function tlLoadMuxer(){if(window.WebMMuxer)return Promise.resolve();return new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/webm-muxer@5.1.4/build/webm-muxer.js';sc.onload=()=>res();sc.onerror=()=>rej(new Error('muxer'));document.head.appendChild(sc)})}
-async function tlFontCSS(){if(tlFontCache!=null)return tlFontCache;tlFontCache='';const fam=M.settings.labelFont,loc=await localFontCSS(usedFonts());if(!['Overpass','Figtree','Pixelify Sans'].includes(fam))return tlFontCache=loc;
-  try{const css=await(await fetch(`https://fonts.googleapis.com/css2?family=${fam.replace(/ /g,'+')}:wght@400;500;600;700;800&display=swap`)).text(),seen=new Map();let out='';
-    for(const blk of css.split('@font-face').slice(1)){if(!/U\+0000-00FF/.test(blk))continue;const m=blk.match(/url\((https:[^)]+)\)/);if(!m)continue;let data=seen.get(m[1]);
-      if(!data){const u8=new Uint8Array(await(await fetch(m[1])).arrayBuffer());let bin='';for(let i=0;i<u8.length;i+=8192)bin+=String.fromCharCode.apply(null,u8.subarray(i,i+8192));data='data:font/woff2;base64,'+btoa(bin);seen.set(m[1],data)}
-      out+='@font-face'+blk.replace(m[1],data)}tlFontCache=out+loc}catch(e){tlFontCache=loc}return tlFontCache}
+async function tlFontCSS(){if(tlFontCache!=null)return tlFontCache;tlFontCache='';try{tlFontCache=await fontCSS(usedFonts())}catch(e){}return tlFontCache}
 function tlImg(str){return new Promise((res,rej)=>{const img=new Image(),u=URL.createObjectURL(new Blob([str],{type:'image/svg+xml'}));img.onload=()=>{URL.revokeObjectURL(u);res(img)};img.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('frame'))};img.src=u})}
 function tlParseStrokes(html){const out=[],re=/<path ([^>]*?)\/>/g;let m;while((m=re.exec(html))){const a={};m[1].replace(/([\w-]+)="([^"]*)"/g,(_,k,v)=>{a[k]=v});if(!a.d||!a.stroke)continue;
   out.push({p:new Path2D(a.d),op:a.opacity!=null?+a.opacity:1,col:a.stroke,w:+a['stroke-width']||1,cap:a['stroke-linecap']||'butt',join:a['stroke-linejoin']||'miter',dash:a['stroke-dasharray']?a['stroke-dasharray'].split(/[\s,]+/).map(Number).filter(n=>!isNaN(n)):[]})}return out}
 function tlStrokeCanvas(ctx,list,mul=1){if(typeof list==='string')list=tlParseStrokes(list);for(const s of list){ctx.globalAlpha=s.op*mul;ctx.strokeStyle=s.col;ctx.lineWidth=s.w;ctx.lineCap=s.cap;ctx.lineJoin=s.join;ctx.setLineDash(s.dash);ctx.stroke(s.p)}ctx.globalAlpha=1;ctx.setLineDash([])}
 // Export renderer: SVG is rasterised once (background, finished lines, a sprite atlas for stations/labels/texts), so each frame is only bitmap copies plus the line being drawn.
-async function tlFastRenderer(W,H,font){const c=tlCache,G=c.G,S=M.settings,b=c.bounds,ff=`${esc(S.labelFont)}, Overpass, 'Helvetica Neue', Arial, sans-serif`;
+async function tlFastRenderer(W,H,font){const c=tlCache,G=c.G,S=M.settings,b=c.bounds,ff=esc(famStack(S.labelFont));
   const k1=tlCam(0,W,H).k,k2=tlCam(tlTotal(),W,H).k,kmax=Math.max(k1,k2),kmin=Math.min(k1,k2);
   const raster=async(inner,vx,vy,vw,vh,pw,ph,withFont)=>{const cv=document.createElement('canvas');cv.width=pw;cv.height=ph;if(!inner)return cv;
     const img=await tlImg(`<svg xmlns="http://www.w3.org/2000/svg" width="${pw}" height="${ph}" viewBox="${vx} ${vy} ${vw} ${vh}" preserveAspectRatio="none">${withFont&&font?'<style>'+font+'</style>':''}${inner}</svg>`);try{await img.decode()}catch(e){}cv.getContext('2d').drawImage(img,0,0,pw,ph);return cv};
