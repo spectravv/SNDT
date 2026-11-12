@@ -167,3 +167,46 @@ revoke execute on function public.strip_identity_profile() from public, anon, au
 revoke execute on function public.delete_me() from public, anon;
 grant execute on function public.delete_me() to authenticated;
 alter function public.strip_profile_data(jsonb) set search_path = '';
+
+-- migration 'accounts_share' (share links and gallery): shared maps come with the nickname and visibility, the gallery gives each map's
+-- link and last change, reporting goes by link (signed in, once per person and map, not your own maps), and you can see your own
+-- gallery pictures (needed to replace them)
+drop function public.get_shared_map(text);
+create function public.get_shared_map(slug text)
+returns table (name text, data text, updated_at timestamptz, nickname text, visibility text)
+language sql security definer set search_path = public stable as $$
+  select m.name, m.data, m.updated_at, p.nickname, m.visibility from public.maps m left join public.profiles p on p.id = m.owner
+  where m.share_slug = slug and m.visibility in ('link','public')
+$$;
+grant execute on function public.get_shared_map(text) to anon, authenticated;
+drop function public.list_gallery(int, timestamptz);
+create function public.list_gallery(lim int default 60, before timestamptz default null)
+returns table (name text, nickname text, thumb_path text, published_at timestamptz, updated_at timestamptz, share_slug text)
+language sql security definer set search_path = public stable as $$
+  select m.name, coalesce(p.nickname, 'Anonymous'), m.thumb_path, m.published_at, m.updated_at, m.share_slug
+  from public.maps m left join public.profiles p on p.id = m.owner
+  where m.visibility = 'public' and m.share_slug is not null and (before is null or m.published_at < before)
+  order by m.published_at desc limit least(lim, 100)
+$$;
+grant execute on function public.list_gallery(int, timestamptz) to anon, authenticated;
+alter table public.map_reports add constraint map_reports_once unique (map_id, reporter);
+create function public.report_map(slug text, reason text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'sign_in_needed'; end if;
+  insert into public.map_reports(map_id, reporter, reason)
+    select m.id, auth.uid(), left(btrim(reason), 1000) from public.maps m
+    where m.share_slug = slug and m.visibility in ('link','public') and m.owner <> auth.uid()
+  on conflict (map_id, reporter) do update set reason = excluded.reason, created_at = now(), status = 'open';
+end $$;
+revoke execute on function public.report_map(text, text) from public, anon;
+grant execute on function public.report_map(text, text) to authenticated;
+create policy thumbs_read_own on storage.objects for select to authenticated
+  using (bucket_id = 'thumbs' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- MODERATION (run in the Supabase SQL editor):
+--   open reports:   select r.created_at, r.reason, m.name, m.share_slug from map_reports r join maps m on m.id = r.map_id where r.status = 'open' order by r.created_at desc;
+--   take a map down (keeps it for its owner, just not shared):
+--                   update maps set visibility = 'private', share_slug = null where share_slug = '<slug>';
+--                   update map_reports set status = 'removed' where map_id = (select id from maps where name = '<name>' limit 1);
+--   dismiss:        update map_reports set status = 'dismissed' where id = <report id>;
