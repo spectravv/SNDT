@@ -178,12 +178,14 @@ td:first-child{white-space:nowrap;font-weight:600}
   <h3>Header</h3>
   <ul>
     <li><b>Maps menu</b> (the map's name): new map, duplicate, switch, import. See <a href="#maps">Maps and saving</a>.</li>
+    <li><b>Share</b> and <b>Gallery</b> (next to the map name): share this map by link or in the gallery, and browse maps other people shared. See <a href="#sharing">Sharing and the gallery</a>.</li>
     <li><b>Search bar</b>: finds any tool, action or setting. See <a href="#search">Search</a>.</li>
     <li><b>Support SNDT</b> (heart) and <b>Discord</b>: the Ko-fi page and the SNDT Discord server.</li>
     <li><b>Live room</b>: edit a map together. See <a href="#live">Live rooms</a>.</li>
+    <li><b>Account</b>: sign in to keep your maps in the cloud. See <a href="#accounts">Accounts and cloud saving</a>.</li>
     <li><b>Help</b>: the tutorial and this handbook.</li>
     <li><b>Language</b> (11 languages) and <b>theme</b> (auto, light, dark).</li>
-    <li><b>Grid</b> / <b>Free</b>: snap stations to the grid or place them freely (see <a href="#map-settings">Grid</a>). <b>Lines</b> / <b>Stations</b>: the lane layout (see <a href="#layout">Lane layout</a>).</li>
+    <li><b>Grid</b> / <b>Free</b>: snap stations to the grid or place them freely (see <a href="#map-settings">Grid</a>). <b>Lines</b> / <b>Stations</b> / <b>Manual</b>: the lane layout (see <a href="#layout">Lane layout</a>).</li>
     <li><b>Undo</b> and <b>redo</b>, <b>Simple</b> / <b>Advanced</b>, <b>Map</b> / <b>Timeline</b>, and <b>Export</b>.</li>
   </ul>
   <h3>Around the map</h3>
@@ -230,6 +232,9 @@ td:first-child{white-space:nowrap;font-weight:600}
     <li><b>Type</b>: Station, Local stop (a small dot), Interchange, Hub (double ring), Terminus, Rail station, HSR station, Tram stop (a tick), Bus stop, To another city (an arrow off the end of the line) or Bend point (no marker, the line just turns there).</li>
     <li><b>Shape</b> (Station, Interchange and Terminus): <i>Same as map</i>, or one of Circles, Ticks (London style), Squares, Rounded squares, Diamonds and Bars. A station on several lines side by side stretches its shape across all of them. The map-wide shape is in Map → Stations.</li>
     <li><b>Label position</b>: the compass puts the name on one of eight sides, × hides it, and <i>Auto: find free space</i> picks the side with the most room. A side you pick stays on that side; if it would sit on a line it only moves further out.</li>
+    <li><b>Text alignment</b> (next to Label position): Auto, Left, Centre or Right lines up the rows of the name (both name lines and the sublabel) inside the label. Auto aligns them towards the station.</li>
+    <li><b>Moving a label</b>: drag the name on the map to put it exactly where you want; drag the station's mark to move the station. The label stays on the side it started on and snaps to the grid (hold <kbd>Alt</kbd> for finer steps, or use Free placement).</li>
+    <li><b>Mark length</b> and <b>Mark thickness</b> (when the station has a dot, pill or shape mark): size the mark yourself, or drag the square handles around it on the map; both sides move, so it stays centred and turned along its lines. Empty means the automatic size; <span class="ui">Reset mark size</span> goes back to it.</li>
     <li><b>Facilities</b>: Airport, Ferry, Cable car, Bus, Rail, Metro, Tram, Parking and Landmark icons next to the name.</li>
     <li><b>Custom icon</b>: see <a href="#icons">Custom icons</a>.</li>
     <li><b>Not in service</b>: draws a cross over the station and greys its name.</li>
@@ -248,7 +253,7 @@ td:first-child{white-space:nowrap;font-weight:600}
   <h3>Fine control <span class="tag a">Advanced</span></h3>
   <p><b>Marker size</b> overrides the map's station size for this station. Below the sections: <span class="ui">Duplicate</span>, <span class="ui">Remove from lines</span> and <span class="ui">Delete station</span>.</p>
   <h3>Several stations at once</h3>
-  <p>Select several stations to get <b>Set type for all</b>, <b>Facilities for all</b>, <b>Custom icon</b>, <b>Label side for all</b> and <b>Line up</b>: <span class="ui">Same row</span>, <span class="ui">Same column</span>, <span class="ui">On a 45° line</span>, <span class="ui">Even spacing ↔</span>, <span class="ui">Even spacing ↕</span>, plus <span class="ui">Mark as not in service</span> and <span class="ui">Mark as in service</span>.</p>
+  <p>Select several stations (Shift-click them, or drag a box over empty map) to get <b>Set type for all</b>, <b>Facilities for all</b>, <b>Custom icon</b>, <b>Label side for all</b> and <b>Line up</b>: <span class="ui">Same row</span>, <span class="ui">Same column</span>, <span class="ui">On a 45° line</span>, <span class="ui">Even spacing ↔</span>, <span class="ui">Even spacing ↕</span>, plus <span class="ui">Mark as not in service</span> and <span class="ui">Mark as in service</span>.</p>
   <h3>Out-of-station transfers</h3>
   <p>With two or more stations selected, <span class="ui">Link as out-of-station transfer</span> joins them with a walking link, for interchanges between stations that aren't in the same building.</p>
 </article>
@@ -310,6 +315,8 @@ td:first-child{white-space:nowrap;font-weight:600}
   <p><b>Width</b>, <b>Opacity</b>, <b>Speed, blocks per second</b> (for travel times and the Timeline), <b>Custom dash pattern</b>, and <span class="ui">Draw above</span> / <span class="ui">Draw below</span> to decide which line passes over at a crossing. Below: <span class="ui">Duplicate line</span> and <span class="ui">Delete line</span>.</p>
   <h3>One segment of a line</h3>
   <p>Click a track to select just that segment. For the line on that segment you can set its own status (<i>Same as line</i>, Open, Planned, Building), <b>Colour here</b> and <b>Style here</b> (<span class="ui">Reset colour and style here</span> undoes both), and the <a href="#one-way">Direction</a>.</p>
+  <h3>Merging lines</h3>
+  <p>Select two or more lines (Shift-click them on the map, or Shift-click or Ctrl-click them in the Lines list) and press <span class="ui">Merge into one line</span>. The lines are joined where one ends and the next begins, turned round where needed; if the chain comes back to where it started, it becomes a loop. The merged line keeps the name and look of the first line you selected, and the other lines' per-segment colours and styles. Lines that don't meet end to end, and loop lines, can't be merged; SNDT says which ones. <kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes it.</p>
 </article>
 
 <article id="ilvf" data-group="Tracks">
@@ -386,6 +393,15 @@ td:first-child{white-space:nowrap;font-weight:600}
   <ul>
     <li><b>Lines first</b>: lines stay straight in their lanes along whole runs, and each station's mark sits where its lines pass, so there are fewer little steps and jumps at stations. New maps start with it.</li>
     <li><b>Stations first</b>: each station stays exactly on its point and the lines fit around it. Maps made before Lines first existed open with this one.</li>
+    <li><b>Manual</b>: the lanes are frozen exactly as they are drawn at that moment, and from then on you place them yourself.</li>
+  </ul>
+  <h3>Moving lanes by hand (Manual)</h3>
+  <ul>
+    <li>Click a line to pick the part under the pointer (the stretch between two corners). Shift-click picks more parts, on any line, and Shift-clicking a picked part drops it. While parts are picked, the other lines fade so the ones you edit stand out.</li>
+    <li>Drag sideways to move every picked part. Each part moves across its own direction, so dragging both parts of an L corner diagonally moves the corner. Steps are half a lane on the grid, a tenth of a lane in Free placement, and any amount with <kbd>Alt</kbd>. On a phone, pick a part first, then drag it; swiping elsewhere still moves the map.</li>
+    <li>The segment panel shows <b>Lanes on this segment</b>: each line's offset per part, which you can also type. <span class="ui">Back to the automatic lanes here</span> resets just that segment.</li>
+    <li>Segments you draw after switching to Manual follow the automatic layout until you move them.</li>
+    <li>Switching back to Lines first or Stations first keeps the lanes you moved by hand; everything else goes back to the automatic layout.</li>
   </ul>
   <p>Both use the same map: switching never changes your stations, lines or orders, only how the lanes are drawn. Where lines must swap sides, they cross once between stations instead of inside one.</p>
 </article>
@@ -414,13 +430,14 @@ td:first-child{white-space:nowrap;font-weight:600}
   <h3>Stations</h3>
   <p><b>Single-line stops</b>: the shape of every station that has no shape of its own (see <a href="#stations">Stations</a>). <b>Station numbers</b> and <b>Code size</b>: see <a href="#numbers">Station numbers</a>. <b>Station size</b> <span class="tag a">Advanced</span>.</p>
   <h3>Labels</h3>
-  <p><b>Label size</b>, <b>Label font</b> (Overpass, Figtree, Pixelify Sans, Cianan Ur, Arial, Georgia, Courier New; Cianan Ur is embedded in exports so it shows everywhere), <b>Facility icons</b> (Top, Centre or Bottom beside the name) and <b>Icons per row (0 = all)</b> (more icons wrap onto new rows), <b>Label halo</b> (an outline in the background colour so names stay readable over lines), <b>Keep station names off lines</b>, <b>Bigger Chinese, Japanese and Korean text</b> (with <b>CJK text size, times the normal size</b> in Advanced) and <b>Bold names at interchanges</b>.</p>
+  <p><b>Label size</b>, <b>Main font</b> (Overpass, Figtree, Pixelify Sans, Cianan Ur, Helvetica, Arial, Georgia, Courier New, and any fonts you add), <b>Facility icons</b> (Top, Centre or Bottom beside the name) and <b>Icons per row (0 = all)</b> (more icons wrap onto new rows), <b>Label halo</b> (an outline in the background colour so names stay readable over lines), <b>Keep station names off lines</b>, <b>Bigger Chinese, Japanese and Korean text</b> (with <b>CJK text size, times the normal size</b> in Advanced) and <b>Bold names at interchanges</b>.</p>
+  <p><b>Fonts</b> <span class="tag a">Advanced</span>: <b>CJK text</b> sets a separate font for Chinese, Japanese and Korean characters in names, and <b>Subtitles</b> one for the second line under a name (for example Noto Serif HK for Chinese with Noto Sans HK for the rest); both are <i>Same as main</i> at first. <b>Add a font</b> takes the name of any family on fonts.google.com. <span class="ui">Upload a font file</span> adds a .ttf, .otf, .woff or .woff2 file up to 1.5 MB; it is saved inside the map and travels with it, so only upload fonts whose licence allows that. Added fonts can be removed with ×. Exports (PNG, SVG, the line strip and timeline videos) carry the fonts inside them, so they look the same everywhere. Helvetica uses the computer's own Helvetica, with Arimo (same letter widths) as the stand-in.</p>
   <h3>Grid</h3>
   <p><b>Placement</b> (also <span class="ui">Grid</span> / <span class="ui">Free</span> in the top bar): Grid snaps stations to the grid; Free places them precisely (to a tenth of a unit) and, while you drag, snaps the station under the pointer into line with other stations — same X, same Y or at 45° — showing a dashed guide (hold <kbd>Alt</kbd> to place without it). In Free, arrow keys move the selection by 1 unit, <kbd>Shift</kbd> + arrow by 0.1. <b>Grid size</b> sets the snapping step; <span class="ui">Snap all to grid</span> moves everything onto it. Hold <kbd>Alt</kbd> to place freely.</p>
   <h3>Legend</h3>
   <p><b>Show legend</b>. The legend lists your lines grouped by type. MTR imports with more than 20 lines start with it hidden. Drag it anywhere; click it for its <b>Heading</b>, <b>Items per column (0 = one column)</b> to split a long legend into columns, its <b>X</b> and <b>Y</b>, and <span class="ui">Hide legend</span>.</p>
   <h3>Game coordinates</h3>
-  <p><b>Blocks per grid cell</b> links the map to your world, so in-game coordinates become map positions and distances. <b>Nether ×8</b> treats Nether coordinates as eight times further. <span class="ui">Place stations</span> moves every station with coordinates to its in-game spot.</p>
+  <p><b>Blocks per grid cell</b> links the map to your world, so in-game coordinates become map positions and distances. Nether coordinates count eight times further, like in the game. <span class="ui">Place stations</span> moves every station with coordinates to its in-game spot.</p>
   <h3>Shortcuts</h3><p>The keyboard shortcuts; see <a href="#shortcuts">Shortcuts</a>.</p>
 </article>
 
@@ -496,7 +513,39 @@ td:first-child{white-space:nowrap;font-weight:600}
   <h2>Maps and saving</h2>
   <p>Your maps save automatically in this browser; the status in the header shows when. The maps menu (the map's name) has <span class="ui">New blank map</span>, <span class="ui">Duplicate this map</span>, your other maps, and the imports. Delete a map from the same menu.</p>
   <p><span class="ui">Clean up map…</span>, under the map name in the Map panel (shown when nothing is selected), lists lines with fewer than two stations, duplicate lines (same stops as another line, also reversed), bend points no line uses and stations on no line. Tick what should go and press <span class="ui">Remove ticked</span>; one undo brings it all back.</p>
-  <div class="note"><b>Back up</b>Maps live in the browser you made them in. Clearing site data removes them, and they don't move to other devices by themselves. Export a JSON backup now and then.</div>
+  <div class="note"><b>Back up</b>Without an account, maps live in the browser you made them in: clearing site data removes them, and they don't move to other devices by themselves. Sign in to keep them in the cloud (see <a href="#accounts">Accounts</a>), or export a JSON backup now and then.</div>
+</article>
+
+<article id="accounts" data-group="Sharing">
+  <h2>Accounts and cloud saving</h2>
+  <p>SNDT works without an account. Sign in to keep your maps in the cloud, open them on every device, and share them. <span class="ui">Account</span> in the header (on phones, in the ☰ menu) → <span class="ui">Continue with Google</span>, or type your email address and <span class="ui">Send link</span>: open the link in that email in the same browser and you're in. There are no passwords.</p>
+  <ul>
+    <li>Signed in, every map saves to your account a few seconds after it saves in the browser. On another device, sign in with the same account and your maps come down by themselves; the open map updates when you come back to the tab.</li>
+    <li>If a map was changed on two devices, the later save wins and the other version is kept as a backup in the account.</li>
+    <li>Deleting a map deletes it from the account too, on every device.</li>
+    <li>An account holds up to 50 maps, 5 MB each and 50 MB in all. A map over the limit stays in the browser, and SNDT says so.</li>
+    <li><b>Nickname</b>: the name shown with maps you put in the gallery (2 to 30 characters). Until you set one, the gallery says Anonymous.</li>
+    <li><span class="ui">Sign out</span> keeps your maps in this browser. <span class="ui">Delete my account and cloud maps</span> (asks twice) deletes the account, its maps, their backups and gallery pictures at once.</li>
+  </ul>
+  <p>SNDT keeps only your email address and the maps you save; the name and picture Google sends are thrown away. See the <a href="/privacy">privacy page</a>. Signing in works on sndt.cc.</p>
+</article>
+
+<article id="sharing" data-group="Sharing">
+  <h2>Sharing and the gallery</h2>
+  <p><span class="ui">Share</span> next to the map name (signed in) saves the map to your account and lets you choose who can see it:</p>
+  <ul>
+    <li><b>Only me</b>: private, the default.</li>
+    <li><b>Anyone with the link</b>: <span class="ui">Copy</span> the link (sndt.cc/?m=…) and send it. It can't be guessed and isn't listed anywhere.</li>
+    <li><b>In the gallery</b>: listed for everyone with a picture of the map and your nickname, and the map gets a <b>Gallery ID</b> like #12. It keeps that number, even if you take it out and publish it again.</li>
+  </ul>
+  <p>People see the map as it is in your account, so your later changes show up too. Making it private again turns the link off; sharing again makes a new link. Whoever opens a shared map can look at it, and editing anything makes their own copy; the original stays yours.</p>
+  <h3>The gallery</h3>
+  <ul>
+    <li><span class="ui">Gallery</span> next to Share shows maps people shared, newest first. Click one to open it.</li>
+    <li>Search by the map's name, the maker's nickname or the Gallery ID (<code>#12</code> or just <code>12</code>).</li>
+    <li>Your own gallery maps are listed on their own at the top. The × on one takes it out of the gallery (press it again to confirm); the map stays in your maps.</li>
+    <li>Something wrong with a map? Open it and press <span class="ui">Report</span> in the bar at the top, with a short reason. Reports are checked by hand.</li>
+  </ul>
 </article>
 
 <article id="live" data-group="Sharing">
