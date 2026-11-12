@@ -1665,12 +1665,13 @@ function regionSVG(r,i){
   if(r.zone){const zs=r.fs||48,tw=textW(String(r.label||''),zs,800),th=zs*.72,m=zs*.3,hx=/^#?([0-9a-f]{6})$/i.exec(r.color||''),v=hx?parseInt(hx[1],16):0,lum=hx?.2126*(v>>16&255)+.7152*(v>>8&255)+.0722*(v&255):0,bright=lum>140,
     nc=bright?mix(r.color,S.ink,Math.min(.7,(lum-110)/200)):r.color,no=bright?Math.max(.5,Math.min(1,op*2.6)):Math.min(1,op*2.6),
     num=(x,y)=>`<text x="${f(x)}" y="${f(y+th)}" font-size="${f(zs)}" font-weight="800" fill="${nc}" fill-opacity="${f(no)}">${cjkT(String(r.label))}</text>`;
-    let lab='';if(r.label){const above=i==null?[]:M.regions.slice(i+1).filter(o=>o.zone),spots=[];
-      for(let y=y0;y<=y1-th;y+=zs/4)for(let x=x0;x<=x1-tw;x+=zs/4){const pts=[[x-m,y-m],[x+tw+m,y-m],[x-m,y+th+m],[x+tw+m,y+th+m],[x+tw/2,y+th/2]];
+    // (the spots tried are at most about 80 × 80, so a tiny number on a big zone can't freeze the app; player report)
+    let lab='';if(r.label){const above=i==null?[]:M.regions.slice(i+1).filter(o=>o.zone),spots=[],stp=Math.max(zs/4,(x1-x0)/80,(y1-y0)/80,.5);
+      for(let y=y0;y<=y1-th;y+=stp)for(let x=x0;x<=x1-tw;x+=stp){const pts=[[x-m,y-m],[x+tw+m,y-m],[x-m,y+th+m],[x+tw+m,y+th+m],[x+tw/2,y+th/2]];
         if(pts.every(([px,py])=>regionHas(r,px,py)&&!above.some(o=>regionHas(o,px,py))))spots.push({x,y})}
       // as many numbers as asked for (r.znum, default 2): the first nearest the top left, each next one in the free spot farthest from
       // those already placed, so they spread out over the zone; one that would sit close to another is left out
-      const want=r.znum??2;if(spots.length&&want>0){const got=[spots.reduce((a,p)=>p.x+p.y<a.x+a.y?p:a)];
+      const want=Math.max(0,Math.min(12,Math.round(r.znum??2)));if(spots.length&&want>0){const got=[spots.reduce((a,p)=>p.x+p.y<a.x+a.y?p:a)];
         while(got.length<want){let best=null,bd=0;for(const p of spots){const d=Math.min(...got.map(g=>Math.hypot(p.x-g.x,p.y-g.y)));if(d>bd){bd=d;best=p}}if(!best||bd<tw+zs*2)break;got.push(best)}
         lab=got.map(p=>num(p.x,p.y)).join('')}}
     return `<g data-kind="region" data-id="${r.id}"><defs>${defs}</defs><g${cut}><g opacity="${op}">${shp(r,`fill="${r.color}"`)}</g>${lab}</g></g>`}
