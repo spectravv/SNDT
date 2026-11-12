@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SNDT privacy</title>
+<meta name="description" content="What SNDT keeps about you, why, and how to delete it.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b0b0b'/%3E%3Cpath d='M5 21H12L20 13H28' fill='none' stroke='%23efede7' stroke-width='3.2'/%3E%3Cpath d='M5 17V25' stroke='%23efede7' stroke-width='3.2'/%3E%3Cpath d='M19 3V29' fill='none' stroke='%23e61919' stroke-width='3.2'/%3E%3Ccircle cx='19' cy='14' r='3.7' fill='%23efede7' stroke='%230b0b0b' stroke-width='1.8'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+:root{--paper:#efede7;--ink:#0b0b0b;--muted:#55524c;--red:#e61919;--line:#0b0b0b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#121212;--ink:#efede7;--muted:#a8a49c;--line:#efede7}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 Figtree,system-ui,sans-serif}
+main{max-width:720px;margin:0 auto;padding:40px 16px 80px}
+a{color:inherit;text-decoration-color:var(--red);text-underline-offset:3px}
+.top{display:flex;align-items:center;gap:10px;margin-bottom:28px;text-decoration:none}
+.top svg{width:32px;height:32px}
+.top b{font:24px/1 'Archivo Black',sans-serif;letter-spacing:-.04em}
+h1{font:clamp(30px,6vw,44px)/1.05 'Archivo Black',sans-serif;letter-spacing:-.03em;margin:0 0 6px}
+h2{font:20px/1.2 'Archivo Black',sans-serif;letter-spacing:-.02em;margin:34px 0 8px;padding-top:14px;border-top:3px solid var(--line)}
+.sub{color:var(--muted);margin:0 0 20px}
+.lead{font-size:18px}
+table{width:100%;border-collapse:collapse;margin:8px 0;font-size:15px}
+th,td{text-align:left;vertical-align:top;padding:8px 10px 8px 0;border-bottom:1px solid color-mix(in srgb,var(--ink) 25%,transparent)}
+th{font-weight:700}
+ul{padding-left:20px}
+li{margin:4px 0}
+.box{border:2px solid var(--line);padding:12px 14px;margin:14px 0}
+</style>
+</head>
+<body>
+<main>
+<a class="top" href="/" aria-label="SNDT home"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" fill="#0b0b0b"/><path d="M5 21H12L20 13H28" fill="none" stroke="#efede7" stroke-width="3.2"/><path d="M5 17V25" stroke="#efede7" stroke-width="3.2"/><path d="M19 3V29" fill="none" stroke="#e61919" stroke-width="3.2"/><circle cx="19" cy="14" r="3.7" fill="#efede7" stroke="#0b0b0b" stroke-width="1.8"/></svg><b>SNDT</b></a>
+<h1>Privacy</h1>
+<p class="sub">Last updated 12 November 2026</p>
+
+<p class="lead">SNDT works without an account, and then nothing about you leaves your browser. If you sign in, SNDT keeps as little as it can: your email address and the maps you save. It never sees or stores a password.</p>
+
+<h2>Without an account</h2>
+<p>Your maps are saved in your own browser (its local storage), on your device only. SNDT doesn't send them anywhere, and there is no tracking or advertising.</p>
+<p>The page loads its fonts from Google Fonts, which means your browser asks Google's servers for them, the same as on most websites. If you use a live room to edit a map together with friends, the map and the changes go through SNDT's server for as long as the room is open.</p>
+
+<h2>With an account</h2>
+<p>You can sign in with Google or with a link sent to your email. There are no passwords: Google checks your password itself, and an email link replaces one.</p>
+<table>
+<tr><th>What SNDT keeps</th><th>Why</th></tr>
+<tr><td>Your email address</td><td>To sign you in and to recognise you on another device.</td></tr>
+<tr><td>An account number and the sign-in method (Google or email)</td><td>To tell accounts apart.</td></tr>
+<tr><td>The maps you save while signed in, with up to 5 earlier versions of each</td><td>So they open on every device you sign in on, and nothing is lost when two devices save at once.</td></tr>
+<tr><td>A nickname, if you choose one</td><td>Shown next to maps you put in the gallery.</td></tr>
+<tr><td>Sign-in times, and the network (IP) address you signed in from</td><td>Kept in the sign-in service's logs for security, and removed regularly.</td></tr>
+</table>
+<p><b>What SNDT doesn't keep:</b> passwords, and the name and profile picture Google sends when you sign in (they are removed as soon as they arrive).</p>
+
+<h2>Sharing and the gallery</h2>
+<p>Your maps are private unless you share them. A map shared "with the link" can be opened by anyone who has that link, and isn't listed anywhere. A map you put in the gallery is visible to everyone, together with a picture of it and your nickname. You can make a map private again at any time; that turns its link off.</p>
+<p>If someone reports a shared map, the report (the reason they gave and their account number) is kept so it can be checked. A map that breaks the rules can be taken out of the gallery.</p>
+
+<h2>Where it is kept</h2>
+<p>Accounts and maps are stored with <a href="https://supabase.com" rel="noopener">Supabase</a>, which runs SNDT's database and sign-in. Sign-in emails are sent by an email service on SNDT's behalf. Google is involved only if you choose to sign in with Google. None of them get your maps for any other purpose, and SNDT doesn't sell or share your data with anyone else.</p>
+
+<h2>Deleting your data</h2>
+<div class="box">In SNDT, open <b>Account</b> and choose <b>Delete my account and cloud maps</b>. Your account, email address, nickname, saved maps, their earlier versions and their gallery pictures are deleted straight away. Maps in your browser stay there until you delete them.</div>
+<p>You can also just sign out: your maps stay in your account until you delete it.</p>
+
+<h2>Your rights</h2>
+<p>You can see what is stored (your maps are all in the app, and your email is shown under Account), take it with you (export any map as a JSON file), and delete it (above). If you have a question about your data, or want help with any of this, ask on the <a href="https://discord.gg/jTycUK7Uvs" rel="noopener">SNDT Discord</a>.</p>
+
+<h2>Changes</h2>
+<p>If this page changes in a way that matters, the change will be announced in SNDT's release notes and on Discord.</p>
+</main>
+</body>
+</html>

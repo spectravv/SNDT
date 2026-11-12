@@ -83,6 +83,12 @@ header .hbtn.icon{justify-content:center}
 @media (min-width:901px){header .hbtn.icon{width:auto;min-width:36px;flex-direction:column;gap:2px;padding:0 7px;font-size:8.5px;letter-spacing:.06em;line-height:1}
 header .hbtn.icon svg{order:-1;width:16px;height:16px}
 header .hbtn.icon .hl{display:block}}
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;max-height:60vh;overflow:auto;margin:8px 0}
+.gal-card{display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:0 0 8px;border:2px solid var(--ink);background:var(--paper);text-align:left;cursor:pointer}
+.gal-card img,.gal-card .gal-ph{display:block;width:100%;aspect-ratio:8/5;object-fit:cover;background:var(--line,#ddd)}
+.gal-card b,.gal-card small{padding:0 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.gal-card small{color:var(--muted)}
+.gal-card:hover{outline:2px solid var(--red)}
+#galModal{min-width:min(640px,86vw)}
 #accountBtn{position:relative}#accountBtn .acc-dot{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:#2f9e5b}#accountBtn .acc-dot[hidden]{display:none}
 @media (min-width:901px){header .hbtn.icon,header .hbtn.stack,header .seg{flex-shrink:0}}
 @media (min-width:1520px){header .hsearch{min-width:150px}}
@@ -2667,6 +2673,14 @@ function act(name,arg,el){
     case 't-done':setMulti(false);select([]);sheetClose();break;
     case 'close-modal':closeModal();break;
     case 'account':accountModal();break;
+    case 'share':closePop();shareModal();break;
+    case 'share-set':shareSet(arg);break;
+    case 'share-copy':{const el=$('#shareUrl');if(el){el.select();try{navigator.clipboard.writeText(el.value).then(()=>toast(tr('Link copied.')),()=>{document.execCommand('copy');toast(tr('Link copied.'))})}catch(e){document.execCommand('copy');toast(tr('Link copied.'))}}break}
+    case 'gallery':closePop();galleryModal(false);break;
+    case 'gallery-more':galleryModal(true);break;
+    case 'open-shared':closeModal();history.pushState(null,'','/?m='+arg);openShared(arg);break;
+    case 'report-shared':reportModal();break;
+    case 'report-send':reportSend();break;
     case 'auth-google':case 'auth-email':case 'auth-nick':case 'auth-out':case 'auth-delete':authAct(name);break;
     case 'do-paste':{const t=$('#pasteBox').value;closeModal();importJSON(t);break}
     case 'copy-out':{const t=$('#outBox');copyText(t.value,t);break}
@@ -3348,7 +3362,7 @@ let saveT=null,saving=false,again=false;
 function status(t,c){const s=$('#status');s.textContent=t;s.title=t;s.style.setProperty('--status',c||'#9aa')}
 function scheduleSave(){
   if(EMBED)return;
-  if(isExample){isExample=false;mapId=uid();if(M.name==='Example network')M.name='My network';$('#mapName').textContent=M.name;$('#banner').hidden=true}
+  if(isExample){isExample=false;mapId=uid();if(M.name==='Example network')M.name='My network';$('#mapName').textContent=M.name;$('#banner').hidden=true;sharedClear()}
   localPut(mapId,M);lsSet('blockline:last',mapId);if(live)liveLocal();
   clearTimeout(saveT);
   if(!store){status('Saved in this browser','#d4a017');return}
@@ -3376,7 +3390,7 @@ function arcsToFree(){const arcs=Object.entries(M.segs||{}).filter(([,v])=>v&&v.
     for(const p of P){const h=Math.abs((p.x-A.x)*dy-(p.y-A.y)*dx)/c;if(h>hm){hm=h;Q=p}}
     delete sg.arc;delete sg.flip;delete sg.fit;if(!Q||hm<1){delete sg.route;continue}
     const th=4*Math.atan(2*hm/c),R=c/(2*Math.sin(th/2)),L=4/3*Math.tan(th/8)*R*1.68;sg.route='custom';sg.pts=[{x:Math.round(Q.x),y:Math.round(Q.y),hx:Math.round(dx/c*L),hy:Math.round(dy/c*L)}]}}
-function loadInto(m,id){if(live&&!liveJoining)liveLeave(false);liveTouched.clear();undoQ.length=0;redoQ.length=0;tlPlay(false);tlSel=-1;tlGrp=null;tlTime=0;tlCache=null;M=normalize(m);arcsToFree();mapId=id;isExample=false;sel=[];drawLine=null;undoS.length=0;redoS.length=0;$('#banner').hidden=true;lsSet('blockline:last',id);render();renderLists();renderInspector();updUndo();requestAnimationFrame(fit);if(section==='timeline')renderTimeline()}
+function loadInto(m,id){sharedClear();if(live&&!liveJoining)liveLeave(false);liveTouched.clear();undoQ.length=0;redoQ.length=0;tlPlay(false);tlSel=-1;tlGrp=null;tlTime=0;tlCache=null;M=normalize(m);arcsToFree();mapId=id;isExample=false;sel=[];drawLine=null;undoS.length=0;redoS.length=0;$('#banner').hidden=true;lsSet('blockline:last',id);render();renderLists();renderInspector();updUndo();requestAnimationFrame(fit);if(section==='timeline')renderTimeline()}
 async function openMap(id){
   await flushNow();
   if(store){try{const d=await store.doc('maps/'+id).get();if(d.exists){loadInto(JSON.parse(d.data().json),id);status('Saved','#2f9e5b');return}}catch(e){}}
@@ -3406,7 +3420,7 @@ async function openMapsMenu(anchor){
   openPop(anchor,'<div class="lbl">Your maps</div><p class="sub" style="padding:4px 10px">Loading…</p>');
   const maps=await listMaps();if(!popEl)return;
   popEl.innerHTML=`<div class="lbl">Your maps</div>${maps.length?maps.map(m=>`<button class="row ${m.id===mapId?'on':''}" data-act="open-map:${m.id}"><span class="nm" data-nt>${esc(m.name)}</span>${m.updatedAt?`<small>${ago(m.updatedAt)}</small>`:''}</button>`).join(''):'<p class="sub" style="padding:4px 10px">No saved maps yet. Your first edit saves this one.</p>'}
-  <hr><button class="row" data-act="new-map">New blank map</button><button class="row" data-act="dup-map">Duplicate this map</button><button class="row" data-act="mtr-import">Import from MTR…</button><button class="row" data-act="import">Import from JSON file…</button><button class="row" data-act="paste-import">Paste JSON…</button>${isExample?'':'<hr><button class="row" data-act="del-map" data-confirm="1" style="color:var(--danger)">Delete this map</button>'}
+  <hr><button class="row" data-act="new-map">New blank map</button><button class="row" data-act="dup-map">Duplicate this map</button><button class="row" data-act="share">${tr('Share and publish…')}</button><button class="row" data-act="gallery">${tr('Gallery…')}</button><button class="row" data-act="mtr-import">Import from MTR…</button><button class="row" data-act="import">Import from JSON file…</button><button class="row" data-act="paste-import">Paste JSON…</button>${isExample?'':'<hr><button class="row" data-act="del-map" data-confirm="1" style="color:var(--danger)">Delete this map</button>'}
   <p class="sub" style="padding:6px 10px">${store?'Maps save automatically to this artifact.':'Saving to this browser only. Export JSON to keep a backup.'}</p>`;
   m.querySelectorAll('[data-mtr-type]').forEach(e=>e.addEventListener('change',()=>{mtrTypeCfg(e.dataset.mtrType).on=e.checked;mtrShowRoutes()}));
   m.querySelectorAll('[data-mtr-type-mode]').forEach(e=>e.addEventListener('change',()=>{mtrTypeCfg(e.dataset.mtrTypeMode).mode=e.value}));
@@ -4265,12 +4279,12 @@ function accountModal(){
   if(!authUser){modal(`<div id="acctModal"><h2>${tr('Account')}</h2><p class="sub">${tr('Sign in to keep your maps in the cloud and open them on any device, share them by link, or show them in the gallery. SNDT keeps working without an account too.')}</p>
     <div class="btns"><button class="btn acc" data-act="auth-google">${tr('Continue with Google')}</button></div>
     <div class="fld"><span>${tr('Or get a sign-in link by email')}</span><div style="display:flex;gap:6px"><input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com" style="flex:1;min-width:0"><button class="btn" data-act="auth-email">${tr('Send link')}</button></div></div>
-    <p class="sub">${tr('Open the link in this same browser.')}</p>${priv}<div class="btns"><button class="btn" data-act="close-modal">${tr('Close')}</button></div></div>`);return}
+    <p class="sub">${tr('Open the link in this same browser.')}</p>${priv}<div class="btns"><button class="btn" data-act="gallery">${tr('Browse the gallery')}</button><button class="btn" data-act="close-modal">${tr('Close')}</button></div></div>`);return}
   modal(`<div id="acctModal"><h2>${tr('Account')}</h2><p class="sub" data-nt>${tr('Signed in as')} <b>${esc(authUser.email||'')}</b></p>
     <div class="fld"><span>${tr('Nickname (shown with maps you put in the gallery)')}</span><div style="display:flex;gap:6px"><input id="authNick" type="text" maxlength="30" value="${esc(authNick||'')}" placeholder="${esc(tr('2 to 30 characters'))}" style="flex:1;min-width:0"><button class="btn" data-act="auth-nick">${tr('Save')}</button></div></div>
     <p class="sub">${tr('Your maps are kept in your account and open on any device where you sign in (up to 50 maps, 5 MB each).')}</p>
     ${priv}<div class="btns"><button class="btn" data-act="auth-out">${tr('Sign out')}</button><button class="btn warn" data-act="auth-delete" data-confirm="1">${tr('Delete my account and cloud maps')}</button></div>
-    <div class="btns"><button class="btn" data-act="close-modal">${tr('Close')}</button></div></div>`)}
+    <div class="btns"><button class="btn" data-act="share">${tr('Share this map…')}</button><button class="btn" data-act="gallery">${tr('Browse the gallery')}</button><button class="btn" data-act="close-modal">${tr('Close')}</button></div></div>`)}
 const authHere=()=>location.origin+location.pathname;
 async function authAct(name){const sb=await authClient();try{
   if(name==='auth-google'){const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:authHere(),queryParams:{prompt:'select_account'}}});if(error)throw error;return}
@@ -4279,7 +4293,8 @@ async function authAct(name){const sb=await authClient();try{
   if(name==='auth-nick'){const n=(($('#authNick')||{}).value||'').trim();if(n.length<2||n.length>30){toast(tr('A nickname is 2 to 30 characters.'));return}
     const {error}=await sb.from('profiles').upsert({id:authUser.id,nickname:n});if(error)throw error;authNick=n;accountUI();toast(tr('Nickname saved.'));return}
   if(name==='auth-out'){await sb.auth.signOut();lsDel('sndt:cloud');closeModal();toast(tr('Signed out. Your maps stay in this browser.'));return}
-  if(name==='auth-delete'){const {error}=await sb.rpc('delete_me');if(error)throw error;await sb.auth.signOut();lsDel('sndt:cloud');closeModal();toast(tr('Your account and cloud maps are deleted. Maps in this browser are kept.'));return}
+  if(name==='auth-delete'){try{const {data:fl}=await sb.storage.from('thumbs').list(authUser.id,{limit:1000});if(fl&&fl.length)await sb.storage.from('thumbs').remove(fl.map(f=>authUser.id+'/'+f.name))}catch(e){}
+    const {error}=await sb.rpc('delete_me');if(error)throw error;await sb.auth.signOut();lsDel('sndt:cloud');closeModal();toast(tr('Your account and cloud maps are deleted. Maps in this browser are kept.'));return}
  }catch(e){toast(tr('That didn’t work:')+' '+(e&&e.message||e))}}
 // cloud sync (signed in): every save here also goes to the account a few seconds later (ids waiting to go up are kept in sndt:cloudDirty,
 // so a closed tab still sends them next time). On sign-in and on start, maps newer in the account come down and maps only here go up.
@@ -4299,8 +4314,8 @@ async function cloudPush(){if(!authUser||cloudBusy)return;cloudBusy=true;let ret
     for(const id of cloudDirtyIds()){const m=await localGet(id);if(!m){cloudSetDirty(id,false);continue}
       try{const {data:cur}=await sb.from('maps').select('id,updated_at').eq('owner',authUser.id).eq('local_id',id).maybeSingle();
         if(cur&&cloudSeen()[id]!==cur.updated_at)await cloudBackup(sb,cur.id);
-        const {data,error}=await sb.from('maps').upsert({owner:authUser.id,local_id:id,name:m.name||'',data:JSON.stringify(m)},{onConflict:'owner,local_id'}).select('updated_at').single();if(error)throw error;
-        cloudSetSeen(id,data.updated_at);cloudSetDirty(id,false);cloudErr='';if(id===mapId)status(tr('Saved to your account'),'#2f9e5b')}
+        const {data,error}=await sb.from('maps').upsert({owner:authUser.id,local_id:id,name:m.name||'',data:JSON.stringify(m)},{onConflict:'owner,local_id'}).select('id,updated_at,visibility').single();if(error)throw error;
+        cloudSetSeen(id,data.updated_at);if(data.visibility==='public'&&id===mapId&&Date.now()-(thumbAt.get(data.id)||0)>6e5)await thumbUpload(data.id,id);cloudSetDirty(id,false);cloudErr='';if(id===mapId)status(tr('Saved to your account'),'#2f9e5b')}
       catch(e){if(!cloudFail(e))retry=true}}}
   catch(e){retry=true}
   cloudBusy=false;if(retry){clearTimeout(cloudT);cloudT=setTimeout(cloudPush,15000)}}
@@ -4324,7 +4339,67 @@ async function cloudPull0(){let sb;try{sb=await authClient()}catch(e){return}
   cloudPush()}
 // coming back to the tab (e.g. after editing on another device) checks the account again, at most every 30 s
 let cloudLastPull=0;document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&authUser&&Date.now()-cloudLastPull>30000){cloudLastPull=Date.now();cloudPull()}});
-async function cloudDelete(id){cloudSetDirty(id,false);if(!authUser)return;try{const sb=await authClient();await sb.from('maps').delete().eq('owner',authUser.id).eq('local_id',id);cloudSetSeen(id,null)}catch(e){}}
+async function cloudDelete(id){cloudSetDirty(id,false);if(!authUser)return;try{const sb=await authClient(),{data:row}=await sb.from('maps').select('id,thumb_path').eq('owner',authUser.id).eq('local_id',id).maybeSingle();
+  // its gallery picture goes too (pictures can only be removed through the storage API)
+  if(row&&row.thumb_path)await sb.storage.from('thumbs').remove([row.thumb_path]);await sb.from('maps').delete().eq('owner',authUser.id).eq('local_id',id);cloudSetSeen(id,null)}catch(e){}}
+// shared maps: sndt.cc/?m=<link> opens someone's shared or gallery map read-only, like the example (an edit turns it into your own copy).
+// The banner says whose it is and has Report. The link part is random (share_slug), so links can't be guessed or listed
+let shared=null,bannerHTML='';
+function sharedClear(){if(!shared)return;shared=null;const b=$('#banner');if(bannerHTML)b.innerHTML=bannerHTML;if(/[?&]m=/.test(location.search))history.replaceState(null,'',location.pathname+location.hash)}
+async function openShared(slug){try{const sb=await liveClient(),{data,error}=await sb.rpc('get_shared_map',{slug});
+    if(error||!data||!data.length){toast(tr('This shared map isn’t available any more.'));return false}
+    const r=data[0],keep=lsGet('blockline:last');await flushNow();shared=null;loadInto(JSON.parse(r.data),null);if(keep)lsSet('blockline:last',keep);
+    mapId=null;isExample=true;shared={slug,name:r.name,nick:r.nickname};const b=$('#banner');if(!bannerHTML)bannerHTML=b.innerHTML;
+    b.innerHTML=`<span><b data-nt>${esc(r.name||tr('Shared map'))}</b>${r.nickname?` · ${tr('by')} <span data-nt>${esc(r.nickname)}</span>`:''}. ${tr('Edit anything to make your own copy.')}</span><button class="btn" data-act="report-shared">${tr('Report')}</button>`;
+    b.hidden=false;status(tr('Shared map, not saved'),'#9aa');return true}
+  catch(e){toast(tr('This shared map couldn’t be opened.'));return false}}
+const shareSlug=()=>{const a=new Uint8Array(10);crypto.getRandomValues(a);return [...a].map(x=>'abcdefghjkmnpqrstuvwxyz23456789'[x%31]).join('')};
+const shareUrl=slug=>location.origin+'/?m='+slug;
+// make sure the open map is in the account (waits for a save already under way)
+async function cloudEnsure(id){cloudSetDirty(id,true);for(let i=0;i<60&&cloudBusy;i++)await new Promise(r=>setTimeout(r,200));await cloudPush();return !cloudDirtyIds().has(id)}
+let shareRow=null;const thumbAt=new Map();
+async function shareModal(){
+  if(!AUTH_OK()){accountModal();return}
+  if(!authUser){modal(`<div id="shareModal"><h2>${tr('Share')}</h2><p class="sub">${tr('Sign in to share a map by link or put it in the gallery.')}</p><div class="btns"><button class="btn acc" data-act="account">${tr('Sign in')}</button><button class="btn" data-act="close-modal">${tr('Close')}</button></div></div>`);return}
+  if(isExample||!mapId){toast(tr('Edit the map first, so it is yours and saved, then share it.'));return}
+  modal(`<div id="shareModal"><h2>${tr('Share')}</h2><p class="sub">${tr('Saving the map to your account…')}</p></div>`);
+  if(!await cloudEnsure(mapId)){modal(`<div id="shareModal"><h2>${tr('Share')}</h2><p class="sub">${tr('The map couldn’t be saved to your account, so it can’t be shared yet.')}</p><div class="btns"><button class="btn" data-act="close-modal">${tr('Close')}</button></div></div>`);return}
+  const sb=await authClient(),{data}=await sb.from('maps').select('id,local_id,visibility,share_slug,thumb_path').eq('owner',authUser.id).eq('local_id',mapId).single();shareRow=data;shareRender()}
+function shareRender(){const r=shareRow;if(!r)return;const v=r.visibility,url=r.share_slug?shareUrl(r.share_slug):'';
+  modal(`<div id="shareModal"><h2>${tr('Share')}: <span data-nt>${esc(M.name)}</span></h2>
+    <div class="opts">${[['private','Only me'],['link','Anyone with the link'],['public','In the gallery']].map(([k,l])=>`<button class="opt" data-act="share-set:${k}" aria-pressed="${v===k}">${tr(l)}</button>`).join('')}</div>
+    <p class="sub">${v==='private'?tr('Only you can open this map.'):v==='link'?tr('Anyone with the link can look at the map and make their own copy. It isn’t listed anywhere.'):tr('Listed in the gallery for everyone, with a picture of the map and your nickname. Anyone can look at it and make their own copy.')}</p>
+    ${url?`<div class="fld"><span>${tr('Link')}</span><div style="display:flex;gap:6px"><input id="shareUrl" readonly value="${esc(url)}" style="flex:1;min-width:0"><button class="btn" data-act="share-copy">${tr('Copy')}</button></div></div>`:''}
+    ${v==='public'&&!authNick?`<p class="sub"><b>${tr('Set a nickname in your account')}</b> ${tr('so the gallery can show who made it (until then it says Anonymous).')}</p>`:''}
+    <p class="sub">${v==='private'?'':tr('People see the map as it is in your account, so your later changes show up too. Making it private again turns the link off; sharing again makes a new link.')}</p>
+    <div class="btns"><button class="btn" data-act="close-modal">${tr('Done')}</button></div></div>`)}
+async function shareSet(v){const r=shareRow;if(!r||r.visibility===v)return;const sb=await authClient(),up={visibility:v};
+  if(v==='private')up.share_slug=null;else if(!r.share_slug)up.share_slug=shareSlug();
+  const {data,error}=await sb.from('maps').update(up).eq('id',r.id).select('id,local_id,visibility,share_slug,thumb_path,updated_at').single();if(error){toast(tr('That didn’t work:')+' '+error.message);return}
+  shareRow=data;cloudSetSeen(data.local_id,data.updated_at);if(v==='public')await thumbUpload(data.id,data.local_id);shareRender()}
+// the gallery picture: the whole map fitted into 640 × 400, saved under the owner's folder; refreshed when the map changes (at most every 10 min)
+async function thumbUpload(rowId,localId){try{const sb=await authClient(),{svg,w,h}=exportSVG(true),img=new Image();
+    await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)});
+    const W=640,H=400,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');g.fillStyle=M.settings.bg||'#ffffff';g.fillRect(0,0,W,H);
+    const k=Math.min(W/w,H/h);g.drawImage(img,(W-w*k)/2,(H-h*k)/2,w*k,h*k);const blob=await new Promise(r=>c.toBlob(r,'image/webp',.82));if(!blob)return;
+    const path=authUser.id+'/'+rowId+'.webp',{error}=await sb.storage.from('thumbs').upload(path,blob,{upsert:true,contentType:'image/webp'});if(error)throw error;
+    const {data}=await sb.from('maps').update({thumb_path:path}).eq('id',rowId).select('updated_at').single();if(data&&localId)cloudSetSeen(localId,data.updated_at);thumbAt.set(rowId,Date.now())}
+  catch(e){}}
+// the gallery: newest first, 30 at a time, open to everyone (signed in or not)
+let galRows=[];
+async function galleryModal(more){if(!more)modal(`<div id="galModal"><h2>${tr('Gallery')}</h2><p class="sub">${tr('Loading…')}</p></div>`);
+  try{const sb=await liveClient(),before=more&&galRows.length?galRows[galRows.length-1].published_at:null,{data,error}=await sb.rpc('list_gallery',{lim:30,before});if(error)throw error;
+    galRows=more?galRows.concat(data):data;
+    const img=r=>r.thumb_path?`<img loading="lazy" alt="" src="${LIVE_URL}/storage/v1/object/public/thumbs/${esc(r.thumb_path)}?v=${encodeURIComponent(r.updated_at)}">`:'<i class="gal-ph"></i>';
+    modal(`<div id="galModal"><h2>${tr('Gallery')}</h2><p class="sub">${tr('Maps people chose to share with everyone. Open one to look at it, or edit it to make your own copy.')}</p>
+      ${galRows.length?`<div class="gal">${galRows.map(r=>`<button class="gal-card" data-act="open-shared:${esc(r.share_slug)}">${img(r)}<b data-nt>${esc(r.name||tr('Untitled'))}</b><small data-nt>${esc(r.nickname)} · ${ago(Date.parse(r.published_at))}</small></button>`).join('')}</div>`:`<p class="sub">${tr('Nothing here yet. Share a map with "In the gallery" to be the first.')}</p>`}
+      <div class="btns">${data.length===30?`<button class="btn" data-act="gallery-more">${tr('Show more')}</button>`:''}<button class="btn" data-act="close-modal">${tr('Close')}</button></div></div>`)}
+  catch(e){modal(`<div id="galModal"><h2>${tr('Gallery')}</h2><p class="sub">${tr('The gallery couldn’t be loaded. Check your connection and try again.')}</p><div class="btns"><button class="btn" data-act="close-modal">${tr('Close')}</button></div></div>`)}}
+function reportModal(){if(!shared)return;if(!authUser){if(AUTH_OK()){toast(tr('Sign in to report a map.'));accountModal()}else toast(tr('Reporting works on sndt.cc.'));return}
+  modal(`<div id="reportModal"><h2>${tr('Report this map')}</h2><p class="sub" data-nt>${esc(shared.name||'')}</p><div class="fld"><span>${tr('What’s wrong with it?')}</span><textarea id="reportWhy" rows="4" maxlength="1000" placeholder="${esc(tr('e.g. offensive names, someone else’s map posted as their own'))}"></textarea></div>
+    <div class="btns"><button class="btn warn" data-act="report-send">${tr('Send report')}</button><button class="btn" data-act="close-modal">${tr('Cancel')}</button></div></div>`)}
+async function reportSend(){const why=(($('#reportWhy')||{}).value||'').trim();if(!why){toast(tr('Say briefly what’s wrong, so it can be checked.'));return}
+  try{const sb=await authClient(),{error}=await sb.rpc('report_map',{slug:shared.slug,reason:why});if(error)throw error;closeModal();toast(tr('Thanks. The report was sent and will be checked.'))}catch(e){toast(tr('That didn’t work:')+' '+(e&&e.message||e))}}
 async function liveRpc(fn,args){const sb=await liveClient(),{data,error}=await sb.rpc(fn,args);if(error)throw error;return data}
 // the map as independent pieces: every station, line, area, segment, plus settings, timeline, name and the order of each list
 function liveSnap(m){const s=new Map();for(const c of LIVE_COLLS){for(const o of m[c]||[])s.set(c+LIVE_SEP+o.id,JSON.stringify(o));s.set('ord'+LIVE_SEP+c,JSON.stringify((m[c]||[]).map(o=>o.id)))}
@@ -4493,7 +4568,8 @@ if(!EMBED)setTimeout(()=>{liveFromHash();deepLink()},1200);
   try{store=C&&C.use?await C.use('db'):null}catch(e){store=null}
   if(!store){
     status('Saving to this browser','#d4a017');
-    await localMigrate();const last=lsGet('blockline:last'),lm=last&&await localGet(last).catch(()=>null);
+    await localMigrate();const shSlug=new URLSearchParams(location.search).get('m');if(shSlug&&/^[a-z0-9]{6,20}$/.test(shSlug)&&await openShared(shSlug))return;
+    const last=lsGet('blockline:last'),lm=last&&await localGet(last).catch(()=>null);
     if(lm){try{loadInto(lm,last)}catch(e){}}
     return;
   }
