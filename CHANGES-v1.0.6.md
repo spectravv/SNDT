@@ -11,4 +11,4 @@
   - Leaving Manual drops the saved lanes and goes back to the automatic layout (undo brings them back).
   - Freezing is faithful: on the test maps the frozen drawing matches the automatic one to within half a pixel, apart from two odd hand-drawn hooks on c&t Lake.
 - Header: the GRID | FREE switch now hides below 1360px window width (was 1200) and the lane layout switch below 1164px (was 1100), to make room for the new button. Placement is still in This map.
-  - "Fade the other lines" (in the segment panel and the parts panel, Manual only): every line except the picked parts is drawn at 10% opacity while editing, so the picked parts stand out. Editor only, never in exports; remembered per browser (user request 2026-11-12).
+  - While parts of lines are picked, every other line fades to 15% opacity, so the lines being edited stand out; a line with a picked part stays whole. Editor only, never in exports (user request 2026-11-12: first a 10% toggle, then made automatic).
