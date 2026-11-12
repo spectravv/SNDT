@@ -25,7 +25,25 @@ body{background:var(--paper);color:var(--ink);font-family:var(--font-ui);font-si
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--red);outline-offset:1px}
-.app{display:grid;grid-template-rows:auto 1fr;grid-template-columns:minmax(0,1fr);height:100%}
+.app{display:grid;grid-template-rows:auto auto minmax(0,1fr);grid-template-columns:minmax(0,1fr);height:100%}
+.app>header{grid-row:1}.app>main,.app>#tlView{grid-row:3}
+/* the ribbon: on desktop windows under 1780px and on touch screens, the mode switches live in a row under the top bar, opened with Modes */
+#ribbon{grid-row:2;display:flex;align-items:center;gap:8px 22px;flex-wrap:wrap;padding:6px max(16px,env(safe-area-inset-left,0px));border-bottom:3px solid var(--ink);background:var(--paper)}
+#ribbon[hidden]{display:none}
+.rib-g{display:flex;align-items:center;gap:8px}.rib-g>span{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.rib-g>div{display:flex}#ribbon .seg{margin-left:0}
+body:not(.ribmode) #ribbonBtn{display:none!important}
+#ribbonBtn svg{transition:transform .15s}#ribbonBtn[aria-expanded="true"] svg{transform:rotate(180deg)}
+/* touch screens in the desktop layout (tablets sideways): bigger targets */
+@media (pointer:coarse) and (min-width:901px){
+  header{height:60px}header .hbtn,header .seg,header .hsel{height:46px}header .hbtn.icon{min-width:44px}
+  #ribbon .seg{height:40px}#ribbon .seg button{padding:0 14px}
+  .btn{min-height:38px}.opt{padding:10px 10px}.chip{padding:7px 9px}
+  .compass{grid-template-columns:repeat(3,40px)}.compass button{height:38px}.lblpos .opts.auto1,.fld .opts.auto1{width:128px}
+  .fld input[type=text],.fld input[type=number],.fld select,.ro{height:38px;font-size:13px}
+  .row{min-height:40px}.stop{min-height:38px}.stop .b button{min-width:34px;min-height:34px}
+  .pane>h3{min-height:48px}
+}
 header{overflow:clip}
 
 /* header */
@@ -533,10 +551,12 @@ input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}
       <button id="mSimple" data-act="mode:simple" aria-pressed="true"><svg viewBox="0 0 24 24"><path d="M4 12h16"/><circle cx="12" cy="12" r="3" style="fill:var(--paper)"/></svg><span>Simple</span></button>
       <button id="mAdv" data-act="mode:adv" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="2.2" style="fill:var(--paper)"/><circle cx="16" cy="12" r="2.2" style="fill:var(--paper)"/><circle cx="10" cy="18" r="2.2" style="fill:var(--paper)"/></svg><span>Advanced</span></button>
     </div>
+    <button class="hbtn icon" id="ribbonBtn" data-act="ribbon" aria-expanded="false" aria-controls="ribbon" title="Placement, lane layout and Simple / Advanced"><span class="hl">Modes</span><span class="nm-lbl">Modes</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
     <div class="seg" role="group" aria-label="Section"><button id="secMap" data-act="section:map" aria-pressed="true"><svg viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"/></svg><span>Map</span></button><button id="secTl" data-act="section:timeline" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M7 5v14l11-7z"/></svg><span>Timeline</span></button></div>
     <button class="hbtn primary stack" data-act="export-menu" aria-haspopup="true"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span class="hide-narrow">Export</span></button>
     
   </header>
+  <div id="ribbon" hidden><div class="rib-g"><span>Placement</span><div data-rib="place"></div></div><div class="rib-g"><span>Lane layout</span><div data-rib="lay"></div></div><div class="rib-g"><span>Controls</span><div data-rib="ctl"></div></div></div>
   <aside id="navMenu" aria-label="Menu">
     <div class="nm-head"><span class="nm-k">Menu</span><button class="hbtn icon" data-act="drawer:navMenu" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="nm-sec"><div class="nm-k">Map</div><button class="hbtn" data-act="sheet-map"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span class="nm-lbl">Map settings</span></button><div class="nm-slot" data-slot="export"></div></div>
@@ -2608,6 +2628,7 @@ function act(name,arg,el){
     case 'img-replace':if(one&&one.t==='image'){imgReplace=one.id;$('#imgIn').click()}break;
     case 'img-reset':{const im=one&&one.t==='image'&&(M.images||[]).find(x=>x.id===one.id);if(im&&im.ar){pushUndo();im.free=false;im.h=Math.round(im.w/im.ar);changed()}break}
     case 'section':setSection(arg);break;
+    case 'ribbon':lsSet('sndt:ribbon',lsGet('sndt:ribbon')==='1'?'0':'1');ribShow();break;
     case 'tl-play':tlPlay(!tlPlaying);break;
     case 'tl-start':tlPlay(false);tlTime=0;tlDraw();break;
     case 'tl-prev':case 'tl-next':{tlPlay(false);const c=tlCache||tlPrepare(),ends=c.segs.map(x=>x.start+x.dur);if(name==='tl-next'){const n=ends.find(x=>x>tlTime+.001);tlTime=n!=null?n:tlTotal()}else{const pv=[0,...ends].filter(x=>x<tlTime-.001);tlTime=pv.length?pv[pv.length-1]:0}tlDraw();break}
@@ -3327,7 +3348,13 @@ let navNarrow=null;
 function NARROW(){return matchMedia('(max-width:900px)').matches}
 function VW(){return document.documentElement.clientWidth||window.innerWidth}
 function navPlace(){const n=NARROW();if(n===navNarrow)return;navNarrow=n;for(const o of NAV){if(n)document.querySelector(`#navMenu [data-slot="${o.slot}"]`).appendChild(o.el);else o.ph.after(o.el)}}
-navPlace();window.addEventListener('resize',navPlace);
+const RIB=[['header .seg.place:not(.lay)','place'],['header .seg.lay','lay'],['header .seg.ctl','ctl']]
+  .map(([q,k])=>{const el=document.querySelector(q),ph=document.createComment('rib-'+k);el.before(ph);return{el,ph,k}});
+function ribPlace(){const n=NARROW(),on=!n&&matchMedia('(max-width:1779px),(pointer:coarse)').matches;document.body.classList.toggle('ribmode',on);
+  for(const o of RIB){if(on)document.querySelector(`#ribbon [data-rib="${o.k}"]`).appendChild(o.el);else if(o.el.closest('#ribbon')&&(!n||o.k==='place'))o.ph.after(o.el)}
+  ribShow()}
+function ribShow(){const open=document.body.classList.contains('ribmode')&&lsGet('sndt:ribbon')==='1';$('#ribbon').hidden=!open;$('#ribbonBtn').setAttribute('aria-expanded',String(open))}
+navPlace();ribPlace();window.addEventListener('resize',()=>{navPlace();ribPlace()});
 // phones: a tap outside the menu or the lists drawer closes it
 document.addEventListener('pointerdown',e=>{if(!NARROW())return;for(const id of ['navMenu','left']){const a=$('#'+id);if(a.classList.contains('open')&&!a.contains(e.target)&&!e.target.closest(`[data-act="drawer:${id}"],.pop,.scrim`))a.classList.remove('open')}},true);
 // phones: the inspector is a bottom sheet. Selecting something with the Select tool opens it; deselecting closes it again
