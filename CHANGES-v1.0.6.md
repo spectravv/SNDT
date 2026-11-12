@@ -21,3 +21,5 @@
 - Labels can be dragged on their own in Simple mode too (before, only in Advanced; in Simple, dragging a label moved its station). Drag the station's mark to move the station (user report 2026-11-12).
 - Fix: one-way chevrons on stations showed at two-way stops shared with a one-way branch (Curt, Yelloway/Spawn). A stop is now marked one-way only when every line stopping there runs one way through it, all in the same direction.
 - Fix: a fare zone with a tiny number size (1) and a huge count (200) froze the app (Curt). The number placement now tries at most about 80 × 80 spots, and the count is capped at 12 like the field says.
+- Fix: the tutorial came back after every refresh for players who closed the tab in the middle of it (Absolutely Nobody; seen on Firefox, Linux Mint). It now counts as seen as soon as it opens by itself; Help opens it again.
+- Fix: with the gap between areas set to 0, an area's outline ran on beside the outline of an area drawn over it (Curt, "Outlines on districts overlap each other"). The outline is now cut a little wider than the fill, so it stops at the other area's outline.

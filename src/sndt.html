@@ -1654,8 +1654,11 @@ function regionSVG(r,i){
   const shp=(o,attrs,grow=0)=>shp1(o,attrs,grow)+(o.join||[]).map(j=>shp1(Object.assign({radius:o.radius},j),attrs,grow)).join('');
   const front=i==null?[]:M.regions.slice(i+1).filter(o=>regionsOverlap(R,regionShapes(o),gap));
   let defs=`<mask id="${id}-o" maskUnits="userSpaceOnUse" ${box}><rect ${box} fill="#fff"/>${shp(r,'fill="#000"')}</mask>`,cut='',edge='';
-  if(front.length){defs+=`<mask id="${id}-c" maskUnits="userSpaceOnUse" ${box}><rect ${box} fill="#fff"/>${front.map(F=>shp(F,`fill="#000" stroke="#000" stroke-width="${f(gap*2)}"`)).join('')}</mask><clipPath id="${id}-k">${shp(r,'')}</clipPath>`;
-    cut=` mask="url(#${id}-c)"`;edge=`<g clip-path="url(#${id}-k)" opacity="${Math.min(1,op*4)}">${front.filter(F=>!F.pts).map(F=>shp(F,`fill="none" stroke="${r.color}" stroke-width="1.5"${dash}`,gap+.75)).join('')}</g>`}
+  // (the outline is cut a little wider than the fill, so with no gap between areas it still stops at the other area's outline instead
+  // of running on beside it; player report)
+  let ocut='';
+  if(front.length){defs+=`<mask id="${id}-c" maskUnits="userSpaceOnUse" ${box}><rect ${box} fill="#fff"/>${front.map(F=>shp(F,`fill="#000" stroke="#000" stroke-width="${f(gap*2)}"`)).join('')}</mask><mask id="${id}-c2" maskUnits="userSpaceOnUse" ${box}><rect ${box} fill="#fff"/>${front.map(F=>shp(F,`fill="#000" stroke="#000" stroke-width="${f(gap*2+6)}"`)).join('')}</mask><clipPath id="${id}-k">${shp(r,'')}</clipPath>`;
+    cut=` mask="url(#${id}-c)"`;ocut=` mask="url(#${id}-c2)"`;edge=`<g clip-path="url(#${id}-k)" opacity="${Math.min(1,op*4)}">${front.filter(F=>!F.pts).map(F=>shp(F,`fill="none" stroke="${r.color}" stroke-width="1.5"${dash}`,gap+.75)).join('')}</g>`}
   const lp=r.pts&&r.pts.length>2?{x:r.pts.reduce((a,p)=>a+p[0],0)/r.pts.length,y:r.pts.reduce((a,p)=>a+p[1],0)/r.pts.length+4,anchor:' text-anchor="middle"'}:r.zone?{x:r.x+r.w/2,y:r.y+r.h/2+4,anchor:' text-anchor="middle"'}:{x:r.x+10,y:r.y+19,anchor:''};
   // fare zone (Tube-map style): a plain shaded area, no border, its number big and faint
   // (the number near two opposite corners, inside the shape, so an inner zone drawn over the middle doesn't hide it)
@@ -1675,7 +1678,7 @@ function regionSVG(r,i){
         while(got.length<want){let best=null,bd=0;for(const p of spots){const d=Math.min(...got.map(g=>Math.hypot(p.x-g.x,p.y-g.y)));if(d>bd){bd=d;best=p}}if(!best||bd<tw+zs*2)break;got.push(best)}
         lab=got.map(p=>num(p.x,p.y)).join('')}}
     return `<g data-kind="region" data-id="${r.id}"><defs>${defs}</defs><g${cut}><g opacity="${op}">${shp(r,`fill="${r.color}"`)}</g>${lab}</g></g>`}
-  return `<g data-kind="region" data-id="${r.id}"><defs>${defs}</defs><g${cut}><g opacity="${op}">${shp(r,`fill="${r.color}"`)}</g><g mask="url(#${id}-o)" opacity="${Math.min(1,op*4)}">${shp(r,`fill="none" stroke="${r.color}" stroke-width="3"${dash}`)}</g>${edge}${r.label?`<text x="${f(lp.x)}" y="${f(lp.y)}"${lp.anchor} font-size="${r.fs||11}" font-weight="700" letter-spacing=".08em" fill="${S.ink}" fill-opacity=".62">${cjkT(String(r.label).toUpperCase())}</text>`:''}</g></g>`;
+  return `<g data-kind="region" data-id="${r.id}"><defs>${defs}</defs><g${cut}><g opacity="${op}">${shp(r,`fill="${r.color}"`)}</g><g${ocut}><g mask="url(#${id}-o)" opacity="${Math.min(1,op*4)}">${shp(r,`fill="none" stroke="${r.color}" stroke-width="3"${dash}`)}</g></g>${edge}${r.label?`<text x="${f(lp.x)}" y="${f(lp.y)}"${lp.anchor} font-size="${r.fs||11}" font-weight="700" letter-spacing=".08em" fill="${S.ink}" fill-opacity=".62">${cjkT(String(r.label).toUpperCase())}</text>`:''}</g></g>`;
 }
 // lines A to Z (numbers in order), the same order as the Lines list, so the legend matches it
 const linesAZ=a=>a.slice().sort((x,y)=>String(x.name||'').localeCompare(String(y.name||''),undefined,{numeric:true,sensitivity:'base'}));
@@ -4139,7 +4142,9 @@ $('#banner').hidden=false;
 requestAnimationFrame(fit);
 if(LANG!=='en')i18nTree(document.body);
 try{document.fonts&&document.fonts.ready.then(()=>{measureCache.clear();render()})}catch(e){}
-if(!EMBED&&!lsGet('sndt:tour'))setTimeout(()=>{if(tourI<0&&!lsGet('sndt:tour'))tourStart()},900);i18nObs.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:I18N_ATTRS});
+// the tutorial opens by itself once: it counts as seen as soon as it is shown, not only when it is finished or skipped (players saw it
+// again after every refresh when they closed the tab mid-way); Help opens it again
+if(!EMBED&&!lsGet('sndt:tour'))setTimeout(()=>{if(tourI<0&&!lsGet('sndt:tour')){lsSet('sndt:tour','1');tourStart()}},900);i18nObs.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:I18N_ATTRS});
 window.addEventListener('resize',()=>{if(window.innerWidth>900)document.querySelectorAll('aside').forEach(a=>a.classList.remove('open'))});
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>render());
 /* ---------- live rooms: Supabase Realtime for edits and cursors, one row per room keeps the latest map ---------- */
