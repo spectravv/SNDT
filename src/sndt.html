@@ -1480,9 +1480,18 @@ function pruneLanes(){const old={};for(const [k,g] of Object.entries(M.segs))if(
 // where a station's mark is drawn: its own point, or (lines first, manual) the middle of the line ends it covers
 function markAt(s,G){if(!marksFollow()||s.kind==='waypoint'||ciconBox(s))return{x:s.x,y:s.y};const E=(G.ends.get(s.id)||[]).filter(e=>!passesAt(e.lid,s.id));if(!E.length)return{x:s.x,y:s.y};
   const [p,q]=farPair(E,s);return{x:(p.x+q.x)/2,y:(p.y+q.y)/2}}
+// a station mark sized by hand (station.markW along its lines, markH across them, like the code boxes): the mark keeps its centre
+// and its direction; null when the station keeps its automatic size or has a mark that can't be sized this way
+function markFree(s,G){const k=s.kind||'stop';if(k==='waypoint'||k==='local'||k==='arrow'||ciconBox(s)||numBox(s,G))return false;
+  if((k==='tram'||(k==='stop'&&(s.shape||M.settings.stopStyle)==='tick'))&&new Set((G.ends.get(s.id)||[]).filter(e=>!passesAt(e.lid,s.id)).map(e=>e.lid)).size===1)return false;return true}
+function markGeom(s,G){const E=(G.ends.get(s.id)||[]).filter(e=>!passesAt(e.lid,s.id)),sz=stSize(s);let [p,q]=farPair(E,s);
+  const L=Math.hypot(q.x-p.x,q.y-p.y),u=L<.5?{x:1,y:0}:{x:(q.x-p.x)/L,y:(q.y-p.y)/L},W0=L+sz,H0=sz;
+  if(!(s.markW||s.markH)||!markFree(s,G))return{p,q,sz,u,W:W0,H:H0,W0,H0,E};
+  const W=s.markW||W0,H=s.markH||H0,c={x:(p.x+q.x)/2,y:(p.y+q.y)/2},hl=Math.max(0,(W-H)/2);
+  return{p:{x:c.x-u.x*hl,y:c.y-u.y*hl},q:{x:c.x+u.x*hl,y:c.y+u.y*hl},sz:H,u,W,H,W0,H0,E}}
 function stationSVG(s,G,editor){
-  const S=M.settings,E=(G.ends.get(s.id)||[]).filter(e=>!passesAt(e.lid,s.id)),sz=stSize(s),lids=[...new Set(E.map(e=>e.lid))],k=s.kind||'stop';
-  const [p,q]=farPair(E,s),one=Math.hypot(p.x-q.x,p.y-q.y)<.5,lineCol=lids.length===1?lnOf(lids[0]).color:S.ink;
+  const S=M.settings,mg=markGeom(s,G),E=mg.E,sz=mg.sz,lids=[...new Set(E.map(e=>e.lid))],k=s.kind||'stop';
+  const p=mg.p,q=mg.q,one=Math.hypot(p.x-q.x,p.y-q.y)<.5,lineCol=lids.length===1?lnOf(lids[0]).color:S.ink;
   // lines first: the mark sits where the lines pass, so clicks and the one-way chevron go there too
   const mc=markAt(s,G),hr=Math.max(sz/2+5,10),cb=ciconBox(s);
   const hit=editor&&(k!=='waypoint'||showBends)?(marksFollow()&&!one&&k!=='waypoint'&&!cb?`<line x1="${f(p.x)}" y1="${f(p.y)}" x2="${f(q.x)}" y2="${f(q.y)}" stroke="transparent" stroke-width="${f(hr*2)}" stroke-linecap="round"/>`:'')+`<circle cx="${f(mc.x)}" cy="${f(mc.y)}" r="${Math.max(hr,cb?Math.max(cb.w,cb.h)/2+3:0)}" fill="transparent"/>`:'';
@@ -1553,7 +1562,7 @@ function textW0(str,fs,weight,italic){const S=M.settings,key=[str,fs,weight,ital
   if(measureCache.size>4000)measureCache.clear();measureCache.set(key,w);return w}
 function contrastOn(hex){const [r,g,b]=hexRgb(hex);return(.299*r+.587*g+.114*b)/255>.6?'#1d2226':'#ffffff'}
 function labelBox(s,G,dk,push=0){
-  const S=M.settings,dir=DIRS[dk]||DIRS.e,E=G.ends.get(s.id)||[],cb=ciconBox(s),sz=Math.max(stSize(s),cb?Math.max(cb.w,cb.h):0),bgp=s.lbg?4:0,o=markAt(s,G);
+  const S=M.settings,dir=DIRS[dk]||DIRS.e,mg=(s.markW||s.markH)&&markGeom(s,G),E=mg?(G.ends.get(s.id)||[]).concat([mg.p,mg.q]):G.ends.get(s.id)||[],cb=ciconBox(s),sz=Math.max(mg?mg.sz:stSize(s),cb?Math.max(cb.w,cb.h):0),bgp=s.lbg?4:0,o=markAt(s,G);
   let ext=0;const nb=numBox(s,G);if(nb)ext=Math.abs(dir[0])*nb.W/2+Math.abs(dir[1])*nb.h/2-sz/2;
   for(const e of E){ext=Math.max(ext,(e.x-o.x)*dir[0]+(e.y-o.y)*dir[1]);if(s.kind==='arrow'){const L=lnOf(e.lid),len=(L?lw(L):S.lineWidth)*1.9;ext=Math.max(ext,(e.x-e.dir.x*len-o.x)*dir[0]+(e.y-e.dir.y*len-o.y)*dir[1]-sz/2+2)}}
   const gap=sz/2+ext+5+push+bgp,x0=o.x+dir[0]*gap+(s.ldx||0),y0=o.y+dir[1]*gap+(s.ldy||0);
@@ -1913,7 +1922,7 @@ function overlaySVG(G){
   if(tool==='water'&&hover&&waterMode!=='fill')o+=`<circle cx="${f(hover.x)}" cy="${f(hover.y)}" r="${brush/2}" fill="none" stroke="${c}" stroke-width="${f(1.5/view.k)}" stroke-dasharray="${f(4/view.k)} ${f(3/view.k)}" pointer-events="none"/>`;
   if(tool==='station'&&hover&&!drag)o+=`<circle cx="${hover.x}" cy="${hover.y}" r="${M.settings.stationSize/2}" fill="none" stroke="${c}" stroke-dasharray="3 2" pointer-events="none"/>`;
   for(const s of sel){
-    if(s.t==='station'){const st=stOf(s.id);if(!st)continue;const E=G.ends.get(st.id)||[];const [p,q]=farPair(E,st);const r=stSize(st)/2+6;
+    if(s.t==='station'){const st=stOf(s.id);if(!st)continue;const mg=markGeom(st,G),p=mg.p,q=mg.q,r=mg.sz/2+6;
       o+=Math.hypot(p.x-q.x,p.y-q.y)<.5?`<circle cx="${f(st.x)}" cy="${f(st.y)}" r="${r}" fill="none" stroke="${c}" stroke-width="2" stroke-dasharray="4 3" pointer-events="none"/>`:`<line x1="${f(p.x)}" y1="${f(p.y)}" x2="${f(q.x)}" y2="${f(q.y)}" stroke="${c}" stroke-opacity=".9" stroke-width="${r*2}" stroke-linecap="round" fill="none" pointer-events="none" style="stroke-opacity:.18"/>`}
     if(s.t==='line'&&s.seg&&manualLay()){const t=G.tracks.get(s.seg),g=t&&legGeo(t,s.id),L=lnOf(s.id);
       // manual layout: the picked part, and the corners where the line's parts on this segment meet
@@ -1925,6 +1934,11 @@ function overlaySVG(G){
       o+=`<rect x="${f(cx-hw)}" y="${f(cy-hh)}" width="${f(nb.W)}" height="${f(nb.h)}" fill="none" stroke="${c}" stroke-width="${f(1.2/view.k)}" stroke-dasharray="${f(4/view.k)} ${f(3/view.k)}" pointer-events="none"/>`;
       for(const [k,ax,ay] of [['nw',-1,-1],['n',0,-1],['ne',1,-1],['e',1,0],['se',1,1],['s',0,1],['sw',-1,1],['w',-1,0]])
         o+=`<rect data-kind="nbh" data-id="${st.id}" data-i="${k}" x="${f(cx+ax*hw-z/2)}" y="${f(cy+ay*hh-z/2)}" width="${f(z)}" height="${f(z)}" fill="#fff" stroke="${c}" stroke-width="${f(1.5/view.k)}" style="cursor:${k==='n'||k==='s'?'ns':k==='e'||k==='w'?'ew':k==='nw'||k==='se'?'nwse':'nesw'}-resize"/>`}}
+    // a station's mark: drag a corner or an edge to size it by hand (it stays centred, turned along its lines)
+    if(s.t==='station'&&sel.length===1&&tool==='select'){const st=stOf(s.id);if(st&&markFree(st,G)){const m=markGeom(st,G),cx=(m.p.x+m.q.x)/2,cy=(m.p.y+m.q.y)/2,hw=m.W/2+2,hh=m.H/2+2,z=7/view.k,ang=Math.atan2(m.u.y,m.u.x)*180/Math.PI;
+      o+=`<g transform="rotate(${f(ang)} ${f(cx)} ${f(cy)})"><rect x="${f(cx-hw)}" y="${f(cy-hh)}" width="${f(hw*2)}" height="${f(hh*2)}" fill="none" stroke="${c}" stroke-width="${f(1.2/view.k)}" stroke-dasharray="${f(4/view.k)} ${f(3/view.k)}" pointer-events="none"/>`;
+      for(const [k,ax,ay] of [['nw',-1,-1],['n',0,-1],['ne',1,-1],['e',1,0],['se',1,1],['s',0,1],['sw',-1,1],['w',-1,0]])
+        o+=`<rect data-kind="mkh" data-id="${st.id}" data-i="${k}" x="${f(cx+ax*hw-z/2)}" y="${f(cy+ay*hh-z/2)}" width="${f(z)}" height="${f(z)}" fill="#fff" stroke="${c}" stroke-width="${f(1.5/view.k)}" style="cursor:${k==='n'||k==='s'?'ns':k==='e'||k==='w'?'ew':k==='nw'||k==='se'?'nwse':'nesw'}-resize"/>`;o+='</g>'}}
     if(s.t==='image'){const im=(M.images||[]).find(x=>x.id===s.id);if(im)o+=`<rect x="${f(im.x-3)}" y="${f(im.y-3)}" width="${f(im.w+6)}" height="${f(im.h+6)}" fill="none" stroke="${c}" stroke-width="${f(1.5/view.k)}" stroke-dasharray="${f(5/view.k)} ${f(4/view.k)}" pointer-events="none"${im.rot?` transform="rotate(${im.rot} ${f(im.x+im.w/2)} ${f(im.y+im.h/2)})"`:''}/><rect data-kind="ihandle" data-id="${im.id}" x="${f(im.x+im.w-6/view.k)}" y="${f(im.y+im.h-6/view.k)}" width="${f(12/view.k)}" height="${f(12/view.k)}" rx="2" fill="${c}" style="cursor:nwse-resize"/>`}
     if(s.t==='region'){const r=M.regions.find(x=>x.id===s.id);if(r&&r.pts&&!r.locked)continue;if(r)regionShapes(r).slice(0,1+(r.more||[]).length).forEach((q,i)=>{o+=`<rect x="${q.x-3}" y="${q.y-3}" width="${q.w+6}" height="${q.h+6}" rx="${(r.radius??10)+3}" fill="none" stroke="${c}" stroke-width="1.5" stroke-dasharray="5 4" pointer-events="none"/>`+(r.locked?(i?'':`<g transform="translate(${f(q.x+q.w-10)} ${f(q.y-8)})" pointer-events="none"><rect width="18" height="18" rx="3" fill="${c}"/><path d="M5.5 8V6a3.5 3.5 0 0 1 7 0v2" fill="none" stroke="#fff" stroke-width="1.7"/><rect x="4" y="8" width="10" height="7" rx="1.2" fill="#fff"/></g>`):`<rect data-kind="handle" data-id="${r.id}" data-i="${i-1}" x="${q.x+q.w-6}" y="${q.y+q.h-6}" width="12" height="12" rx="2" fill="${c}" style="cursor:nwse-resize"/>`)})}
   }
@@ -2105,6 +2119,8 @@ function inspStation(s){
    ${(()=>{if(s.kind==='waypoint')return'';const G=lastG||geom(),B=stNums(G).get(s.id)||[],ls=lines.filter(L=>String(L.numPrefix||'').trim());if(!ls.length)return'';
      return (M.settings.stNums==='marks'?`<p class="sub">${tr('Drag the square handles around the codes on the map to size them.')}</p>`+(s.numW||s.numH||s.numSize?'<div class="btns"><button class="btn" data-act="num-size-reset">'+tr('Reset code size')+'</button></div>':''):'')+`<div class="grid2">${ls.map(L=>{const auto=(B.find(b=>b.lid===L.id)||{}).text||'';return fld(tr('Number on')+' '+String(L.name).split('\n')[0],inp('station',s.id,'nums.'+L.id,(s.nums||{})[L.id]||'','text','placeholder="'+esc(auto)+'" maxlength="10"'))}).join('')}</div>`})()}
    ${['stop','interchange','terminus','hub'].includes(s.kind||'stop')?fld('Shape',selectF('station',s.id,'shape',s.shape||'',[['',tr('Same as map')+' ('+tr((SHAPES.find(x=>x[0]===(M.settings.stopStyle||'circle'))||SHAPES[0])[1])+')']].concat(SHAPES))):''}
+   ${(()=>{const G=lastG||geom();if(!markFree(s,G))return'';const m=markGeom(s,G),r=v=>Math.round(v*10)/10;
+     return `<div class="grid2">${fld(tr('Mark length'),inp('station',s.id,'markW',s.markW??'','numnull','min="3" step="0.5" placeholder="'+r(m.W0)+'"'))}${fld(tr('Mark thickness'),inp('station',s.id,'markH',s.markH??'','numnull','min="3" step="0.5" placeholder="'+r(m.H0)+'"'))}</div><p class="sub">${tr('Or drag the square handles around the mark on the map. Empty means the automatic size.')}</p>${s.markW||s.markH?'<div class="btns"><button class="btn" data-act="mark-size-reset">'+tr('Reset mark size')+'</button></div>':''}`})()}
    ${s.kind==='waypoint'?fld('Corner radius at this bend point',inp('station',s.id,'radius',s.radius??'','numnull','min="0" max="400" placeholder="'+(M.settings.cornerR??16)+' (map default)"')):''}
    <div class="fld"><span>Facilities</span><div class="chips">${Object.keys(ICONS).map(k=>`<button class="chip" data-act="icon:${k}" aria-pressed="${(s.icons||[]).includes(k)}"><svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true"><rect width="14" height="14" rx="2.5" fill="#0b0b0b"/>${iconGlyph(k,'#ffffff','#0b0b0b')}</svg>${ICONS[k][0]}</button>`).join('')}</div></div>${(s.icons||[]).length?`<label class="wp-w" style="display:flex;padding:0;border:0"><span>${esc(tr('Icon size'))}</span><input type="range" class="fac-size" min="50" max="300" step="5" value="${s.iconScale||100}"><b data-nt>${s.iconScale||100}%</b></label>`:''}
    ${ciconField([s])}
@@ -2499,6 +2515,7 @@ function act(name,arg,el){
     case 'mixroute':{const m=routeMix(),on=m.includes(arg);if(on&&m.length<=2){toast(tr('Keep at least two types ticked, or switch to One type.'));break}pushUndo();M.settings.routeMix=on?m.filter(k=>k!==arg):m.concat([arg]);M.settings.route=routeMix()[0];changed();break}
     case 'mcorner':pushUndo();M.settings.cornerR=+arg;changed();break;
     case 'mgap':pushUndo();M.settings.crossGap=+arg;changed();break;
+    case 'mark-size-reset':{const ss=sel.filter(x=>x.t==='station').map(x=>stOf(x.id)).filter(Boolean);if(!ss.length)break;pushUndo();ss.forEach(x=>{delete x.markW;delete x.markH});changed();break}
     case 'num-size-reset':if(curSt){pushUndo();delete curSt.numW;delete curSt.numH;delete curSt.numSize;changed()}break;
     case 'mlayout':{const v=arg==='lines'||arg==='manual'?arg:'stations';if(M.settings.layout===v)break;pushUndo();
       // manual freezes the lanes as they are drawn now (keeping any moved by hand before); leaving it keeps only the ones moved by hand
@@ -2844,6 +2861,7 @@ function pointerDown(e){if(multiAdd&&e.pointerType!=='mouse'&&dtapSel)Object.def
   if(h&&(h.kind==='cp'||h.kind==='cpadd')){const v=sel[0]&&segView(h.key,sel[0].id),i=+h.i,m=v&&(h.kind==='cp'?[v.ch[i+1],v.dv[i+1]]:[{x:(v.ch[i].x+v.ch[i+1].x)/2,y:(v.ch[i].y+v.ch[i+1].y)/2},{x:(v.dv[i].x+v.dv[i+1].x)/2,y:(v.dv[i].y+v.dv[i+1].y)/2}]);
     drag={type:h.kind,key:h.key,i,start:w,moved:false,off:m?{x:m[1].x-m[0].x,y:m[1].y-m[0].y}:{x:0,y:0}};return}
   if(h&&h.kind==='ihandle'){const im=(M.images||[]).find(x=>x.id===h.id);if(im){drag={type:'iresize',im,start:w,ow:im.w,oh:im.h,moved:false};return}}
+  if(h&&h.kind==='mkh'){const st=stOf(h.id);if(st){const m=markGeom(st,lastG||geom());drag={type:'mkresize',s:st,i:h.i,start:w,ow:m.W,oh:m.H,u:m.u,moved:false};return}}
   if(h&&h.kind==='nbh'){const st=stOf(h.id),nb=st&&numBox(st,lastG);if(nb){drag={type:'nbresize',s:st,i:h.i,start:w,ow:nb.W,oh:nb.h,moved:false};return}}
   if(h&&h.kind==='handle'){const g=M.regions.find(x=>x.id===h.id),r=+h.i>=0?g.more[+h.i]:g;drag={type:'resize',r,start:w,ow:r.w,oh:r.h,moved:false};return}
   if(h&&h.kind==='label'&&adv()){const s=stOf(h.id);if(!isSel('station',s.id))select([{t:'station',id:s.id}]);drag={type:'label',s,start:w,moved:false};return}
@@ -2963,6 +2981,9 @@ svg.addEventListener('pointermove',e=>{
   if(drag.type==='nvx'||drag.type==='nmid'){if(!drag.moved){if(Math.hypot(dx,dy)*view.k<2)return;pushUndo();if(drag.type==='nmid'){drag.a.pts.splice(drag.i+1,0,[0,0]);drag.i++;drag.type='nvx'}drag.moved=true}
     drag.a.pts[drag.i]=[snap(w.x,e.altKey),snap(w.y,e.altKey)];requestRender();return}
   if(drag.type==='nmove'){if(!drag.moved){if(Math.hypot(dx,dy)*view.k<3)return;pushUndo();drag.moved=true}const ddx=snap(dx,e.altKey),ddy=snap(dy,e.altKey);drag.a.pts=drag.orig.map(p=>[p[0]+ddx,p[1]+ddy]);requestRender();return}
+  // both sides move together, so the mark stays centred; the pointer is measured along the mark (its lines) and across it
+  if(drag.type==='mkresize'){if(!drag.moved){if(Math.hypot(dx,dy)*view.k<2)return;pushUndo();drag.moved=true}const k=drag.i,sx=k.includes('e')?1:k.includes('w')?-1:0,sy=k.includes('s')?1:k.includes('n')?-1:0,u=drag.u,da=dx*u.x+dy*u.y,dn=-dx*u.y+dy*u.x;
+    const st=e.altKey?.5:1,r=v=>Math.round(v/st)*st;if(sx)drag.s.markW=Math.max(4,r(drag.ow+2*da*sx));if(sy)drag.s.markH=Math.max(3,r(drag.oh+2*dn*sy));if(sx&&!drag.s.markH)drag.s.markH=r(drag.oh);if(sy&&!drag.s.markW)drag.s.markW=r(drag.ow);requestRender();return}
   if(drag.type==='nbresize'){if(!drag.moved){if(Math.hypot(dx,dy)*view.k<2)return;pushUndo();drag.moved=true}const k=drag.i,sx=k.includes('e')?1:k.includes('w')?-1:0,sy=k.includes('s')?1:k.includes('n')?-1:0;
     // both sides move together, so the box stays centred on the station; Alt for finer steps
     const st=e.altKey?.5:1,r=v=>Math.round(v/st)*st;if(sx)drag.s.numW=Math.max(8,r(drag.ow+2*dx*sx));if(sy)drag.s.numH=Math.max(6,r(drag.oh+2*dy*sy));requestRender();return}
@@ -2984,7 +3005,7 @@ function endPointer(e){
   if(d.type==='lane'){if(d.moved)laneDrop(d);requestOverlay();return}
   if(d.type==='mlane'){if(d.moved)changed();else if(d.click)select([d.click]);return}
   if(d.type==='hdl'){if(d.moved)changed();return}
-  if(d.type==='move'||d.type==='label'||d.type==='resize'||d.type==='iresize'||d.type==='nbresize'||d.type==='cp'||d.type==='cpadd'||d.type==='nvx'||d.type==='nmid'||d.type==='nmove'){if(d.moved){anchorSel=null;changed()}return}
+  if(d.type==='move'||d.type==='label'||d.type==='resize'||d.type==='iresize'||d.type==='nbresize'||d.type==='mkresize'||d.type==='cp'||d.type==='cpadd'||d.type==='nvx'||d.type==='nmid'||d.type==='nmove'){if(d.moved){anchorSel=null;changed()}return}
   if(d.type==='marquee'){if(d.moved){const x0=Math.min(d.a.x,d.b.x),x1=Math.max(d.a.x,d.b.x),y0=Math.min(d.a.y,d.b.y),y1=Math.max(d.a.y,d.b.y);
     const inside=p=>p.x>=x0&&p.x<=x1&&p.y>=y0&&p.y<=y1;
     const box=r=>inside({x:r.x,y:r.y})&&inside({x:r.x+r.w,y:r.y+r.h}),pin=a=>(a.pts||[]).length&&a.pts.every(q=>inside({x:q[0],y:q[1]}));
