@@ -83,9 +83,10 @@ header .hbtn.icon{justify-content:center}
 @media (min-width:901px){header .hbtn.icon{width:auto;min-width:36px;flex-direction:column;gap:2px;padding:0 7px;font-size:8.5px;letter-spacing:.06em;line-height:1}
 header .hbtn.icon svg{order:-1;width:16px;height:16px}
 header .hbtn.icon .hl{display:block}}
+#accountBtn{position:relative}#accountBtn .acc-dot{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:#2f9e5b}#accountBtn .acc-dot[hidden]{display:none}
 @media (min-width:901px){header .hbtn.icon,header .hbtn.stack,header .seg{flex-shrink:0}}
-@media (min-width:1380px){header .hsearch{min-width:150px}}
-@media (max-width:1060px) and (min-width:901px){header .hbtn.icon .hl{display:none}header .hbtn.icon{min-width:32px}}
+@media (min-width:1520px){header .hsearch{min-width:150px}}
+@media (max-width:1080px) and (min-width:901px){header .hbtn.icon .hl{display:none}header .hbtn.icon{min-width:32px}}
 @media (max-width:980px) and (min-width:901px){html header .seg button span{font-size:7.5px;letter-spacing:.02em}html header .seg button{padding:0 3px;min-width:34px}html header .hbtn,html header .seg,html header .hsel{margin-left:2px}html header .mapname{max-width:96px}html header #langSel{width:48px}}
 @media (max-width:1399px) and (min-width:901px){header .hbtn,header .seg,header .hsel{margin-left:3px}header .hbtn.icon{padding:0 4px}header .hbtn.stack{padding:0 4px}}
 .status{font-size:10px;color:var(--muted);white-space:nowrap;display:flex;align-items:center;gap:7px;text-transform:uppercase;letter-spacing:.1em;margin-left:12px}
@@ -171,8 +172,8 @@ aside{background:var(--paper);overflow-y:auto;min-height:0}
 @media (hover:hover){.hsearch:hover{background:var(--paper);color:var(--ink)}}
 @media (max-width:1250px){.hsearch kbd{display:none}header #status{display:none}}
 @media (max-width:1799px){header #status{font-size:0;gap:0}}
-@media (max-width:1549px){header .seg.place:not(.lay){display:none}}
-@media (max-width:1189px){header .seg.lay{display:none}}
+@media (max-width:1619px){header .seg.place:not(.lay){display:none}}
+@media (max-width:1309px){header .seg.lay{display:none}}
 @media (max-width:1399px) and (min-width:901px){header .seg button{padding:0 7px}}
 @media (max-width:1299px) and (min-width:901px){header .mapname{max-width:110px}header #langSel{width:56px}header .hbtn{margin-left:3px}}
 @media (max-width:1100px) and (min-width:901px){header .seg button{padding:0 7px}header .hbtn{margin-left:4px}.logo{padding-right:10px;margin-right:6px}.mapname{max-width:140px}}
@@ -488,6 +489,7 @@ input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}
     <a class="hbtn icon" id="discordBtn" target="_blank" rel="noopener" aria-label="Discord" title="Join the SNDT Discord" hidden><span class="hl">Discord</span><span class="nm-lbl">Discord</span><svg viewBox="0 0 24 24" class="brand"><path d="M20.317 4.37a19.79 19.79 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.74 19.74 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.1 13.1 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.3 12.3 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.84 19.84 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></a>
     <a class="hbtn icon" id="donateBtn" target="_blank" rel="noopener" aria-label="Support SNDT" title="Support SNDT" hidden><span class="hl">Support</span><span class="nm-lbl">Support SNDT</span><svg viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0112 7.6 4.3 4.3 0 0119.5 10c0 5.4-7.5 10-7.5 10z" style="stroke:var(--red)"/></svg></a>
     <button class="hbtn icon" id="liveBtn" data-act="live" aria-label="Live room" title="Live room"><span class="hl">Live room</span><span class="nm-lbl">Live room</span><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.6 2.7-6 6-6s6 2.4 6 6"/><circle cx="17" cy="9" r="2.6"/><path d="M16 14.2c2.9.1 5 2.3 5 5.8"/></svg><span class="lv" data-nt></span></button>
+    <button class="hbtn icon" id="accountBtn" data-act="account" aria-label="Account" title="Account: keep your maps in the cloud"><span class="hl" id="accountHl">Account</span><span class="nm-lbl" id="accountLbl">Account</span><svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20c1.2-3.6 4-5.4 7.5-5.4s6.3 1.8 7.5 5.4"/></svg><i class="acc-dot" hidden></i></button>
     <button class="hbtn icon" id="installBtn" data-act="install" aria-label="Install app" title="Install app" hidden><span class="hl">Install</span><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span class="nm-lbl">Install app</span></button>
     <button class="hbtn stack" id="tourBtn" data-act="help" title="Tutorial and handbook" aria-haspopup="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 114 2c-1 .7-1.5 1.2-1.5 2.5M12 17.5v.01"/></svg><span>Help</span></button>
     <select id="langSel" class="hsel" aria-label="Language" title="Language"><option value="en">EN</option><option value="fr">FR</option><option value="zh">简体中文</option><option value="de">DE</option><option value="tr">TR</option><option value="ru">RU</option><option value="it">IT</option><option value="es">ES</option><option value="pt">PT</option><option value="ms">MS</option><option value="ar">عربي</option></select>
@@ -509,7 +511,7 @@ input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}
     <div class="nm-sec"><div class="nm-k">Map</div><button class="hbtn" data-act="sheet-map"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span class="nm-lbl">Map settings</span></button><div class="nm-slot" data-slot="export"></div></div>
     <div class="nm-sec"><div class="nm-k">Lane layout</div><div class="nm-slot" data-slot="layout"></div></div>
     <div class="nm-sec"><div class="nm-k">View</div><div class="nm-slot" data-slot="mode"></div><div class="nm-slot" data-slot="section"></div></div>
-    <div class="nm-sec"><div class="nm-slot" data-slot="search"></div><div class="nm-slot" data-slot="install"></div><div class="nm-slot" data-slot="live"></div><div class="nm-slot" data-slot="tour"></div><div class="nm-slot" data-slot="theme"></div>
+    <div class="nm-sec"><div class="nm-slot" data-slot="search"></div><div class="nm-slot" data-slot="install"></div><div class="nm-slot" data-slot="live"></div><div class="nm-slot" data-slot="account"></div><div class="nm-slot" data-slot="tour"></div><div class="nm-slot" data-slot="theme"></div>
       <label class="nm-row"><span class="nm-k">Language</span><span class="nm-slot" data-slot="lang"></span></label>
       <div class="nm-slot" data-slot="donate"></div><div class="nm-slot" data-slot="discord"></div></div>
     <div class="nm-slot nm-foot" data-slot="status"></div>
@@ -2664,6 +2666,8 @@ function act(name,arg,el){
     case 't-multi':setMulti(!multiAdd);break;
     case 't-done':setMulti(false);select([]);sheetClose();break;
     case 'close-modal':closeModal();break;
+    case 'account':accountModal();break;
+    case 'auth-google':case 'auth-email':case 'auth-nick':case 'auth-out':case 'auth-delete':authAct(name);break;
     case 'do-paste':{const t=$('#pasteBox').value;closeModal();importJSON(t);break}
     case 'copy-out':{const t=$('#outBox');copyText(t.value,t);break}
   }
@@ -3150,7 +3154,7 @@ document.addEventListener('keyup',e=>{if(e.key===' '){spaceDown=false;svg.style.
 $('#stFilter').addEventListener('input',renderLists);
 
 /* ---------- drawers, popovers, modal, toast ---------- */
-const NAV=[['header [data-act="export-menu"]','export'],['header .seg.lay','layout'],['header .seg:not(.ctl):not(.place)','section'],['header .seg.ctl','mode'],['#installBtn','install'],['#liveBtn','live'],['#searchBtn','search'],['#tourBtn','tour'],['#themeBtn','theme'],['#langSel','lang'],['#donateBtn','donate'],['#discordBtn','discord'],['#status','status']]
+const NAV=[['header [data-act="export-menu"]','export'],['header .seg.lay','layout'],['header .seg:not(.ctl):not(.place)','section'],['header .seg.ctl','mode'],['#installBtn','install'],['#liveBtn','live'],['#accountBtn','account'],['#searchBtn','search'],['#tourBtn','tour'],['#themeBtn','theme'],['#langSel','lang'],['#donateBtn','donate'],['#discordBtn','discord'],['#status','status']]
   .map(([q,slot])=>{const el=document.querySelector(q),ph=document.createComment(slot);el.before(ph);return{el,ph,slot}});
 let navNarrow=null;
 function navPlace(){const n=window.innerWidth<=900;if(n===navNarrow)return;navNarrow=n;for(const o of NAV){if(n)document.querySelector(`#navMenu [data-slot="${o.slot}"]`).appendChild(o.el);else o.ph.after(o.el)}}
@@ -4238,6 +4242,42 @@ function liveLink(c){return location.origin+location.pathname+'#join='+liveFmt(c
 function liveNewCode(){const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',b=new Uint8Array(8);crypto.getRandomValues(b);return[...b].map(x=>A[x%A.length]).join('')}
 function liveLoadLib(){if(window.supabase&&window.supabase.createClient)return Promise.resolve();return new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';sc.onload=()=>res();sc.onerror=()=>rej(new Error('lib'));document.head.appendChild(sc)})}
 async function liveClient(){await liveLoadLib();if(!liveSb)liveSb=window.supabase.createClient(LIVE_URL,LIVE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});return liveSb}
+// accounts: Supabase Auth with Google or an email link (no passwords anywhere). The session stays in this browser (sndt:auth); the
+// library is only loaded when someone signs in or already is. Profiles hold just a nickname for the gallery
+let authSb=null,authUser=null,authNick=null;
+const AUTH_OK=()=>location.protocol==='https:'&&/(^|\.)sndt\.cc$|\.vercel\.app$/.test(location.hostname);
+async function authClient(){if(authSb)return authSb;await liveLoadLib();
+  authSb=window.supabase.createClient(LIVE_URL,LIVE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce',storageKey:'sndt:auth'}});
+  authSb.auth.onAuthStateChange((ev,ses)=>{const was=authUser&&authUser.id;authUser=ses&&ses.user||null;if(authUser&&authUser.id!==was)authLoadNick();if(!authUser)authNick=null;accountUI();
+    // back from Google or the email link: take the code out of the address
+    if(ev==='SIGNED_IN'&&/[?&](code|error)=/.test(location.search)){history.replaceState(null,'',location.pathname+location.hash);toast(tr('Signed in.'))}});
+  const {data}=await authSb.auth.getSession();authUser=data&&data.session&&data.session.user||null;accountUI();if(authUser)authLoadNick();return authSb}
+async function authLoadNick(){try{const sb=await authClient(),{data}=await sb.from('profiles').select('nickname').eq('id',authUser.id).maybeSingle();authNick=data&&data.nickname||null}catch(e){}accountUI();if($('#acctModal'))accountModal()}
+// restore a session on start only when there is one (or the address carries a sign-in code), so most visits don't load the library
+function authBoot(){if(EMBED)return;let has=false;try{has=!!localStorage.getItem('sndt:auth')}catch(e){}if(has||/[?&]code=/.test(location.search))authClient().catch(()=>{})}
+function accountUI(){const b=$('#accountBtn');if(!b)return;const on=!!authUser,nm=on?(authNick||tr('Account')):tr('Account');
+  b.querySelector('.acc-dot').hidden=!on;$('#accountHl').textContent=nm.length>10?nm.slice(0,9)+'…':nm;$('#accountLbl').textContent=on?tr('Account')+': '+nm:tr('Account');b.title=on?tr('Signed in as')+' '+(authNick||authUser.email||''):tr('Account: keep your maps in the cloud')}
+function accountModal(){
+  const priv=`<p class="sub">${tr('SNDT never sees or stores a password. It keeps your email address (to sign you in) and the maps you save to your account; the name and picture from Google are not kept. You can delete everything at any time.')} <a href="/privacy" target="_blank" rel="noopener">${tr('Privacy')}</a></p>`;
+  if(!AUTH_OK()){modal(`<div id="acctModal"><h2>${tr('Account')}</h2><p class="sub">${tr('Signing in works on sndt.cc. Open SNDT there to keep your maps in the cloud.')}</p><div class="btns"><a class="btn acc" href="https://sndt.cc" target="_blank" rel="noopener">${tr('Open sndt.cc')}</a><button class="btn" data-act="close-modal">${tr('Close')}</button></div></div>`);return}
+  if(!authUser){modal(`<div id="acctModal"><h2>${tr('Account')}</h2><p class="sub">${tr('Sign in to keep your maps in the cloud and open them on any device, share them by link, or show them in the gallery. SNDT keeps working without an account too.')}</p>
+    <div class="btns"><button class="btn acc" data-act="auth-google">${tr('Continue with Google')}</button></div>
+    <div class="fld"><span>${tr('Or get a sign-in link by email')}</span><div style="display:flex;gap:6px"><input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com" style="flex:1;min-width:0"><button class="btn" data-act="auth-email">${tr('Send link')}</button></div></div>
+    <p class="sub">${tr('Open the link in this same browser.')}</p>${priv}<div class="btns"><button class="btn" data-act="close-modal">${tr('Close')}</button></div></div>`);return}
+  modal(`<div id="acctModal"><h2>${tr('Account')}</h2><p class="sub" data-nt>${tr('Signed in as')} <b>${esc(authUser.email||'')}</b></p>
+    <div class="fld"><span>${tr('Nickname (shown with maps you put in the gallery)')}</span><div style="display:flex;gap:6px"><input id="authNick" type="text" maxlength="30" value="${esc(authNick||'')}" placeholder="${esc(tr('2 to 30 characters'))}" style="flex:1;min-width:0"><button class="btn" data-act="auth-nick">${tr('Save')}</button></div></div>
+    ${priv}<div class="btns"><button class="btn" data-act="auth-out">${tr('Sign out')}</button><button class="btn warn" data-act="auth-delete" data-confirm="1">${tr('Delete my account and cloud maps')}</button></div>
+    <div class="btns"><button class="btn" data-act="close-modal">${tr('Close')}</button></div></div>`)}
+const authHere=()=>location.origin+location.pathname;
+async function authAct(name){const sb=await authClient();try{
+  if(name==='auth-google'){const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:authHere(),queryParams:{prompt:'select_account'}}});if(error)throw error;return}
+  if(name==='auth-email'){const em=(($('#authEmail')||{}).value||'').trim();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){toast(tr('That doesn’t look like an email address.'));return}
+    const {error}=await sb.auth.signInWithOtp({email:em,options:{emailRedirectTo:authHere(),shouldCreateUser:true}});if(error)throw error;toast(tr('Sign-in link sent. Check your email, and open the link in this browser.'));closeModal();return}
+  if(name==='auth-nick'){const n=(($('#authNick')||{}).value||'').trim();if(n.length<2||n.length>30){toast(tr('A nickname is 2 to 30 characters.'));return}
+    const {error}=await sb.from('profiles').upsert({id:authUser.id,nickname:n});if(error)throw error;authNick=n;accountUI();toast(tr('Nickname saved.'));return}
+  if(name==='auth-out'){await sb.auth.signOut();closeModal();toast(tr('Signed out. Your maps stay in this browser.'));return}
+  if(name==='auth-delete'){const {error}=await sb.rpc('delete_me');if(error)throw error;await sb.auth.signOut();closeModal();toast(tr('Your account and cloud maps are deleted. Maps in this browser are kept.'));return}
+ }catch(e){toast(tr('That didn’t work:')+' '+(e&&e.message||e))}}
 async function liveRpc(fn,args){const sb=await liveClient(),{data,error}=await sb.rpc(fn,args);if(error)throw error;return data}
 // the map as independent pieces: every station, line, area, segment, plus settings, timeline, name and the order of each list
 function liveSnap(m){const s=new Map();for(const c of LIVE_COLLS){for(const o of m[c]||[])s.set(c+LIVE_SEP+o.id,JSON.stringify(o));s.set('ord'+LIVE_SEP+c,JSON.stringify((m[c]||[]).map(o=>o.id)))}
@@ -4400,6 +4440,7 @@ status('Example, not saved','#9aa');
 if(!EMBED)setTimeout(()=>{liveFromHash();deepLink()},1200);
 (async()=>{
   if(EMBED){embedBoot();return}
+  authBoot();
   const C=window.claude;
   try{downloads=C&&C.use?await C.use('downloads'):null}catch(e){downloads=null}
   try{store=C&&C.use?await C.use('db'):null}catch(e){store=null}
