@@ -3001,7 +3001,7 @@ function mergeLines(ids){const Ls=ids.map(lnOf).filter(L=>L&&L.stops.length>1);i
   sel=[{t:'line',id:keep.id}];changed();toast(tr('Merged into')+' '+keep.name)}
 // an uploaded font file goes into the map (as data), checked first by loading it
 document.getElementById('fontIn').addEventListener('change',async e=>{const fl=e.target.files&&e.target.files[0];e.target.value='';if(!fl)return;
-  if(fl.size>8e6){toast(tr('That font file is over 8 MB, too big to keep inside a map.'));return}
+  if(fl.size>1.5e6){toast(tr('That font file is over 1.5 MB, too big to keep inside a map. Try a .woff2 version, or a Google font.'));return}
   const n=fontName(fl.name.replace(/\.[^.]+$/,''))||'Uploaded font';if(allFonts().includes(n)){toast(tr('That font is already in the list.'));return}
   const buf=await fl.arrayBuffer();try{const ff=new FontFace(n,buf);await ff.load()}catch(err){toast(tr('That file isn’t a font SNDT can read.'));return}
   const u8=new Uint8Array(buf);let bin='';for(let i=0;i<u8.length;i+=8192)bin+=String.fromCharCode.apply(null,u8.subarray(i,i+8192));
@@ -3320,12 +3320,31 @@ function closeModal(){const s=$('#scrim');if(s)s.remove();if(textAsk)textEmptyKe
 function ago(t){const s=(Date.now()-t)/1000;if(s<60)return'just now';if(s<3600)return Math.floor(s/60)+' min ago';if(s<86400)return Math.floor(s/3600)+' h ago';return new Date(t).toLocaleDateString()}
 
 /* ---------- storage ---------- */
+// maps kept in this browser live in IndexedDB, which has room for hundreds of MB (localStorage holds only about 5 MB, which a map with
+// an uploaded font could overflow, and a full localStorage failed without a word). Maps saved by older versions in localStorage are
+// moved over on start. Where IndexedDB can't be opened (some private windows), localStorage is used as before, and a failed save says so
+const IDB=(()=>{let dbp=null;const open=()=>dbp||(dbp=new Promise((res,rej)=>{try{const r=indexedDB.open('sndt',1);r.onupgradeneeded=()=>r.result.createObjectStore('maps');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}}));
+  const tx=(mode,fn)=>open().then(db=>new Promise((res,rej)=>{const t=db.transaction('maps',mode),rq=fn(t.objectStore('maps'));t.oncomplete=()=>res(rq&&rq.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)}));
+  return{get:id=>tx('readonly',st=>st.get(id)),put:(id,v)=>tx('readwrite',st=>st.put(v,id)),del:id=>tx('readwrite',st=>st.delete(id)),
+    all:()=>open().then(db=>new Promise((res,rej)=>{const out=[],c=db.transaction('maps').objectStore('maps').openCursor();c.onsuccess=()=>{const cur=c.result;if(cur){out.push(Object.assign({id:cur.key},cur.value));cur.continue()}else res(out)};c.onerror=()=>rej(c.error)}))}})();
+let idbOk=null,localQ=Promise.resolve();
+function localPut(id,m){if(EMBED||!id)return localQ;const json=JSON.stringify(m),v={name:m.name,updatedAt:Date.now(),json};
+  return localQ=localQ.then(async()=>{if(idbOk!==false){try{await IDB.put(id,v);idbOk=true;lsDel('blockline:map:'+id);return}catch(e){idbOk=false}}
+    try{localStorage.setItem('blockline:map:'+id,json)}catch(e){status('Not saved: browser storage is full','#b42318');toast('This browser’s storage is full, so the map could not be saved here. Export a JSON backup, or delete an old map.')}})}
+async function localGet(id){if(idbOk!==false){try{const v=await IDB.get(id);if(v)return JSON.parse(v.json)}catch(e){}}const ls=lsGet('blockline:map:'+id);return ls?JSON.parse(ls):null}
+async function localList(){let out=[];if(idbOk!==false){try{out=(await IDB.all()).map(x=>({id:x.id,name:x.name,updatedAt:x.updatedAt||0}))}catch(e){}}
+  try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('blockline:map:')&&!out.some(o=>o.id===k.slice(14))){const m=JSON.parse(localStorage.getItem(k));out.push({id:k.slice(14),name:m.name,updatedAt:0})}}}catch(e){}
+  return out.sort((a,b)=>b.updatedAt-a.updatedAt)}
+async function localDel(id){try{await IDB.del(id)}catch(e){}lsDel('blockline:map:'+id)}
+// move maps saved by older versions out of localStorage (each one removed only once it is safely in IndexedDB)
+async function localMigrate(){if(EMBED)return;const keys=[];try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('blockline:map:'))keys.push(k)}}catch(e){return}
+  for(const k of keys){const id=k.slice(14),json=lsGet(k);if(!json)continue;try{const has=await IDB.get(id);if(!has){let name='';try{name=JSON.parse(json).name}catch(e){}await IDB.put(id,{name,updatedAt:Date.now(),json})}idbOk=true;lsDel(k)}catch(e){idbOk=false;return}}}
 let saveT=null,saving=false,again=false;
 function status(t,c){const s=$('#status');s.textContent=t;s.title=t;s.style.setProperty('--status',c||'#9aa')}
 function scheduleSave(){
   if(EMBED)return;
   if(isExample){isExample=false;mapId=uid();if(M.name==='Example network')M.name='My network';$('#mapName').textContent=M.name;$('#banner').hidden=true}
-  lsSet('blockline:map:'+mapId,JSON.stringify(M));lsSet('blockline:last',mapId);if(live)liveLocal();
+  localPut(mapId,M);lsSet('blockline:last',mapId);if(live)liveLocal();
   clearTimeout(saveT);
   if(!store){status('Saved in this browser','#d4a017');return}
   status('Unsaved changes','#d4a017');saveT=setTimeout(flush,900);
@@ -3342,7 +3361,7 @@ async function flush(){
   saving=false;if(again){again=false;flush()}
 }
 async function listMaps(){
-  if(!store){const out=[];try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('blockline:map:')){const m=JSON.parse(localStorage.getItem(k));out.push({id:k.slice(14),name:m.name,updatedAt:0})}}}catch(e){}return out}
+  if(!store)return localList();
   try{const q=await store.collection('maps').orderBy('updatedAt','desc').limit(100).get();return q.docs.map(d=>{const x=d.data();return{id:d.id,name:x.name,updatedAt:x.updatedAt}})}catch(e){return[]}
 }
 // circular arcs were removed: turn each one into a free shape with one curved bend point at the top of the arc as it was drawn
@@ -3356,7 +3375,7 @@ function loadInto(m,id){if(live&&!liveJoining)liveLeave(false);liveTouched.clear
 async function openMap(id){
   await flushNow();
   if(store){try{const d=await store.doc('maps/'+id).get();if(d.exists){loadInto(JSON.parse(d.data().json),id);status('Saved','#2f9e5b');return}}catch(e){}}
-  const ls=lsGet('blockline:map:'+id);if(ls){loadInto(JSON.parse(ls),id);return}
+  const lm=await localGet(id);if(lm){loadInto(lm,id);return}
   toast('That map could not be opened.');
 }
 async function flushNow(){if(saveT){clearTimeout(saveT);saveT=null;await flush()}}
@@ -3366,7 +3385,7 @@ async function deleteMap(){
   if(isExample){toast('The example is not saved, so there is nothing to delete.');return}
   const id=mapId;clearTimeout(saveT);saveT=null;
   if(store){try{await store.doc('maps/'+id).delete()}catch(e){toast('Could not delete the map.');return}}
-  lsDel('blockline:map:'+id);
+  await localDel(id);
   const rest=(await listMaps()).filter(m=>m.id!==id);
   if(rest.length)openMap(rest[0].id);else{M=sampleMap();mapId=null;isExample=true;sel=[];$('#banner').hidden=false;render();renderLists();renderInspector();fit();status(store?'Example, not saved':'Example','#9aa')}
   toast('Map deleted.');
@@ -4386,8 +4405,8 @@ if(!EMBED)setTimeout(()=>{liveFromHash();deepLink()},1200);
   try{store=C&&C.use?await C.use('db'):null}catch(e){store=null}
   if(!store){
     status('Saving to this browser','#d4a017');
-    const last=lsGet('blockline:last'),ls=last&&lsGet('blockline:map:'+last);
-    if(ls){try{loadInto(JSON.parse(ls),last)}catch(e){}}
+    await localMigrate();const last=lsGet('blockline:last'),lm=last&&await localGet(last).catch(()=>null);
+    if(lm){try{loadInto(lm,last)}catch(e){}}
     return;
   }
   const maps=await listMaps();
