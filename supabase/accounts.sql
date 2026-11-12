@@ -1,5 +1,5 @@
 -- SNDT accounts: cloud maps, share links and a public gallery.
--- DRAFT for review: not applied to the sndt project yet.
+-- Applied to the sndt project as migration 'accounts' (2026-11-12).
 --
 -- Sign-in is Supabase Auth (Google, email link). Every signed-in person owns their maps; nobody else can read or change them
 -- unless the owner shares one by link or publishes it to the gallery.
@@ -15,14 +15,14 @@ create table public.profiles (
   created_at timestamptz not null default now()
 );
 
--- one row per map; json is the whole map as SNDT saves it
+-- one row per map; data is the whole map as SNDT saves it (JSON text)
 create table public.maps (
   id          uuid primary key default gen_random_uuid(),
   owner       uuid not null references auth.users(id) on delete cascade,
   local_id    text not null,                       -- the map's id in the app, so the same map syncs across devices
   name        text not null default '',
-  json        text not null,
-  size        int  generated always as (octet_length(json)) stored,
+  data        text not null,
+  size        int  generated always as (octet_length(data)) stored,
   visibility  text not null default 'private' check (visibility in ('private','link','public')),
   share_slug  text unique,                         -- random, set when the owner makes a share link
   published_at timestamptz,                        -- when it went into the gallery
@@ -39,7 +39,7 @@ create table public.map_backups (
   id         bigint generated always as identity primary key,
   map_id     uuid not null references public.maps(id) on delete cascade,
   owner      uuid not null references auth.users(id) on delete cascade,
-  json       text not null,
+  data       text not null,
   saved_at   timestamptz not null default now()
 );
 
@@ -80,9 +80,9 @@ create policy reports_insert on public.map_reports for insert to authenticated
 
 -- a shared map by its link (link or gallery maps only)
 create function public.get_shared_map(slug text)
-returns table (name text, json text, updated_at timestamptz)
+returns table (name text, data text, updated_at timestamptz)
 language sql security definer set search_path = public stable as $$
-  select m.name, m.json, m.updated_at from public.maps m
+  select m.name, m.data, m.updated_at from public.maps m
   where m.share_slug = slug and m.visibility in ('link','public')
 $$;
 grant execute on function public.get_shared_map(text) to anon, authenticated;
@@ -102,9 +102,9 @@ grant execute on function public.list_gallery(int, timestamptz) to anon, authent
 create function public.maps_guard() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
-  if octet_length(new.json) > 5000000 then raise exception 'map_too_large'; end if;
+  if octet_length(new.data) > 5000000 then raise exception 'map_too_large'; end if;
   if tg_op = 'INSERT' and (select count(*) from public.maps where owner = new.owner) >= 50 then raise exception 'too_many_maps'; end if;
-  if (select coalesce(sum(size),0) from public.maps where owner = new.owner and id <> new.id) + octet_length(new.json) > 50000000
+  if (select coalesce(sum(size),0) from public.maps where owner = new.owner and id <> new.id) + octet_length(new.data) > 50000000
     then raise exception 'account_full'; end if;
   new.updated_at := now();
   if new.visibility = 'public' and new.published_at is null then new.published_at := now(); end if;
@@ -156,3 +156,14 @@ language plpgsql security definer set search_path = public as $$
 begin new.identity_data := public.strip_profile_data(new.identity_data); return new; end $$;
 create trigger strip_identity_profile before insert or update on auth.identities
   for each row execute function public.strip_identity_profile();
+
+-- follow-up migration 'accounts_tidy' (after Supabase's security advisor): trigger functions can't be called through the API, only
+-- signed-in people can delete their account, and a fixed search path. The advisor warnings left are intentional: get_shared_map and
+-- list_gallery are public on purpose, delete_me is for signed-in people, and the room_* functions belong to live rooms.
+revoke execute on function public.maps_guard() from public, anon, authenticated;
+revoke execute on function public.backups_trim() from public, anon, authenticated;
+revoke execute on function public.strip_user_profile() from public, anon, authenticated;
+revoke execute on function public.strip_identity_profile() from public, anon, authenticated;
+revoke execute on function public.delete_me() from public, anon;
+grant execute on function public.delete_me() to authenticated;
+alter function public.strip_profile_data(jsonb) set search_path = '';
