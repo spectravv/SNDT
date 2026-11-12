@@ -96,7 +96,8 @@ Still open from this list: Manual layout (below, moved to v1.0.6); hand-drawn ro
 
 v1.0.5.1 hotfix released 2026-11-07 (ILVF station numbers, striped lines bend, no A›B›A, Clean up "Lines that double back"; log CHANGES-v1.0.5.1.md).
 
-## v1.0.6 (next)
+## v1.0.6 — The “Connected” Update (released 2026-11-12)
+- Left after release: hairline seam where two touching areas with gap 0 meet (seen in the CHTR title box on curt-tung-sha maps), from the district-outline fix; update Discord post statuses (one-way arrows, district outlines, fonts, Helvetica, cloud storage, tutorial pop-up).
 - Manual layout (step 2 of the precision plan), carried over from v1.0.5. First pass done 2026-11-08 (see CHANGES-v1.0.6.md).
 - Bugs from players (2026-11-02):
   - "Line between stations": a striped (white blocks inside the line) line's blocks go askew around a bend (screenshot only; which map and style isn't known yet).
