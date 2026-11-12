@@ -2285,8 +2285,9 @@ function inspMulti(){
     ${same?xferRow(gs[0],null)+(gs[0].sts.length-ids.length>=2?'<div class="btns"><button class="btn" data-act="xfer-out">Take the selected stations out</button></div>':'')
       :`<div class="btns"><button class="btn acc" data-act="xfer-add">${gs.length?tr('Link into one transfer'):tr('Link as out-of-station transfer')}</button></div>${gs.length?'<p class="sub">Stations already in a transfer are merged into the new one.</p>':''}`}</div>`}
   const rgs=sel.filter(s=>s.t==='region');if(rgs.length>=2)xp+=`<div class="pane"><h3>${tr('Areas')}</h3><div class="btns"><button class="btn acc" data-act="region-join">${tr('Join into one area')}</button></div><p class="sub">${tr('The selected districts or fare zones become one area with one outline, keeping the look of the first one you selected.')}</p></div>`;
+  const lns=[...new Set(sel.filter(s=>s.t==='line').map(s=>s.id))];if(lns.length>=2)xp+=`<div class="pane"><h3>${tr('Lines')}</h3><div class="btns"><button class="btn acc" data-act="line-merge">${tr('Merge into one line')}</button></div><p class="sub">${tr('The selected lines become one line, joined where one ends and the next begins. It keeps the name and look of the first one you selected.')}</p></div>`;
   // manual layout: picked parts of lines
-  if(manualLay()&&sel.every(x=>x.t==='line'&&x.seg)){const nl=new Set(sel.map(x=>x.id)).size;return `<div class="pane"><h3>${esc(tr('Selection'))}</h3><h2>${sel.length} ${esc(tr('parts of lines'))}</h2><p class="sub">${esc(tr('On'))} ${nl} ${esc(tr(nl===1?'line':'lines'))}. ${esc(tr('Drag any of them sideways to move them all. Shift-click a part to add or drop it.'))}</p></div>`}
+  if(manualLay()&&sel.every(x=>x.t==='line'&&x.seg)){const nl=new Set(sel.map(x=>x.id)).size;return xp+`<div class="pane"><h3>${esc(tr('Selection'))}</h3><h2>${sel.length} ${esc(tr('parts of lines'))}</h2><p class="sub">${esc(tr('On'))} ${nl} ${esc(tr(nl===1?'line':'lines'))}. ${esc(tr('Drag any of them sideways to move them all. Shift-click a part to add or drop it.'))}</p></div>`}
   return xp+`<div class="pane"><h3>Selection</h3><h2>${sel.length} items</h2><p class="sub">${sts.length} station${sts.length===1?'':'s'}. Drag any of them to move the whole group.</p></div>
   ${sts.length>1?`<div class="pane"><h3>Line up</h3><div class="btns"><button class="btn" data-act="align:h">Same row</button><button class="btn" data-act="align:v">Same column</button><button class="btn" data-act="align:d">On a 45° line</button></div>
    <div class="btns adv-only"><button class="btn" data-act="dist:h">Even spacing ↔</button><button class="btn" data-act="dist:v">Even spacing ↕</button></div>
@@ -2428,6 +2429,7 @@ function act(name,arg,el){
       for(const id of curL.stops){const st=stOf(id);if(!st||st.kind==='waypoint'||(curL.skip||[]).includes(id)||seen.has(id))continue;seen.add(id);seq.push(st)}
       if(curL.numRev)seq.reverse();const n0=Number.isFinite(+curL.numStart)&&curL.numStart!==''&&curL.numStart!=null?+curL.numStart:1;pushUndo();
       seq.forEach((st,i)=>{(st.nums||(st.nums={}))[curL.id]=pre+'\u2009'+(n0+i)});changed();toast(`${tr('Renumbered')} ${seq.length} ${tr('stations')}: ${pre} ${n0}–${n0+seq.length-1}`);break}
+    case 'line-merge':mergeLines([...new Set(sel.filter(x=>x.t==='line').map(x=>x.id))]);break;
     case 'region-join':{const rs=sel.filter(x=>x.t==='region').map(x=>M.regions.find(r=>r.id===x.id)).filter(r=>r&&!r.locked);if(rs.length<2)break;pushUndo();
       // the first selected keeps its look; the others (with anything joined to them) become its parts
       const [main,...rest]=rs;main.join=main.join||[];
@@ -2875,6 +2877,31 @@ function mlaneStart(d){const parts=sel.filter(x=>x.t==='line'&&x.seg);if(!parts.
   for(const x of parts){const t=G.tracks.get(x.seg),z=t&&laneOf(x.seg,x.id),g=z&&legGeo(t,x.id);if(!g)continue;const n=legCount(t),v=legVals(z,n);M.segs[x.seg].lanes[x.id]=v;
     d.parts.push({key:x.seg,lid:x.id,leg:Math.min(x.leg??0,g.length-1),n,N:g[Math.min(x.leg??0,g.length-1)].N,orig:v.slice()})}
   return d.parts.length>0}
+// merge lines into the first one: they are chained end to end (each turned round if needed) at the stations where one ends and
+// the next begins; a chain that comes back to its start becomes a loop. Every other reference to the merged lines (segment line
+// orders, lanes, station line orders, timeline…) is pointed at the kept line
+function mergeLines(ids){const Ls=ids.map(lnOf).filter(L=>L&&L.stops.length>1);if(Ls.length<2)return;
+  const bad=Ls.find(L=>L.loop&&L.stops.length>2);if(bad){toast(tr('A loop line can’t be merged with others:')+' '+bad.name);return}
+  const keep=Ls[0];let S=keep.stops.slice();const rest=Ls.slice(1),flip=new Set();
+  while(rest.length){const i=rest.findIndex(L=>{const a=L.stops[0],b=L.stops[L.stops.length-1];return a===S[S.length-1]||b===S[S.length-1]||a===S[0]||b===S[0]});
+    if(i<0){toast(tr('These lines don’t meet end to end, so they can’t become one line:')+' '+rest.map(L=>L.name).join(', '));return}
+    const L=rest.splice(i,1)[0],T=L.stops,a=T[0],b=T[T.length-1];
+    if(a===S[S.length-1])S=S.concat(T.slice(1));else if(b===S[S.length-1]){S=S.concat(T.slice().reverse().slice(1));flip.add(L)}
+    else if(b===S[0])S=T.slice(0,-1).concat(S);else{S=T.slice().reverse().slice(0,-1).concat(S);flip.add(L)}}
+  pushUndo();const gone=new Set(Ls.slice(1).map(L=>L.id));
+  for(const L of Ls.slice(1)){for(const [k,o] of Object.entries(L.segs||{})){keep.segs=keep.segs||{};if(keep.segs[k])continue;const c=clone(o);
+      // one-way is set along the line's own direction
+      if(flip.has(L)&&c.oneway)c.oneway=c.oneway==='fwd'?'back':'fwd';keep.segs[k]=c}
+    if(L.skip)keep.skip=[...new Set((keep.skip||[]).concat(L.skip))]}
+  if(S.length>3&&S[0]===S[S.length-1]){S.pop();keep.loop=true}
+  keep.stops=S;M.lines=M.lines.filter(L=>!gone.has(L.id));
+  const swap=v=>gone.has(v)?keep.id:typeof v==='string'&&v.includes(':')&&gone.has(v.split(':')[0])?keep.id+v.slice(v.indexOf(':')):v;
+  // (a list that had a merged line in it, like a line order, is left with the kept line once)
+  const walk=o=>{if(Array.isArray(o)){let hit=false;for(let i=0;i<o.length;i++){if(typeof o[i]==='string'){const v=swap(o[i]);if(v!==o[i]){o[i]=v;hit=true}}else if(o[i]&&typeof o[i]==='object')walk(o[i])}
+      if(hit){const u=[...new Set(o)];if(u.length<o.length)o.splice(0,o.length,...u)}return}
+    for(const k of Object.keys(o)){let v=o[k];if(typeof v==='string')o[k]=swap(v);else if(v&&typeof v==='object')walk(v);const nk=swap(k);if(nk!==k){if(!(nk in o))o[nk]=o[k];delete o[k]}}};
+  for(const k of Object.keys(M))if(k!=='lines'&&M[k]&&typeof M[k]==='object')walk(M[k]);walk(M.lines);
+  sel=[{t:'line',id:keep.id}];changed();toast(tr('Merged into')+' '+keep.name)}
 function insertTrackOnly(key,s){
   const [a,b]=key.split('~');M.stations.push(s);
   M.lines.forEach(L=>{for(let i=L.stops.length-1;i>=0;i--){const n=L.stops.length,j=(i+1)%n;if(j===0&&!(L.loop&&n>2))continue;const x=L.stops[i],y=L.stops[j];if((x===a&&y===b)||(x===b&&y===a))L.stops.splice(i+1,0,s.id)}});
