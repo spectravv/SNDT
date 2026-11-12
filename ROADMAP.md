@@ -122,6 +122,7 @@ v1.0.5.1 hotfix released 2026-11-07 (ILVF station numbers, striped lines bend, n
 - Sign in with Google or an email link (Supabase Auth, project sndt). Optional: the app keeps working without an account.
 - Scope: cloud sync of your own maps + share links + public gallery with reporting.
 - Local first: maps stay in IndexedDB (done in v1.0.6), signed-in saves also go to the cloud; the later save wins and the older version is kept as a backup (5 per map).
+- Privacy (user 2026-11-12): no passwords anywhere (Google + email link only); the name/picture Google sends are stripped on arrival (triggers on auth.users / auth.identities), so the only personal detail kept is the email; gallery shows a self-chosen nickname (profiles table).
 - Limits: 50 maps, 5 MB per map, 50 MB per account. "Delete my account" removes everything. Needs a privacy page.
 - Database draft: supabase/accounts.sql (not applied yet; user to review).
 - User setup: Google OAuth client, Supabase Auth URLs (sndt.cc), custom SMTP for email links (Supabase's built-in sender only allows a few emails per hour).

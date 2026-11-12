@@ -3,6 +3,17 @@
 --
 -- Sign-in is Supabase Auth (Google, email link). Every signed-in person owns their maps; nobody else can read or change them
 -- unless the owner shares one by link or publishes it to the gallery.
+--
+-- Personal data kept to the minimum: there are no passwords (Google and email links only), the name and picture Google sends are
+-- removed as soon as they arrive (see strip_profile below), so the only personal detail stored is the email address Supabase needs to
+-- sign people in. Our own tables hold no names or emails, only the anonymous user id; the gallery shows a nickname people choose.
+
+-- the nickname shown with gallery maps (chosen by the person, not taken from Google)
+create table public.profiles (
+  id         uuid primary key references auth.users(id) on delete cascade,
+  nickname   text not null check (char_length(btrim(nickname)) between 2 and 30),
+  created_at timestamptz not null default now()
+);
 
 -- one row per map; json is the whole map as SNDT saves it
 create table public.maps (
@@ -42,6 +53,7 @@ create table public.map_reports (
   created_at timestamptz not null default now()
 );
 
+alter table public.profiles    enable row level security;
 alter table public.maps        enable row level security;
 alter table public.map_backups enable row level security;
 alter table public.map_reports enable row level security;
@@ -53,6 +65,12 @@ create policy maps_own on public.maps for all to authenticated
 create policy maps_gallery_read on public.maps for select to anon, authenticated
   using (visibility = 'public');
 -- link-shared maps are read only through get_shared_map(slug), so they can't be listed
+
+create policy profiles_own on public.profiles for all to authenticated
+  using (id = auth.uid()) with check (id = auth.uid());
+-- a nickname is visible to others only once its owner has a map in the gallery
+create policy profiles_gallery_read on public.profiles for select to anon, authenticated
+  using (exists (select 1 from public.maps m where m.owner = profiles.id and m.visibility = 'public'));
 
 create policy backups_own on public.map_backups for all to authenticated
   using (owner = auth.uid()) with check (owner = auth.uid());
@@ -68,6 +86,17 @@ language sql security definer set search_path = public stable as $$
   where m.share_slug = slug and m.visibility in ('link','public')
 $$;
 grant execute on function public.get_shared_map(text) to anon, authenticated;
+
+-- the gallery: newest first, with the maker's nickname (no user ids or emails go out)
+create function public.list_gallery(lim int default 60, before timestamptz default null)
+returns table (id uuid, name text, nickname text, thumb_path text, published_at timestamptz)
+language sql security definer set search_path = public stable as $$
+  select m.id, m.name, coalesce(p.nickname, 'Anonymous'), m.thumb_path, m.published_at
+  from public.maps m left join public.profiles p on p.id = m.owner
+  where m.visibility = 'public' and (before is null or m.published_at < before)
+  order by m.published_at desc limit least(lim, 100)
+$$;
+grant execute on function public.list_gallery(int, timestamptz) to anon, authenticated;
 
 -- limits per account: 50 maps, 5 MB per map, 50 MB in all; updated_at set by the server
 create function public.maps_guard() returns trigger
@@ -110,3 +139,20 @@ create policy thumbs_update on storage.objects for update to authenticated
   using (bucket_id = 'thumbs' and (storage.foldername(name))[1] = auth.uid()::text);
 create policy thumbs_delete on storage.objects for delete to authenticated
   using (bucket_id = 'thumbs' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- remove the name and picture Google sends (on the user and on its sign-in identity), every time they arrive; Supabase only needs the
+-- account ids and the email to sign people in
+create function public.strip_profile_data(d jsonb) returns jsonb
+language sql immutable as $$
+  select coalesce(d, '{}'::jsonb) - 'name' - 'full_name' - 'given_name' - 'family_name' - 'nickname' - 'picture' - 'avatar_url' - 'locale'
+$$;
+create function public.strip_user_profile() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin new.raw_user_meta_data := public.strip_profile_data(new.raw_user_meta_data); return new; end $$;
+create trigger strip_user_profile before insert or update on auth.users
+  for each row execute function public.strip_user_profile();
+create function public.strip_identity_profile() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin new.identity_data := public.strip_profile_data(new.identity_data); return new; end $$;
+create trigger strip_identity_profile before insert or update on auth.identities
+  for each row execute function public.strip_identity_profile();
