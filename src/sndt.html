@@ -2145,7 +2145,7 @@ function inspStation(s){
    <div class="grid2">${fld('Text colour',inp('station',s.id,'lcolor',s.lcolor||(s.lbg?contrastOn(s.lbg):M.settings.ink),'color'))}${s.lbg?fld('Background colour',inp('station',s.id,'lbg',s.lbg,'color')):''}</div>
    <label class="chk"><input type="checkbox" id="f-lbg-toggle" data-act="lbg-toggle" ${s.lbg?'checked':''}>Coloured background</label>
    <div class="adv-only"><div class="grid2">${fld('Label nudge X',inp('station',s.id,'ldx',s.ldx||0,'num'))}${fld('Label nudge Y',inp('station',s.id,'ldy',s.ldy||0,'num'))}${fld('Label rotation °',inp('station',s.id,'lrot',s.lrot||0,'num','step="15"'))}${fld('Label size',inp('station',s.id,'fs',s.fs||'','numnull','placeholder="'+M.settings.labelSize+'"'))}${fld('Weight',selectF('station',s.id,'bold',s.bold||'auto',[['auto','Automatic'],['bold','Bold'],['normal','Regular']]))}</div>
-   <p class="sub">Tip: in Advanced mode you can drag a label on the map to nudge it.</p></div>
+   <p class="sub">Tip: drag a label on the map to move it on its own.</p></div>
    ${s.lcolor||s.lbg||s.sub?'<div class="btns"><button class="btn" data-act="lstyle-reset">Reset label style</button></div>':''}</div>
   <div class="pane"><h3>In-game location</h3>
    ${fld('Dimension',selectF('station',s.id,'dim',s.dim||'overworld',[['overworld','Overworld'],['nether','Nether'],['end','The End']]))}
@@ -2864,7 +2864,7 @@ function pointerDown(e){if(multiAdd&&e.pointerType!=='mouse'&&dtapSel)Object.def
   if(h&&h.kind==='mkh'){const st=stOf(h.id);if(st){const m=markGeom(st,lastG||geom());drag={type:'mkresize',s:st,i:h.i,start:w,ow:m.W,oh:m.H,u:m.u,moved:false};return}}
   if(h&&h.kind==='nbh'){const st=stOf(h.id),nb=st&&numBox(st,lastG);if(nb){drag={type:'nbresize',s:st,i:h.i,start:w,ow:nb.W,oh:nb.h,moved:false};return}}
   if(h&&h.kind==='handle'){const g=M.regions.find(x=>x.id===h.id),r=+h.i>=0?g.more[+h.i]:g;drag={type:'resize',r,start:w,ow:r.w,oh:r.h,moved:false};return}
-  if(h&&h.kind==='label'&&adv()){const s=stOf(h.id);if(!isSel('station',s.id))select([{t:'station',id:s.id}]);drag={type:'label',s,start:w,moved:false};return}
+  if(h&&h.kind==='label'){const s=stOf(h.id);if(!isSel('station',s.id))select([{t:'station',id:s.id}]);drag={type:'label',s,start:w,moved:false};return}
   if(h&&(h.kind==='station'||h.kind==='label'||h.kind==='text'||h.kind==='region'||h.kind==='legend'||h.kind==='image')){
     const t=h.kind==='label'?'station':h.kind,id=h.kind==='legend'?'legend':h.id,was=isSel(t,id);
     if(e.shiftKey){if(isSel(t,id))select(sel.filter(s=>!(s.t===t&&s.id===id)));else select(sel.concat([{t,id}]));}
