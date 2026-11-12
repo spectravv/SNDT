@@ -1795,9 +1795,9 @@ function xferClean(){M.transfers=(M.transfers||[]).map(x=>(x.sts=[...new Set(x.s
 function polyAt(P,d){for(let i=0;i<P.length-1;i++){const l=Math.hypot(P[i+1].x-P[i].x,P[i+1].y-P[i].y);if(d<=l||i===P.length-2){const k=l?Math.min(1,d/l):0;return{x:P[i].x+(P[i+1].x-P[i].x)*k,y:P[i].y+(P[i+1].y-P[i].y)*k,u:unit(P[i+1].x-P[i].x,P[i+1].y-P[i].y)}}d-=l}return{x:P[0].x,y:P[0].y,u:{x:1,y:0}}}
 function chevron(x,y,u,s,col,sw){const n={x:-u.y,y:u.x};return `<path d="M${f(x-u.x*s*.45+n.x*s*.55)} ${f(y-u.y*s*.45+n.y*s*.55)}L${f(x+u.x*s*.35)} ${f(y+u.y*s*.35)}L${f(x-u.x*s*.45-n.x*s*.55)} ${f(y-u.y*s*.45-n.y*s*.55)}" fill="none" stroke="${col}" stroke-width="${f(sw)}" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>`}
 function lightOn(c){const m=/^#?([0-9a-f]{6})$/i.exec(c||'');if(!m)return '#ffffff';const v=parseInt(m[1],16),l=.2126*(v>>16&255)+.7152*(v>>8&255)+.0722*(v&255);return l>165?'#1d2226':'#ffffff'}
-function onewaySVG(G){let o='';G.owStops=new Map();
-  for(const L of M.lines){if(L.hidden||!L.segs)continue;const w=lw(L),P2=pairs(L),seen=new Map();
-    P2.forEach(([a,b])=>{const key=segKey(a,b),ow=(L.segs[key]||{}).oneway,t=G.tracks.get(key);
+function onewaySVG(G){let o='';G.owStops=new Map();const agg=new Map();
+  for(const L of M.lines){if(L.hidden)continue;const w=lw(L),P2=pairs(L),seen=new Map();
+    P2.forEach(([a,b])=>{const key=segKey(a,b),ow=((L.segs||{})[key]||{}).oneway,t=G.tracks.get(key);
       for(const s of [a,b]){const e=seen.get(s)||{all:true,u:null};if(!ow)e.all=false;seen.set(s,e)}
       if(!ow||!t||a===b)return;let P=t.off.get(L.id);if(!P||P.length<2)return;
       let from=ow==='back'?b:a;P=from===t.a?P:P.slice().reverse();
@@ -1806,7 +1806,10 @@ function onewaySVG(G){let o='';G.owStops=new Map();
       for(let i=0;i<n;i++){const q=polyAt(P,len*(i+.5)/n);o+=chevron(q.x,q.y,q.u,Math.max(4,w*.95),lightOn(L.color),Math.max(1.4,w*.26))}
       const st=polyAt(P,Math.min(len/2,6)),en=polyAt(P,Math.max(len/2,len-6));
       const ea=seen.get(from),eb=seen.get(from===a?b:a);if(!ea.u)ea.u=st.u;if(!eb.u)eb.u=en.u});
-    for(const [sid,e] of seen)if(e.all&&e.u&&!G.owStops.has(sid))G.owStops.set(sid,e.u)}
+    // a stop is marked one-way only when every line stopping there runs one way through it, and all the same way (player report:
+    // a one-way branch marked the two-way stops it shares with other lines)
+    for(const [sid,e] of seen){if(passesAt(L.id,sid))continue;if(!agg.has(sid))agg.set(sid,{two:false,us:[]});const g=agg.get(sid);if(e.all&&e.u)g.us.push(e.u);else g.two=true}}
+  for(const [sid,g] of agg)if(!g.two&&g.us.length&&g.us.every(u=>u.x*g.us[0].x+u.y*g.us[0].y>.7))G.owStops.set(sid,g.us[0]);
   return o?'<g>'+o+'</g>':''}
 function mapSVG(editor){
   const G=geom(),S=M.settings,cuts=crossings(G);let o=editor?'':'<g>'+natureSVG()+waterSVG()+'</g>',xdefs='';
