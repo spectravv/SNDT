@@ -127,6 +127,7 @@ v1.0.5.1 hotfix released 2026-11-07 (ILVF station numbers, striped lines bend, n
 - Database: supabase/accounts.sql, APPLIED to sndt 2026-11-12 as migrations accounts + accounts_tidy (column json renamed data: json is a keyword in the project's Postgres 17). User approved the limits (until a paid Supabase plan). Tested 2026-11-12 on a local Postgres 15 with stand-ins for Supabase auth/storage (branching needs the Pro plan): Google name/picture stripped on insert and update, owners only see their own maps, others only gallery maps, link maps only by slug, nobody but the owner can change a map, reports unreadable to players, 5 MB / 50 maps / 50 MB limits, backups trimmed to 5, thumbs only in your own folder, delete_me removes everything.
 - User setup: Google OAuth client, Supabase Auth URLs (sndt.cc), custom SMTP for email links (Supabase's built-in sender only allows a few emails per hour).
 - Steps: 1) apply SQL, 2) sign-in UI, 3) sync, 4) share links, 5) gallery + reports, 6) privacy page + delete account.
+- Progress 2026-11-12: 1) applied; 2) sign-in done (375ad0d), tested by the user on a Vercel preview with Google + email link; Google name/picture confirmed stripped on the real project; 3) sync done (ef5c32e), user tested PC + phone on preview 7f07pqmp0: works (1 map in the account). Delete account button already in step 2. Next: 4) share links.
 
 ## Later
 - MTR import: an option to spread out only the crowded areas (dense city centres) on import, instead of the whole map (decided 2026-10-28). (moved out of v1.0.2 on 2026-10-29)
