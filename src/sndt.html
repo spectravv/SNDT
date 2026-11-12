@@ -283,6 +283,15 @@ aside{background:var(--paper);overflow-y:auto;min-height:0}
 @media (hover:hover){.stop .b button:hover{background:var(--ink);color:var(--paper)}}
 .stop .b button:disabled{opacity:.25}
 .btns{display:flex;flex-wrap:wrap;gap:6px}
+/* side panels: button rows are an even two-column grid; a lone last button takes the full width */
+.pane .btns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.pane .btns>.btn{width:100%;min-width:0;height:auto;min-height:30px;padding:5px 8px;white-space:normal;line-height:1.25;text-align:center}
+.pane .btns>:last-child:nth-child(odd){grid-column:1/-1}
+.pane .chips:not(.tpl-grid){display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:4px}
+.pane .chips:not(.tpl-grid)>.chip{min-width:0;overflow:hidden;white-space:normal;text-align:left;line-height:1.25;overflow-wrap:anywhere}
+.opts.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.lblpos .opts.auto1,.fld .opts.auto1{width:104px}
+body:not(.adv) .grid2:has(>.adv-only:last-child){grid-template-columns:1fr}
 .btn{height:30px;padding:0 10px;border:2px solid var(--ink);background:var(--paper);text-transform:uppercase;font-size:10.5px;letter-spacing:.07em}
 @media (hover:hover){.btn:hover{background:var(--ink);color:var(--paper)}}
 .btn:disabled{opacity:.35;cursor:default;background:var(--paper);color:var(--ink)}
@@ -2173,7 +2182,7 @@ function inspMap(){
    ${chk('settings','s','legend.show',S.legend.show,'Show legend')}
    <p class="sub">Click the legend on the map to change its heading or move it.</p></div>
   <div class="pane adv-only"><h3>Game coordinates</h3><p class="sub">Moves every station that has X and Z coordinates to its real position, scaled down. Use it as a starting point, then tidy the layout by hand.</p>
-   <div class="grid2">${fld('Blocks per grid cell',inp('settings','s','mcScale',S.mcScale,'num','min="1"'))}<div class="fld"><span>&nbsp;</span>${chk('settings','s','nether8',S.nether8,'Nether ×8')}</div></div>
+   ${fld('Blocks per grid cell',inp('settings','s','mcScale',S.mcScale,'num','min="1"'))}
    <div class="btns"><button class="btn acc" data-act="mc-place">Place stations</button></div></div>
   <div class="pane"><h3>Shortcuts</h3><div class="keys"><kbd>Ctrl+K or /</kbd><span>Search tools and settings</span><kbd>V S L T I R W N H</kbd><span>Tools</span><kbd>Drag empty</kbd><span>Box select (hold Shift to add)</span><kbd>Shift+click</kbd><span>Add to selection</span><kbd>Ctrl+drag</kbd><span>Pan, with any tool</span><kbd>Click a track</kbd><span>Drag its handles to reshape it</span><kbd>Alt+drag</kbd><span>Move without snapping</span><kbd>Double-click track</kbd><span>Insert a station</span><kbd>Arrows</kbd><span>Nudge by one grid cell</span><kbd>Del</kbd><span>Delete selection</span><kbd>Ctrl+D</kbd><span>Duplicate</span><kbd>Ctrl+Z</kbd><span>Undo</span><kbd>F</kbd><span>Fit map to screen</span><kbd>B</kbd><span>Show or hide bend points</span><kbd>Space+drag</kbd><span>Pan</span></div></div>`;
 }
@@ -2194,7 +2203,7 @@ function inspStation(s){
   return `<div class="pane"><h3>Station</h3>
    ${fld('Name',adv()?area('station',s.id,'name',s.name,'rows="2" data-relist="1"'):inp('station',s.id,'name',s.name,'text','data-relist="1"'))}
    ${adv()?'<p class="sub" style="margin-top:-4px">Press Enter for a second line.</p>':''}
-   <div class="grid2 lblpos"><div class="fld"><span>Label position</span><div class="opts" style="width:fit-content"><button class="opt" data-act="label:auto" aria-pressed="${s.label==='auto'}">${tr('Auto')}</button></div><div class="compass">${comp}</div></div>
+   <div class="grid2 lblpos"><div class="fld"><span>Label position</span><div class="opts auto1"><button class="opt" data-act="label:auto" aria-pressed="${s.label==='auto'}">${tr('Auto')}</button></div><div class="compass">${comp}</div></div>
    <div class="fld"><span>${tr('Text alignment')}</span><div class="opts" style="flex-direction:column;align-items:stretch">${[['','Auto'],['left','Left'],['center','Centre'],['right','Right']].map(([k,l])=>`<button class="opt" data-act="lalign:${k}" aria-pressed="${(s.lalign||'')===k}">${tr(l)}</button>`).join('')}</div></div></div>
    <div class="fld"><span>Type</span>${kindPicker(s.kind||'stop')}</div>
    ${(()=>{if(s.kind==='waypoint')return'';const G=lastG||geom(),B=stNums(G).get(s.id)||[],ls=lines.filter(L=>String(L.numPrefix||'').trim());if(!ls.length)return'';
@@ -2271,7 +2280,7 @@ function inspLine(L,segK){
   if(segK){const G=geom(),t=G.tracks.get(segK);if(t){const A=stOf(t.a),B=stOf(t.b),sg=M.segs[segK]||{},d=mcDist(A,B);
     segH=`<div class="pane"><h3>Selected segment</h3><h2 style="font-size:14px" data-nt>${esc(A.kind==='waypoint'?'bend':A.name)} — ${esc(B.kind==='waypoint'?'bend':B.name)}</h2>
     ${d?`<dl class="facts"><dt>Distance</dt><dd>${Math.round(d.d).toLocaleString()} blocks${d.dim==='nether'?' in the Nether':''}</dd>${d.dim==='nether'?`<dt>Overworld equal</dt><dd>${Math.round(d.d*8).toLocaleString()} blocks</dd>`:''}${spd?`<dt>Travel time</dt><dd>about ${fmtTime(d.d/spd)} ${md.how}</dd>`:''}</dl>`:'<p class="sub">Add X and Z coordinates to both stations to see distance and travel time.</p>'}
-    ${(()=>{const o=(L.segs||{})[segK]||{},lk=segLook(L,segK)||{color:L.color};return `<div class="fld"><span>${esc(L.name)} on this segment</span><div class="opts">${[['','Same as line'],['open','Open'],['planned','Planned'],['construction','Building']].map(([k,l])=>`<button class="opt" data-act="sstatus:${k}" aria-pressed="${(o.status||'')===k}">${l}</button>`).join('')}</div></div>
+    ${(()=>{const o=(L.segs||{})[segK]||{},lk=segLook(L,segK)||{color:L.color};return `<div class="fld"><span>${esc(L.name)} on this segment</span><div class="opts g2">${[['','Same as line'],['open','Open'],['planned','Planned'],['construction','Building']].map(([k,l])=>`<button class="opt" data-act="sstatus:${k}" aria-pressed="${(o.status||'')===k}">${l}</button>`).join('')}</div></div>
     <div class="grid2">${fld('Colour here',`<input type="color" id="f-lseg-color" data-obj="lseg" data-id="${L.id}|${segK}" data-prop="color" data-type="text" value="${esc(lk.color)}">`)}${fld('Style here',selectF('lseg',L.id+'|'+segK,'style',o.style||'',[['','Automatic'],...Object.entries(STYLES)]))}</div>
     ${o.color||o.style?'<button class="btn" data-act="sreset">Reset colour and style here</button>':''}
     ${(()=>{const pr=pairs(L).find(([a,b])=>segKey(a,b)===segK);if(!pr)return '';const A=esc((stOf(pr[0])||{}).name||'?'),B=esc((stOf(pr[1])||{}).name||'?');
@@ -2397,13 +2406,12 @@ function inspMulti(){
   // manual layout: picked parts of lines
   if(manualLay()&&sel.every(x=>x.t==='line'&&x.seg)){const nl=new Set(sel.map(x=>x.id)).size;return xp+`<div class="pane"><h3>${esc(tr('Selection'))}</h3><h2>${sel.length} ${esc(tr('parts of lines'))}</h2><p class="sub">${esc(tr('On'))} ${nl} ${esc(tr(nl===1?'line':'lines'))}. ${esc(tr('Drag any of them sideways to move them all. Shift-click a part to add or drop it.'))}</p></div>`}
   return xp+`<div class="pane"><h3>Selection</h3><h2>${sel.length} items</h2><p class="sub">${sts.length} station${sts.length===1?'':'s'}. Drag any of them to move the whole group.</p></div>
-  ${sts.length>1?`<div class="pane"><h3>Line up</h3><div class="btns"><button class="btn" data-act="align:h">Same row</button><button class="btn" data-act="align:v">Same column</button><button class="btn" data-act="align:d">On a 45° line</button></div>
-   <div class="btns adv-only"><button class="btn" data-act="dist:h">Even spacing ↔</button><button class="btn" data-act="dist:v">Even spacing ↕</button></div>
+  ${sts.length>1?`<div class="pane"><h3>Line up</h3><div class="btns"><button class="btn" data-act="align:h">Same row</button><button class="btn" data-act="align:v">Same column</button><button class="btn adv-only" data-act="dist:h">Even spacing ↔</button><button class="btn adv-only" data-act="dist:v">Even spacing ↕</button><button class="btn" data-act="align:d">On a 45° line</button></div>
    <div class="fld"><span>Set type for all</span>${kindPicker(null)}</div>
    <div class="btns"><button class="btn" data-act="closed-all:1">Mark as not in service</button><button class="btn" data-act="closed-all:0">Mark as in service</button></div>
    <div class="fld"><span>Facilities for all</span><div class="chips">${Object.keys(ICONS).map(k=>{const st=sts.map(x=>stOf(x.id)).filter(Boolean),all=st.length&&st.every(x=>(x.icons||[]).includes(k));return `<button class="chip" data-act="icon:${k}" aria-pressed="${all}"><svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true"><rect width="14" height="14" rx="2.5" fill="#0b0b0b"/>${iconGlyph(k,'#ffffff','#0b0b0b')}</svg>${ICONS[k][0]}</button>`}).join('')}</div><p class="sub">Click a facility to add it to every selected station; click again to remove it from all of them.</p></div>${sts.some(x=>(stOf(x.id)?.icons||[]).length)?(v=>`<label class="wp-w" style="display:flex;padding:0;border:0"><span>${esc(tr('Icon size'))}</span><input type="range" class="fac-size" min="50" max="300" step="5" value="${v}"><b data-nt>${v}%</b></label>`)(stOf(sts[0].id)?.iconScale||100):''}
    ${ciconField(sts.map(x=>stOf(x.id)).filter(Boolean))}
-   <div class="fld"><span>Label side for all</span><div class="opts" style="width:fit-content"><button class="opt" data-act="label:auto">Auto for all</button></div><div class="compass">${['nw','n','ne','w','none','e','sw','s','se'].map(d=>`<button data-act="label:${d}">${d==='none'?'×':d.toUpperCase()}</button>`).join('')}</div></div></div>`:''}
+   <div class="fld"><span>Label side for all</span><div class="opts auto1"><button class="opt" data-act="label:auto">Auto for all</button></div><div class="compass">${['nw','n','ne','w','none','e','sw','s','se'].map(d=>`<button data-act="label:${d}">${d==='none'?'×':d.toUpperCase()}</button>`).join('')}</div></div></div>`:''}
   <div class="pane"><div class="btns"><button class="btn" data-act="dup">Duplicate</button><button class="btn warn" data-act="del-sel" data-confirm="1">Delete ${sel.length} items</button></div></div>`;
 }
 function getObj(o,id){
@@ -2783,12 +2791,12 @@ function duplicateSel(){
   }
   if(ns.length)sel=ns;changed();
 }
-function mcMove(s,undo){if(!s.mc||s.mc.x==null||s.mc.z==null){toast('Add X and Z coordinates first.');return false}const S=M.settings,k=S.grid/Math.max(1,S.mcScale),m=s.dim==='nether'&&S.nether8?8:1;if(undo)pushUndo();s.x=snap(s.mc.x*m*k);s.y=snap(s.mc.z*m*k);return true}
+function mcMove(s,undo){if(!s.mc||s.mc.x==null||s.mc.z==null){toast('Add X and Z coordinates first.');return false}const S=M.settings,k=S.grid/Math.max(1,S.mcScale),m=s.dim==='nether'?8:1;if(undo)pushUndo();s.x=snap(s.mc.x*m*k);s.y=snap(s.mc.z*m*k);return true}
 function placeByMc(){
   const S=M.settings,ss=M.stations.filter(s=>s.mc&&s.mc.x!=null&&s.mc.z!=null);
   if(!ss.length){toast('No stations have X and Z coordinates yet.');return}
   pushUndo();
-  const P=ss.map(s=>{const k=s.dim==='nether'&&S.nether8?8:1;return{s,x:s.mc.x*k,z:s.mc.z*k}});
+  const P=ss.map(s=>{const k=s.dim==='nether'?8:1;return{s,x:s.mc.x*k,z:s.mc.z*k}});
   const cx=ss.reduce((a,s)=>a+s.x,0)/ss.length,cy=ss.reduce((a,s)=>a+s.y,0)/ss.length;
   const mx=P.reduce((a,p)=>a+p.x,0)/P.length,mz=P.reduce((a,p)=>a+p.z,0)/P.length,k=S.grid/Math.max(1,S.mcScale);
   P.forEach(p=>{p.s.x=snap(cx+(p.x-mx)*k);p.s.y=snap(cy+(p.z-mz)*k);p.s.ldx=0;p.s.ldy=0});
@@ -3771,9 +3779,9 @@ function inspImage(im){if(!im)return inspMap();return `<div class="pane"><h3>Ima
   <div class="grid2">${fld('Width',inp('image',im.id,'w',Math.round(im.w),'num','min="4"'))}${fld('Height',inp('image',im.id,'h',Math.round(im.h),'num','min="4"'))}</div>
   ${chk('image',im.id,'free',!!im.free,'Allow stretching')}
   ${fld('Layer',selectF('image',im.id,'layer',im.layer||'top',[['top','Above lines and labels'],['bottom','Below lines']]))}
-  ${fld('Opacity',inp('image',im.id,'opacity',im.opacity??1,'num','min="0.05" max="1" step="0.05"'))}
+  <div class="grid2">${fld('Opacity',inp('image',im.id,'opacity',im.opacity??1,'num','min="0.05" max="1" step="0.05"'))}<div class="adv-only">${fld('Rotation °',inp('image',im.id,'rot',im.rot||0,'num','step="15"'))}</div></div>
   <div class="grid2">${fld('Corner radius',inp('image',im.id,'radius',im.radius||0,'num','min="0" max="500"'))}${fld('Border width',inp('image',im.id,'bw',im.bw||0,'num','min="0" max="60" step="0.5"'))}${(im.bw||0)>0?fld('Border colour',inp('image',im.id,'bc',im.bc||M.settings.ink,'color')):''}</div>
-  <div class="grid2 adv-only">${fld('Rotation °',inp('image',im.id,'rot',im.rot||0,'num','step="15"'))}${fld('X',inp('image',im.id,'x',im.x,'num'))}${fld('Y',inp('image',im.id,'y',im.y,'num'))}</div>
+  <div class="grid2 adv-only">${fld('X',inp('image',im.id,'x',im.x,'num'))}${fld('Y',inp('image',im.id,'y',im.y,'num'))}</div>
   <p class="sub">Drag the image to move it and the orange corner to resize it. Hold Alt while resizing to stretch it.</p>
   <div class="btns"><button class="btn" data-act="img-replace">Replace image…</button>${im.free?'<button class="btn" data-act="img-reset">Original proportions</button>':''}<button class="btn" data-act="dup">Duplicate</button><button class="btn warn" data-act="del-sel" data-confirm="1">Delete image</button></div></div>`}
 /* ---------- timeline ---------- */
@@ -4300,8 +4308,7 @@ function accountModal(){
   modal(`<div id="acctModal"><h2>${tr('Account')}</h2><p class="sub" data-nt>${tr('Signed in as')} <b>${esc(authUser.email||'')}</b></p>
     <div class="fld"><span>${tr('Nickname (shown with maps you put in the gallery)')}</span><div style="display:flex;gap:6px"><input id="authNick" type="text" maxlength="30" value="${esc(authNick||'')}" placeholder="${esc(tr('2 to 30 characters'))}" style="flex:1;min-width:0"><button class="btn" data-act="auth-nick">${tr('Save')}</button></div></div>
     <p class="sub">${tr('Your maps are kept in your account and open on any device where you sign in (up to 50 maps, 5 MB each).')}</p>
-    ${priv}<div class="btns"><button class="btn" data-act="auth-out">${tr('Sign out')}</button><button class="btn warn" data-act="auth-delete" data-confirm="1">${tr('Delete my account and cloud maps')}</button></div>
-    <div class="btns"><button class="btn" data-act="share">${tr('Share this map…')}</button><button class="btn" data-act="gallery">${tr('Browse the gallery')}</button><button class="btn" data-act="close-modal">${tr('Close')}</button></div></div>`)}
+    ${priv}<div class="btns acct-btns"><button class="btn warn" data-act="auth-delete" data-confirm="1">${tr('Delete my account and cloud maps')}</button><span style="flex:1"></span><button class="btn" data-act="auth-out">${tr('Sign out')}</button><button class="btn" data-act="close-modal">${tr('Close')}</button></div></div>`)}
 const authHere=()=>location.origin+location.pathname;
 async function authAct(name){const sb=await authClient();try{
   if(name==='auth-google'){const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:authHere(),queryParams:{prompt:'select_account'}}});if(error)throw error;return}

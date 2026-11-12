@@ -45,3 +45,12 @@
   - Gallery search: by map name, maker's nickname or #ID (with or without #); an exact ID match comes first.
   - Your own gallery maps are in their own "Your maps in the gallery" section (not mixed into the list), each with an × that takes it out of the gallery (asks "Remove?" first; the map stays in your maps). Opening one opens your own map, not a copy.
   - The gallery window is bigger (up to 1100 × 860), cards 200 px+; two per row on phones.
+- Button layout tidy-up (from the user's 11 marked spots):
+  - All button rows in the side panels (map, station, line/segment, several selected, area, nature, image, text, timeline) are now an even two-column grid; an odd last button spans the full width. No more single buttons left dangling on their own line at different widths.
+  - Chip lists (Facilities, nature Fill, Served by, Lines passing close by, Custom icon) are an even grid too (two columns in the normal panel width); long chip text wraps instead of being cut.
+  - Line up (several stations): Same row, Same column, Even spacing ↔/↕ (Advanced) and On a 45° line in one grid; Mark as not in service / in service side by side.
+  - Label position and Label side for all: the Auto button is as wide as the compass under it.
+  - Segment status (Same as line / Open / Planned / Building) is a 2 × 2 grid.
+  - Image: Opacity and Rotation side by side, X and Y side by side (Y was alone on a row).
+  - Game coordinates: the Nether ×8 switch is gone; Nether coordinates are always multiplied by 8 when placing stations (it was on by default).
+  - Account window: Share this map / Browse the gallery removed (they're in the top bar now); Delete my account on the left, Sign out and Close on the right.
