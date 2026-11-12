@@ -1794,7 +1794,7 @@ function onewaySVG(G){let o='';G.owStops=new Map();
 function mapSVG(editor){
   const G=geom(),S=M.settings,cuts=crossings(G);let o=editor?'':'<g>'+natureSVG()+waterSVG()+'</g>',xdefs='';
   o+='<g>'+M.regions.map(regionSVG).join('')+imagesSVG('bottom',editor)+'</g>';
-  o+='<g>';
+  const fp=editor?fadeParts():[];o+=fp.length?'<g opacity=".1">':'<g>';
   for(const L of M.lines.slice().reverse()){if(L.hidden)continue;const runs=lineRuns(L,G);if(!runs.length)continue;const d=runs.map(dOf).join('');
     const cut=cuts.get(L.id);if(cut){const id='sndt-x-'+String(L.id).replace(/[^\w-]/g,'');let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const r of runs)for(const p of r){x0=Math.min(x0,p.x);y0=Math.min(y0,p.y);x1=Math.max(x1,p.x);y1=Math.max(y1,p.y)}const pd=lw(L)+24,bx=`x="${f(x0-pd)}" y="${f(y0-pd)}" width="${f(x1-x0+2*pd)}" height="${f(y1-y0+2*pd)}"`;xdefs+=`<mask id="${id}" maskUnits="userSpaceOnUse" ${bx}><rect ${bx} fill="#fff"/>${cut.join('')}</mask>`;o+=`<g mask="url(#${id})">`}
     if(editor&&isSel('line',L.id))o+=`<path d="${d}" fill="none" stroke="${getSelColor()}" stroke-opacity=".35" stroke-width="${lw(L)+10}" stroke-linecap="round" stroke-linejoin="round"/>`;
@@ -1802,6 +1802,8 @@ function mapSVG(editor){
     for(const r of runs)if(r.look)o+=strokeFor(dOf(r),Object.assign({},L,{color:r.look.color,style:r.look.style,dash:r.look.dash}),lw(L));
     if(cut)o+='</g>';}
   o+='</g>';if(xdefs)o+='<defs>'+xdefs+'</defs>';
+  // the picked parts, drawn again at full strength over the faded lines
+  for(const x of fp){const t=G.tracks.get(x.seg),g=t&&legGeo(t,x.id),L=lnOf(x.id);if(!g||!L)continue;const l=g[Math.min(x.leg??0,g.length-1)];o+=strokeFor(dOf(l.pts),L,lw(L))}
   o+=onewaySVG(G);
   if(editor){o+='<g>';const sp=S.lineWidth+S.lineGap;for(const t of G.tracks.values())for(const lid of t.lines)if(!(t.over&&t.over.has(lid)))o+=`<path data-kind="line" data-id="${lid}" data-key="${t.key}" d="${dOf(t.off.get(lid))}" fill="none" stroke="transparent" stroke-width="${Math.max(12,sp+2)}"/>`;o+='</g>'}
   G.auto=editor&&drag&&drag.moved&&lastAuto?lastAuto:autoLabels(G);if(editor)lastAuto=G.auto;
@@ -1818,6 +1820,9 @@ function getSelColor(){return selColor}
    extend when a line ends here). Clicking a stub starts the line tool from the station; the stub's tip is a temporary
    bend point (drawTip) that is removed when the next station is placed, so that segment uses the normal routing. */
 let abMode=null,abFor=null,drawTip=null,autoBuild=lsGet('sndt:autobuild')!=='0';
+// manual layout: fade every line but the picked parts to 10% while editing (editor only, remembered per browser)
+let fadeLines=lsGet('sndt:fade')==='1';
+const fadeParts=()=>manualLay()&&fadeLines?sel.filter(x=>x.t==='line'&&x.seg):[];
 const DIR8=[...Array(8)].map((_,i)=>({x:Math.round(Math.cos(i*Math.PI/4)),y:Math.round(Math.sin(i*Math.PI/4))}));
 // hidden while Reorder lines at stations is on: its dots sit where the stubs would
 function abSid(){return autoBuild&&!(laneEdit&&adv())&&tool==='select'&&!drawLine&&section==='map'&&sel.length===1&&sel[0].t==='station'&&!(drag&&drag.moved)&&(stOf(sel[0].id)||{}).kind!=='waypoint'?sel[0].id:null}
@@ -2151,7 +2156,7 @@ function lanesPane(t){const A=stOf(t.a),B=stOf(t.b),nm=s=>esc(s.kind==='waypoint
     return `<div class="fld"><span data-nt style="display:flex;align-items:center;gap:6px">${swatchSVG(l)}${esc(l.name)}</span>${!z?`<p class="sub">${esc(tr('Not fixed yet: it follows the automatic layout.'))}</p>`:n<2?`<div class="grid2">${box(0,esc(tr('At'))+' '+nm(A),picked.has(lid+'|0'))}${box(1,esc(tr('At'))+' '+nm(B),picked.has(lid+'|0'))}</div>`:`<div class="grid2">${z.map((_,k)=>box(k,esc(tr('Part'))+' '+(k+1)+(k===0?' ('+nm(A)+')':k===n-1?' ('+nm(B)+')':''),picked.has(lid+'|'+k))).join('')}</div>`}</div>`};
   return `<div class="fld"><span>${esc(tr('Lanes on this segment'))}</span></div>${t.lines.map(row).join('')}
     <p class="sub">${esc(tr('How far each part of a line sits to the side of its route, in lanes. Click a part on the map to pick it, Shift-click to pick more, and drag sideways to move the picked parts.'))}</p>
-    <div class="btns"><button class="btn" data-act="lanes-auto">${esc(tr('Back to the automatic lanes here'))}</button></div>`}
+    <div class="btns"><button class="btn" data-act="lanes-auto">${esc(tr('Back to the automatic lanes here'))}</button></div><div class="btns"><button class="btn" data-act="mfade" aria-pressed="${fadeLines}">${esc(tr(fadeLines?'Show all lines':'Fade the other lines'))}</button></div>`}
 function inspLine(L,segK){
   if(!L)return inspMap();
   const md=MODES[modeKey(L)],spd=L.speed||md.speed;
@@ -2284,7 +2289,7 @@ function inspMulti(){
       :`<div class="btns"><button class="btn acc" data-act="xfer-add">${gs.length?tr('Link into one transfer'):tr('Link as out-of-station transfer')}</button></div>${gs.length?'<p class="sub">Stations already in a transfer are merged into the new one.</p>':''}`}</div>`}
   const rgs=sel.filter(s=>s.t==='region');if(rgs.length>=2)xp+=`<div class="pane"><h3>${tr('Areas')}</h3><div class="btns"><button class="btn acc" data-act="region-join">${tr('Join into one area')}</button></div><p class="sub">${tr('The selected districts or fare zones become one area with one outline, keeping the look of the first one you selected.')}</p></div>`;
   // manual layout: picked parts of lines
-  if(manualLay()&&sel.every(x=>x.t==='line'&&x.seg)){const nl=new Set(sel.map(x=>x.id)).size;return `<div class="pane"><h3>${esc(tr('Selection'))}</h3><h2>${sel.length} ${esc(tr('parts of lines'))}</h2><p class="sub">${esc(tr('On'))} ${nl} ${esc(tr(nl===1?'line':'lines'))}. ${esc(tr('Drag any of them sideways to move them all. Shift-click a part to add or drop it.'))}</p></div>`}
+  if(manualLay()&&sel.every(x=>x.t==='line'&&x.seg)){const nl=new Set(sel.map(x=>x.id)).size;return `<div class="pane"><h3>${esc(tr('Selection'))}</h3><h2>${sel.length} ${esc(tr('parts of lines'))}</h2><p class="sub">${esc(tr('On'))} ${nl} ${esc(tr(nl===1?'line':'lines'))}. ${esc(tr('Drag any of them sideways to move them all. Shift-click a part to add or drop it.'))}</p><div class="btns"><button class="btn" data-act="mfade" aria-pressed="${fadeLines}">${esc(tr(fadeLines?'Show all lines':'Fade the other lines'))}</button></div></div>`}
   return xp+`<div class="pane"><h3>Selection</h3><h2>${sel.length} items</h2><p class="sub">${sts.length} station${sts.length===1?'':'s'}. Drag any of them to move the whole group.</p></div>
   ${sts.length>1?`<div class="pane"><h3>Line up</h3><div class="btns"><button class="btn" data-act="align:h">Same row</button><button class="btn" data-act="align:v">Same column</button><button class="btn" data-act="align:d">On a 45° line</button></div>
    <div class="btns adv-only"><button class="btn" data-act="dist:h">Even spacing ↔</button><button class="btn" data-act="dist:v">Even spacing ↕</button></div>
@@ -2504,6 +2509,7 @@ function act(name,arg,el){
     case 'ab-mode':abMode=arg;requestOverlay();break;
     case 'autobuild':autoBuild=arg==='on';lsSet('sndt:autobuild',autoBuild?'1':'0');renderInspector();requestOverlay();break;
     case 'oneway':if(curL&&one.seg){pushUndo();curL.segs=curL.segs||{};const o=curL.segs[one.seg]||(curL.segs[one.seg]={});if(arg)o.oneway=arg;else delete o.oneway;if(!Object.keys(o).length)delete curL.segs[one.seg];changed()}break;
+    case 'mfade':fadeLines=!fadeLines;lsSet('sndt:fade',fadeLines?'1':'0');render();renderInspector();break;
     case 'lanes-auto':if(one&&one.seg&&manualLay()){pushUndo();freezeLanes([one.seg]);changed()}break;
     case 'sreset':if(curL&&one.seg&&curL.segs&&curL.segs[one.seg]){pushUndo();delete curL.segs[one.seg].color;delete curL.segs[one.seg].style;changed()}break;
     case 'seg-smooth':if(one&&one.seg&&M.segs[one.seg]){pushUndo();M.segs[one.seg].smooth=!M.segs[one.seg].smooth;changed()}break;
