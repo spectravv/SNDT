@@ -1050,7 +1050,8 @@ function geom(){
     if(c){const k=sideOf(c.X,leave(t,c.X))*(c.X===t.a?1:-1);slotSort(t.lines,l=>c.r.has(l)?c.r.get(l)*k:null)}}
   for(const t of tracks.values())if(t.fit)t.pts=fitArc(t,tracks,st);
   // the route before any lanes shift it: what manual lanes are measured from
-  const wantBase=manualLay()||geomBase;if(wantBase)for(const t of tracks.values())t.base=t.pts;
+  // (lanes moved by hand in Manual stay in the other layouts too)
+  const wantBase=manualLay()||geomBase||Object.values(M.segs).some(g=>g&&g.lanes);if(wantBase)for(const t of tracks.values())t.base=t.pts;
   // segments that leave a station in the same direction run side by side until they split; each such bundle is then
   // shifted sideways so lines that carry straight on through a station keep their lane instead of jumping
   {const dep=new Map();
@@ -1205,7 +1206,7 @@ function geom(){
       it.t.pts=it.rev?piece.slice().reverse():piece;it.t.off=new Map();it.t.lines=it.rev?ordC.slice().reverse():ordC.slice()});
     ordC.forEach((lid,k)=>{const op=offsetPoly(C,(k-(n-1)/2)*sp);
       // manual layout: frozen lanes, along the whole chain when every piece of it is frozen, else piece by piece
-      let man=null;if(manualLay()){const fz=list.filter(it=>laneOf(it.t.key,lid));if(fz.length)man=fz.length===list.length?manualPieces(list,lid,st,defR,bundleMin(head)):new Map(fz.flatMap(it=>[...manualPieces([{t:it.t,rev:false}],lid,st,defR,bundleMin(it.t))]))}
+      let man=null;if(!geomBase){const fz=list.filter(it=>laneOf(it.t.key,lid));if(fz.length)man=fz.length===list.length?manualPieces(list,lid,st,defR,bundleMin(head)):new Map(fz.flatMap(it=>[...manualPieces([{t:it.t,rev:false}],lid,st,defR,bundleMin(it.t))]))}
       list.forEach((it,i)=>{let piece=op.slice(cuts[i],cuts[i+1]+1);if(piece.length<2)piece=[op[cuts[i]],op[Math.min(op.length-1,cuts[i]+1)]];if(it.rev)piece=piece.slice().reverse();if(it.t.endOrd&&list.length===1)piece=swapPiece(it.t,lid);
         if(man&&man.has(it.t))piece=man.get(it.t);it.t.off.set(lid,piece);
         const t=it.t,P=t.pts,q=P.length,d0=unit(P[1].x-P[0].x,P[1].y-P[0].y),d1=unit(P[q-2].x-P[q-1].x,P[q-2].y-P[q-1].y);
@@ -1462,7 +1463,7 @@ function legCount(t){const B=dedupePts(t.base||t.pts);return smoothRoute(t)||B.l
 function legVals(z,n){if(n<=1)return[z[0],z[z.length-1]];if(z.length===n)return z.slice();const m=z.length>2?z.slice(1,-1).reduce((a,v)=>a+v,0)/(z.length-2):(z[0]+z[z.length-1])/2;return[z[0],...Array(n-2).fill(m),z[z.length-1]]}
 let geomBase=false;
 // freeze the automatic lanes (of the base layout) into seg.lanes, for all segments or only those in keys
-function freezeLanes(keys){const was=M.settings.layout;let G;M.settings.layout=baseLay();geomBase=true;try{G=geom()}finally{M.settings.layout=was;geomBase=false}
+function freezeLanes(keys,keepSet){const was=M.settings.layout;let G;M.settings.layout=baseLay();geomBase=true;try{G=geom()}finally{M.settings.layout=was;geomBase=false}
   const sp=M.settings.lineWidth+M.settings.lineGap,r2=v=>Math.round(v*100)/100,nrm=(p,q)=>{const u=unit(q.x-p.x,q.y-p.y);return{x:-u.y,y:u.x}};
   // a line's offset at an end = how far the bundle moved there (unrounded route against the route) + its own place in the bundle
   for(const t of G.tracks.values()){const B=t.base&&dedupePts(t.base),W=t.raw&&dedupePts(t.raw);if(t.via||!B||!W||B.length<2||W.length<2||(keys&&!keys.includes(t.key)))continue;
@@ -1470,7 +1471,12 @@ function freezeLanes(keys){const was=M.settings.layout;let G;M.settings.layout=b
     const at=(lid,X)=>((o&&o.at===X?o.lines:t.lines).indexOf(lid)-(n-1)/2)*sp;
     // the legs in between don't move with the bundle, only by the line's place in it
     const nl=smoothRoute(t)?1:q-1;for(const lid of t.lines){const a=r2((sa+at(lid,t.a))/sp),b=r2((sb+at(lid,t.b))/sp),m=r2(at(lid,null)/sp);lz[lid]=nl<2?[a,b]:[a,...Array(nl-2).fill(m),b]}
-    (M.segs[t.key]||(M.segs[t.key]={})).lanes=lz}}
+    const sg=M.segs[t.key]||(M.segs[t.key]={});if(keepSet&&sg.lanes)for(const lid of Object.keys(lz))if(laneOf(t.key,lid))lz[lid]=sg.lanes[lid];sg.lanes=lz}}
+// leaving Manual: lanes still where the automatic layout puts them are dropped, lanes moved by hand are kept (and keep applying)
+function pruneLanes(){const old={};for(const [k,g] of Object.entries(M.segs))if(g&&g.lanes)old[k]=clone(g.lanes);freezeLanes();
+  for(const [k,g] of Object.entries(M.segs)){if(!g||!g.lanes)continue;const was=old[k]||{},auto=g.lanes,keep={};
+    for(const [lid,z] of Object.entries(was)){const a=auto[lid];if(!Array.isArray(z))continue;if(!a||z.length!==a.length||z.some((v,i)=>Math.abs(v-a[i])>.01))keep[lid]=z}
+    if(Object.keys(keep).length)g.lanes=keep;else{delete g.lanes;if(!Object.keys(g).length)delete M.segs[k]}}}
 // where a station's mark is drawn: its own point, or (lines first, manual) the middle of the line ends it covers
 function markAt(s,G){if(!marksFollow()||s.kind==='waypoint'||ciconBox(s))return{x:s.x,y:s.y};const E=(G.ends.get(s.id)||[]).filter(e=>!passesAt(e.lid,s.id));if(!E.length)return{x:s.x,y:s.y};
   const [p,q]=farPair(E,s);return{x:(p.x+q.x)/2,y:(p.y+q.y)/2}}
@@ -1570,7 +1576,7 @@ function labelBox(s,G,dk,push=0){
 }
 function labelSVG(s,G){
   if(s.kind==='waypoint'||s.label==='none'||!s.name)return'';
-  const S=M.settings,al=G.auto&&G.auto.get(s.id),b=labelBox(s,G,al?al.dk:(s.label==='auto'?'e':s.label),al?al.push:0);
+  const S=M.settings,al=s.label==='auto'&&G.auto&&G.auto.get(s.id),b=labelBox(s,G,al?al.dk:(s.label==='auto'?'e':s.label),al?al.push:0);
   const tr=s.lrot?` transform="rotate(${s.lrot} ${f(b.px)} ${f(b.py)})"`:'';
   const tc=s.lcolor||(s.lbg?contrastOn(s.lbg):s.closed?mix(S.ink,S.bg,.5):S.ink);
   const halo=S.halo&&!s.lbg?` stroke="${S.bg}" stroke-width="3.5" stroke-linejoin="round" paint-order="stroke"`:'';
@@ -2173,7 +2179,7 @@ function inspLine(L,segK){
     ${t.route==='arc'?`<div class="fld"><span>Arc shape</span><div class="opts"><button class="opt" data-act="arc-fit" aria-pressed="${t.fit}">Fit to neighbours</button><button class="opt" data-act="arc-manual" aria-pressed="${!t.fit}">Manual degrees</button></div></div>${t.fit?'<p class="sub">The curve lines up with the track on both sides, so it joins them without a kink. Any leftover distance becomes a straight run.</p>':`<div class="fld"><span>Arc depth</span><div class="opts">${[45,90,135,180].map(a=>`<button class="opt" data-act="arc-angle:${a}" aria-pressed="${(sg.arc||90)===a}">${a}°</button>`).join('')}<button class="opt" data-act="arc-flip">Flip side</button></div></div>
     <div class="arcman"><input type="range" id="f-seg-arc-range" aria-label="Arc degrees" data-obj="seg" data-id="${segK}" data-prop="arc" data-type="num" min="5" max="180" step="1" value="${sg.arc||90}"><label class="fld"><span>Degrees</span><input type="number" id="f-seg-arc" data-obj="seg" data-id="${segK}" data-prop="arc" data-type="num" min="5" max="180" step="1" value="${sg.arc||90}"></label></div>`}`:''}
     ${sg.route==='custom'?`<p class="sub">Drag the round handles on the map to reshape this segment. Drag a small white handle to add a bend, and double-click a handle to remove it. Hold Alt to place off the grid.</p><div class="btns"><button class="btn" data-act="seg-smooth">${sg.smooth?'Make angular':'Make smooth'}</button><button class="btn" data-act="seg-clear">Remove all bends</button></div>`:'<p class="sub">Or drag the handles on the map to shape it freely.</p>'}
-    ${manualLay()?lanesPane(t):''}
+    ${manualLay()?lanesPane(t):Object.keys(sg.lanes||{}).length?`<p class="sub">${esc(tr('Some lines on this segment were moved by hand in Manual, so they stay where they are.'))}</p><div class="btns"><button class="btn" data-act="lanes-drop">${esc(tr('Back to the automatic lanes here'))}</button></div>`:''}
     ${t.lines.length>1&&!manualLay()?`<div class="fld"><span>Line order on this segment</span><div class="list">${t.lines.map((lid,i)=>{const l=lnOf(lid);return `<div class="stop"><span class="n">${i+1}</span><span class="nm" data-nt style="display:flex;align-items:center;gap:6px">${swatchSVG(l)}${esc(l.name)}</span><span class="b"><button data-act="ord-up:${lid}" ${i?'':'disabled'} aria-label="Move earlier">↑</button><button data-act="ord-down:${lid}" ${i<t.lines.length-1?'':'disabled'} aria-label="Move later">↓</button></span></div>`}).join('')}</div></div>`:''}
     <div class="btns"><button class="btn" data-act="ins-st">Insert station</button><button class="btn" data-act="ins-wp">Insert bend point</button></div>
     <div class="btns"><button class="btn" data-act="sel-whole">Select the whole line</button><button class="btn" data-act="del-seg">Delete this segment</button></div></div>`}}
@@ -2457,7 +2463,8 @@ function act(name,arg,el){
     case 'water-undo':if((M.water||[]).length){pushUndo();M.water.pop();changed()}break;
     case 'water-clear':pushUndo();M.water=[];changed();break;
     case 'undo':undo();break;case 'redo':redo();break;
-    case 'sel-line':select([{t:'line',id:arg}]);closeDrawers('left');break;
+    // Shift-click in the Lines list adds the line to the selection (or takes it out)
+    case 'sel-line':if(actShift){const ls=sel.filter(x=>x.t==='line'),has=ls.some(x=>x.id===arg);select(has?ls.filter(x=>x.id!==arg):ls.filter(x=>!x.seg).concat([{t:'line',id:arg}]))}else{select([{t:'line',id:arg}]);closeDrawers('left')}break;
     case 'sel-st':{select([{t:'station',id:arg}]);const s=stOf(arg);if(s)centerOn(s);closeDrawers('left');break}
     case 'hide-mode':{const Ls=M.lines.filter(L=>modeKey(L)===arg);if(!Ls.length)break;pushUndo();const h=!Ls.every(L=>L.hidden);Ls.forEach(L=>L.hidden=h);changed();break}
     case 'hide-line':{const L=lnOf(arg);pushUndo();L.hidden=!L.hidden;changed();break}
@@ -2488,8 +2495,8 @@ function act(name,arg,el){
     case 'mgap':pushUndo();M.settings.crossGap=+arg;changed();break;
     case 'num-size-reset':if(curSt){pushUndo();delete curSt.numW;delete curSt.numH;delete curSt.numSize;changed()}break;
     case 'mlayout':{const v=arg==='lines'||arg==='manual'?arg:'stations';if(M.settings.layout===v)break;pushUndo();
-      // manual freezes the lanes as they are drawn now; leaving it drops them, back to the automatic layout
-      if(v==='manual'){M.settings.layoutBase=baseLay();freezeLanes()}else{delete M.settings.layoutBase;for(const k in M.segs){delete M.segs[k].lanes;if(!Object.keys(M.segs[k]).length)delete M.segs[k]}}
+      // manual freezes the lanes as they are drawn now (keeping any moved by hand before); leaving it keeps only the ones moved by hand
+      if(v==='manual'){M.settings.layoutBase=baseLay();freezeLanes(null,true)}else{if(manualLay())pruneLanes();delete M.settings.layoutBase}
       M.settings.layout=v;changed();toast(tr(v==='manual'?'Manual: the lanes stay where they are now. Click a part of a line to pick it (Shift-click for more) and drag it sideways.':v==='lines'?'Lines first: lines stay straight in their lanes, and each station sits where its lines pass.':'Stations first: each station stays on its point, and the lines fit around it.'));break}
     case 'arc-angle':case 'arc-flip':if(one&&one.seg){pushUndo();const sg=M.segs[one.seg]||(M.segs[one.seg]={});if(!sg.route)sg.route='arc';if(name==='arc-flip')sg.flip=!sg.flip;else{sg.arc=+arg;sg.fit=false}changed()}break;
     case 'arc-fit':case 'arc-manual':if(one&&one.seg){pushUndo();const sg=M.segs[one.seg]||(M.segs[one.seg]={});if(!sg.route)sg.route='arc';sg.fit=name==='arc-fit';if(!sg.fit&&sg.arc==null)sg.arc=90;changed()}break;
@@ -2508,6 +2515,7 @@ function act(name,arg,el){
     case 'ab-mode':abMode=arg;requestOverlay();break;
     case 'autobuild':autoBuild=arg==='on';lsSet('sndt:autobuild',autoBuild?'1':'0');renderInspector();requestOverlay();break;
     case 'oneway':if(curL&&one.seg){pushUndo();curL.segs=curL.segs||{};const o=curL.segs[one.seg]||(curL.segs[one.seg]={});if(arg)o.oneway=arg;else delete o.oneway;if(!Object.keys(o).length)delete curL.segs[one.seg];changed()}break;
+    case 'lanes-drop':if(one&&one.seg&&M.segs[one.seg]&&M.segs[one.seg].lanes){pushUndo();delete M.segs[one.seg].lanes;changed()}break;
     case 'lanes-auto':if(one&&one.seg&&manualLay()){pushUndo();freezeLanes([one.seg]);changed()}break;
     case 'sreset':if(curL&&one.seg&&curL.segs&&curL.segs[one.seg]){pushUndo();delete curL.segs[one.seg].color;delete curL.segs[one.seg].style;changed()}break;
     case 'seg-smooth':if(one&&one.seg&&M.segs[one.seg]){pushUndo();M.segs[one.seg].smooth=!M.segs[one.seg].smooth;changed()}break;
@@ -2574,10 +2582,12 @@ function act(name,arg,el){
     case 'copy-out':{const t=$('#outBox');copyText(t.value,t);break}
   }
 }
+// Shift (or Ctrl) held on the click that ran the current action
+let actShift=false;
 document.addEventListener('click',e=>{
   const el=e.target.closest('[data-act]');if(!el||el.disabled)return;
   if(el.dataset.confirm&&!el.classList.contains('armed')){el.classList.add('armed');el.dataset.orig=el.textContent;el.textContent='Click again to delete';setTimeout(()=>{if(el.isConnected){el.classList.remove('armed');el.textContent=el.dataset.orig}},3000);return}
-  const [n,...rest]=el.dataset.act.split(':');act(n,rest.join(':'),el);
+  const [n,...rest]=el.dataset.act.split(':');actShift=e.shiftKey||e.ctrlKey||e.metaKey;try{act(n,rest.join(':'),el)}finally{actShift=false}
 });
 function copyText(t,el){
   const ok=()=>toast('Copied');
@@ -2830,7 +2840,7 @@ function pointerDown(e){if(multiAdd&&e.pointerType!=='mouse'&&dtapSel)Object.def
   if(h&&h.kind==='ihandle'){const im=(M.images||[]).find(x=>x.id===h.id);if(im){drag={type:'iresize',im,start:w,ow:im.w,oh:im.h,moved:false};return}}
   if(h&&h.kind==='nbh'){const st=stOf(h.id),nb=st&&numBox(st,lastG);if(nb){drag={type:'nbresize',s:st,i:h.i,start:w,ow:nb.W,oh:nb.h,moved:false};return}}
   if(h&&h.kind==='handle'){const g=M.regions.find(x=>x.id===h.id),r=+h.i>=0?g.more[+h.i]:g;drag={type:'resize',r,start:w,ow:r.w,oh:r.h,moved:false};return}
-  if(h&&h.kind==='label'&&adv()){const s=stOf(h.id);if(!isSel('station',s.id))select([{t:'station',id:s.id}]);drag={type:'label',s,start:w,ox:s.ldx||0,oy:s.ldy||0,moved:false};return}
+  if(h&&h.kind==='label'&&adv()){const s=stOf(h.id);if(!isSel('station',s.id))select([{t:'station',id:s.id}]);drag={type:'label',s,start:w,moved:false};return}
   if(h&&(h.kind==='station'||h.kind==='label'||h.kind==='text'||h.kind==='region'||h.kind==='legend'||h.kind==='image')){
     const t=h.kind==='label'?'station':h.kind,id=h.kind==='legend'?'legend':h.id,was=isSel(t,id);
     if(e.shiftKey){if(isSel(t,id))select(sel.filter(s=>!(s.t===t&&s.id===id)));else select(sel.concat([{t,id}]));}
@@ -2927,7 +2937,12 @@ svg.addEventListener('pointermove',e=>{
     if(!drag.moved){if(Math.hypot(dx,dy)*view.k<3)return;pushUndo();drag.moved=true}
     const free=e.altKey,ddx=snap(dx,free),ddy=snap(dy,free);for(const it of drag.items){if(it.orig){it.o.pts=it.orig.map(q=>[q[0]+ddx,q[1]+ddy]);continue}if(it.rel){it.o.x=it.ox+ddx;it.o.y=it.oy+ddy;continue}it.o.x=snap(it.ox+dx,free);it.o.y=snap(it.oy+dy,free)}
     drag.guides=freePlace()&&!e.altKey?alignMove(drag):null;requestRender();if(drag.guides||drag.hadGuides){drag.hadGuides=!!drag.guides;requestOverlay()}return}
-  if(drag.type==='label'){if(!drag.moved){if(Math.hypot(dx,dy)*view.k<2)return;pushUndo();drag.moved=true}drag.s.ldx=Math.round(drag.ox+dx);drag.s.ldy=Math.round(drag.oy+dy);requestRender();return}
+  // a label drags freely from where it is drawn: an automatic side is fixed first (keeping any push away from other labels), then
+  // the label's corner point snaps to the grid in Grid placement (not with Alt) and goes anywhere in Free placement
+  if(drag.type==='label'){const s=drag.s;if(!drag.moved){if(Math.hypot(dx,dy)*view.k<2)return;pushUndo();drag.moved=true;const G=lastG||geom();
+      if(s.label==='auto'){const al=G.auto&&G.auto.get(s.id),dk=al?al.dk:'e',pu=al?al.push:0;s.label=dk;s.ldx=(s.ldx||0)+DIRS[dk][0]*pu;s.ldy=(s.ldy||0)+DIRS[dk][1]*pu}
+      drag.ox=s.ldx||0;drag.oy=s.ldy||0;const b=labelBox(s,G,s.label,0);drag.bx=b.px-drag.ox;drag.by=b.py-drag.oy}
+    const r=v=>Math.round(v*10)/10;s.ldx=r(snap(drag.bx+drag.ox+dx,e.altKey)-drag.bx);s.ldy=r(snap(drag.by+drag.oy+dy,e.altKey)-drag.by);requestRender();return}
   if(drag.type==='cp'||drag.type==='cpadd'){
     if(!drag.moved){if(Math.hypot(dx,dy)*view.k<2)return;pushUndo();const sg=makeCustom(drag.key);if(!sg){drag=null;return}
       if(drag.type==='cpadd'){sg.pts.splice(drag.i,0,{x:0,y:0});drag.type='cp'}drag.moved=true}
