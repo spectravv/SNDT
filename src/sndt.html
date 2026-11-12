@@ -1571,8 +1571,10 @@ function labelBox(s,G,dk,push=0){
     if(anchor!=='middle')iy=S.iconAlign==='middle'?top+H/2-ih/2:S.iconAlign==='bottom'?top+H-ih:top+fs*.45-isz/2}
   const left=anchor==='start'?x:anchor==='end'?x-tw:x-tw/2;
   const tb={x0:left-bgp,x1:left+tw+bgp*1.5,y0:top-bgp*.6,y1:top+H+bgp*.6};
+  // text alignment set on the station (lalign left/center/right): the label stays where it is, its rows line up inside it
+  const LA={left:'start',center:'middle',right:'end'}[s.lalign],ta=LA||anchor,tx=LA?(LA==='start'?left:LA==='end'?left+tw:left+tw/2):x;
   const rect={x0:Math.min(tb.x0,icons.length?ix:tb.x0),x1:Math.max(tb.x1,icons.length?ix+iw:tb.x1),y0:Math.min(tb.y0,icons.length?iy:tb.y0),y1:Math.max(tb.y1,icons.length?iy+ih:tb.y1)};
-  return{x,y:top+fe*.8,anchor,fs,rows,dys,bold,icons,ix,iy,isz,cols,rect,tb,px:x0,py:y0,subRows,sfs,sdys,subY:top+h+fs*.1+sfe*.85};
+  return{x:tx,y:top+fe*.8,anchor:ta,fs,rows,dys,bold,icons,ix,iy,isz,cols,rect,tb,px:x0,py:y0,subRows,sfs,sdys,subY:top+h+fs*.1+sfe*.85};
 }
 function labelSVG(s,G){
   if(s.kind==='waypoint'||s.label==='none'||!s.name)return'';
@@ -2103,6 +2105,7 @@ function inspStation(s){
    ${['stop','interchange','terminus','hub'].includes(s.kind||'stop')?fld('Shape',selectF('station',s.id,'shape',s.shape||'',[['',tr('Same as map')+' ('+tr((SHAPES.find(x=>x[0]===(M.settings.stopStyle||'circle'))||SHAPES[0])[1])+')']].concat(SHAPES))):''}
    ${s.kind==='waypoint'?fld('Corner radius at this bend point',inp('station',s.id,'radius',s.radius??'','numnull','min="0" max="400" placeholder="'+(M.settings.cornerR??16)+' (map default)"')):''}
    <div class="fld"><span>Label position</span><div class="opts" style="width:fit-content"><button class="opt" data-act="label:auto" aria-pressed="${s.label==='auto'}">Auto: find free space</button></div><div class="compass">${comp}</div></div>
+   <div class="fld"><span>${tr('Text alignment')}</span><div class="opts" style="width:fit-content">${[['','Auto'],['left','Left'],['center','Centre'],['right','Right']].map(([k,l])=>`<button class="opt" data-act="lalign:${k}" aria-pressed="${(s.lalign||'')===k}">${tr(l)}</button>`).join('')}</div></div>
    <div class="fld"><span>Facilities</span><div class="chips">${Object.keys(ICONS).map(k=>`<button class="chip" data-act="icon:${k}" aria-pressed="${(s.icons||[]).includes(k)}"><svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true"><rect width="14" height="14" rx="2.5" fill="#0b0b0b"/>${iconGlyph(k,'#ffffff','#0b0b0b')}</svg>${ICONS[k][0]}</button>`).join('')}</div></div>${(s.icons||[]).length?`<label class="wp-w" style="display:flex;padding:0;border:0"><span>${esc(tr('Icon size'))}</span><input type="range" class="fac-size" min="50" max="300" step="5" value="${s.iconScale||100}"><b data-nt>${s.iconScale||100}%</b></label>`:''}
    ${ciconField([s])}
    ${chk('station',s.id,'closed',!!s.closed,'Not in service')}
@@ -2484,6 +2487,7 @@ function act(name,arg,el){
     case 'del-line':if(curL){pushUndo();M.lines=M.lines.filter(l=>l!==curL);if(drawLine===curL.id)drawLine=null;sel=[];changed()}break;
     case 'kind':{const ss=sel.filter(s=>s.t==='station').map(s=>stOf(s.id));if(!ss.length)break;pushUndo();ss.forEach(s=>s.kind=arg);
       if(arg==='arrow'){const G=geom();ss.forEach(s=>{const e=(G.ends.get(s.id)||[])[0];if(!e)return;const a=Math.atan2(-e.dir.y,-e.dir.x),names=['e','se','s','sw','w','nw','n','ne'];s.label=names[((Math.round(a/(Math.PI/4))%8)+8)%8];s.ldx=0;s.ldy=0})}if(arg==='portal')ss.forEach(s=>{if(!s.dim)s.dim='overworld'});changed();break}
+    case 'lalign':{const ss=sel.filter(x=>x.t==='station').map(x=>stOf(x.id)).filter(Boolean);if(!ss.length)break;pushUndo();ss.forEach(x=>{if(arg)x.lalign=arg;else delete x.lalign});changed();break}
     case 'label':{const ss=sel.filter(s=>s.t==='station').map(s=>stOf(s.id));if(!ss.length)break;pushUndo();ss.forEach(s=>{s.label=arg;s.ldx=0;s.ldy=0});changed();break}
     case 'icon':{const ss=sel.filter(s=>s.t==='station').map(s=>stOf(s.id));if(!ss.length)break;pushUndo();const on=!ss.every(x=>(x.icons||[]).includes(arg));ss.forEach(s=>{const a=(s.icons||[]).filter(k=>k!==arg);if(on)a.push(arg);s.icons=a});changed();break}
     case 'copy-tp':{const t=$('#tpText');copyText(t.textContent,t);break}
