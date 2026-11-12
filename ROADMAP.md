@@ -118,6 +118,15 @@ v1.0.5.1 hotfix released 2026-11-07 (ILVF station numbers, striped lines bend, n
 - Ideas from players (2026-11-02): all done in v1.0.5 (fare zones as an area Kind, ILVF interchange styles Names/Codes/Dots, Renumber stations).
 - Manual layout (step 2 of the precision plan; moved here from v1.2 by the user on 2026-10-31): a "Manual layout" switch per map (Free mode then means precise + manual) that freezes the automatic layout into per-line, per-segment sideways offsets, which the user then sets by dragging or typing; the automatic bundling/reordering leaves them alone; switching back returns to automatic; a single segment can be re-frozen from the automatic layout.
 
+## Accounts (planned 2026-11-12, user decisions)
+- Sign in with Google or an email link (Supabase Auth, project sndt). Optional: the app keeps working without an account.
+- Scope: cloud sync of your own maps + share links + public gallery with reporting.
+- Local first: maps stay in IndexedDB (done in v1.0.6), signed-in saves also go to the cloud; the later save wins and the older version is kept as a backup (5 per map).
+- Limits: 50 maps, 5 MB per map, 50 MB per account. "Delete my account" removes everything. Needs a privacy page.
+- Database draft: supabase/accounts.sql (not applied yet; user to review).
+- User setup: Google OAuth client, Supabase Auth URLs (sndt.cc), custom SMTP for email links (Supabase's built-in sender only allows a few emails per hour).
+- Steps: 1) apply SQL, 2) sign-in UI, 3) sync, 4) share links, 5) gallery + reports, 6) privacy page + delete account.
+
 ## Later
 - MTR import: an option to spread out only the crowded areas (dense city centres) on import, instead of the whole map (decided 2026-10-28). (moved out of v1.0.2 on 2026-10-29)
 - Translator credits: a Translators part in the Creators popup (and the handbook's Creators section), filled from the Crowdin contributors once translations arrive. (moved out of v1.0.2 on 2026-10-29)
