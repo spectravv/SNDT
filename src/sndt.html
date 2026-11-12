@@ -25,7 +25,8 @@ body{background:var(--paper);color:var(--ink);font-family:var(--font-ui);font-si
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--red);outline-offset:1px}
-.app{display:grid;grid-template-rows:auto 1fr;height:100%}
+.app{display:grid;grid-template-rows:auto 1fr;grid-template-columns:minmax(0,1fr);height:100%}
+header{overflow:clip}
 
 /* header */
 header{display:flex;align-items:stretch;gap:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));background:var(--paper);border-bottom:3px solid var(--ink);min-width:0;height:52px}
@@ -2742,7 +2743,7 @@ function act(name,arg,el){
     case 'help':openPop(el,`<button class="row" data-act="tour">${esc(tr('Tutorial'))} <small>${esc(tr('step by step, on the map'))}</small></button><a class="row" href="handbook/" ${FRAMED?'':'target="_blank" rel="noopener"'} style="color:inherit;text-decoration:none">${esc(tr('Handbook'))} <small>${esc(tr('every tool and setting, with live demos'))}</small></a><button class="row" data-act="creators">${esc(tr('Creators'))} <small>${esc(tr('the people who made SNDT'))}</small></button>`);break;
     case 'creators':closePop();modal(`<h2>${esc(tr('Creators'))}</h2><div class="crew">${CREATORS.map(([n,r,i,img])=>`<div class="crew-card"><img src="${img}" alt=""><b data-nt>${esc(n)}</b><span class="role">${esc(tr(r))}</span>${i?`<span class="idea" data-nt>“${esc(i)}”</span>`:''}</div>`).join('')}</div>
       <div class="crew-thanks"><img src="${SNDTLOGO}" alt="SNDT"><img src="${PETROLAVIA}" alt="Petrolavia"><span>${esc(tr('And everyone else in the SNDT and Petrolavia communities, for ideas, testing and feedback.'))}</span></div><div class="btns"><button class="btn acc" data-act="close-modal">${esc(tr('Close'))}</button></div>`);break;
-    case 'search':if(window.innerWidth>900&&el&&el.id==='searchBtn')break;closeDrawers();searchOpen();break;
+    case 'search':if(!NARROW()&&el&&el.id==='searchBtn')break;closeDrawers();searchOpen();break;
     case 'leg-fac':{const lg=M.settings.legend;pushUndo();lg.facPick=lg.facPick||{};if(lg.facPick[arg])delete lg.facPick[arg];else lg.facPick[arg]=true;changed();break}
     case 'cicon':{const ss=sel.filter(x=>x.t==='station').map(x=>stOf(x.id)).filter(Boolean);if(!ss.length)break;pushUndo();ss.forEach(s=>{if(arg)s.cicon=arg;else{delete s.cicon;delete s.ciconSize;delete s.ciconOver}});changed();break}
     case 'cicon-up':iconFor=sel.filter(x=>x.t==='station').map(x=>x.id);$('#iconIn').click();break;
@@ -2986,7 +2987,7 @@ function toolsSync(){const g=$('#toolGroup');if(!g)return;const on=TOOL_GROUP.in
 function toolGroupOpen(){const g=$('#toolGroup');if(popEl&&popEl.classList.contains('tg-pop')){closePop();return}
   openPop(g,TOOL_GROUP.map(toolDef).map(([k,key,l,ic])=>`<button class="row tg-row" data-act="tool-g:${k}" aria-pressed="${tool===k}"><svg viewBox="0 0 24 24">${ic}</svg><span>${l}</span><kbd>${key}</kbd></button>`).join(''));
   popEl.classList.add('tg-pop');const r=g.getBoundingClientRect(),ph=popEl.offsetHeight,pw=popEl.offsetWidth;
-  if(window.innerWidth<=900){popEl.style.top=Math.max(8,r.top-ph-10)+'px';popEl.style.left=Math.min(Math.max(8,r.left+r.width/2-pw/2),window.innerWidth-pw-8)+'px'}
+  if(NARROW()){popEl.style.top=Math.max(8,r.top-ph-10)+'px';popEl.style.left=Math.min(Math.max(8,r.left+r.width/2-pw/2),VW()-pw-8)+'px'}
   else{popEl.style.left=(r.right+10)+'px';popEl.style.top=Math.max(8,Math.min(r.top,window.innerHeight-ph-8))+'px'}}
 
 /* ---------- view ---------- */
@@ -3321,15 +3322,19 @@ $('#stFilter').addEventListener('input',renderLists);
 const NAV=[['header [data-act="export-menu"]','export'],['header .seg.lay','layout'],['header .seg:not(.ctl):not(.place):not(.pub)','section'],['header .seg.ctl','mode'],['#installBtn','install'],['#liveBtn','live'],['#accountBtn','account'],['#searchBtn','search'],['#tourBtn','tour'],['#themeBtn','theme'],['#langSel','lang'],['#donateBtn','donate'],['#discordBtn','discord'],['#status','status']]
   .map(([q,slot])=>{const el=document.querySelector(q),ph=document.createComment(slot);el.before(ph);return{el,ph,slot}});
 let navNarrow=null;
-function navPlace(){const n=window.innerWidth<=900;if(n===navNarrow)return;navNarrow=n;for(const o of NAV){if(n)document.querySelector(`#navMenu [data-slot="${o.slot}"]`).appendChild(o.el);else o.ph.after(o.el)}}
+// phone layout = the same test as the CSS (max-width:900px). Android Chrome can lay a page out wider than the screen
+// (window.innerWidth 1035 on an 800px tablet), which used to switch the scripts to desktop while the CSS stayed on phone
+function NARROW(){return matchMedia('(max-width:900px)').matches}
+function VW(){return document.documentElement.clientWidth||window.innerWidth}
+function navPlace(){const n=NARROW();if(n===navNarrow)return;navNarrow=n;for(const o of NAV){if(n)document.querySelector(`#navMenu [data-slot="${o.slot}"]`).appendChild(o.el);else o.ph.after(o.el)}}
 navPlace();window.addEventListener('resize',navPlace);
 // phones: a tap outside the menu or the lists drawer closes it
-document.addEventListener('pointerdown',e=>{if(window.innerWidth>900)return;for(const id of ['navMenu','left']){const a=$('#'+id);if(a.classList.contains('open')&&!a.contains(e.target)&&!e.target.closest(`[data-act="drawer:${id}"],.pop,.scrim`))a.classList.remove('open')}},true);
+document.addEventListener('pointerdown',e=>{if(!NARROW())return;for(const id of ['navMenu','left']){const a=$('#'+id);if(a.classList.contains('open')&&!a.contains(e.target)&&!e.target.closest(`[data-act="drawer:${id}"],.pop,.scrim`))a.classList.remove('open')}},true);
 // phones: the inspector is a bottom sheet. Selecting something with the Select tool opens it; deselecting closes it again
 let sheetKey='',sheetFor=null,multiAdd=false;
 function sheetOpen(f,full){const R=$('#right');sheetFor=f;R.classList.add('open');R.classList.toggle('full',!!full)}
 function sheetClose(){const R=$('#right');R.classList.remove('open','full');sheetFor=null}
-function sheetSync(){if(window.innerWidth>900)return;const draft=document.body.classList.contains('drafting'),key=draft?'draft':sel.map(x=>x.t+':'+x.id).join(',');
+function sheetSync(){if(!NARROW())return;const draft=document.body.classList.contains('drafting'),key=draft?'draft':sel.map(x=>x.t+':'+x.id).join(',');
   if(key===sheetKey)return;sheetKey=key;
   if(draft){if(sheetFor==='sel')sheetClose();return}
   if(sel.length&&tool==='select'){if(!$('#right').classList.contains('open')){sheetOpen('sel');requestAnimationFrame(()=>{focusPanes();sheetReveal()})}else sheetReveal()}else if(!sel.length&&sheetFor==='sel'){sheetClose();setMulti(false)}}
@@ -3345,7 +3350,7 @@ function draftAct(a){
   if(natureDraft)a==='done'?finishNature():cancelNature();else if(waterDraft)a==='done'?finishWater():cancelWater();else if(regionDraft)a==='done'?finishRegionDraft():cancelRegionDraft()}
 // phones: track the on-screen keyboard (what the visual viewport loses at the bottom) and keep the field being typed in visible
 if(window.visualViewport){const vv=window.visualViewport;
-  const kbSync=()=>{const kb=Math.max(0,Math.round(window.innerHeight-vv.height-vv.offsetTop)),on=kb>80&&window.innerWidth<=900;
+  const kbSync=()=>{const kb=Math.max(0,Math.round(window.innerHeight-vv.height-vv.offsetTop)),on=kb>80&&NARROW();
     document.body.style.setProperty('--kb',(on?kb:0)+'px');document.body.classList.toggle('kb',on);
     if(on){const el=document.activeElement;if(el&&el.matches('input,textarea,select')&&el.closest('#right,.scrim,aside'))requestAnimationFrame(()=>el.scrollIntoView({block:'center'}))}};
   vv.addEventListener('resize',kbSync);vv.addEventListener('scroll',kbSync)}
@@ -3366,13 +3371,13 @@ function setMulti(on){multiAdd=on;const b=$('#multiBtn');if(b)b.setAttribute('ar
   g.addEventListener('pointerup',e=>{if(gy==null)return;const d=e.clientY-gy,R=$('#right');gy=null;
     if(d<-30)R.classList.add('full');else if(d>30){if(R.classList.contains('full'))R.classList.remove('full');else sheetClose()}else R.classList.toggle('full')});
   g.addEventListener('pointercancel',()=>{gy=null})}
-function openDrawer(w){if(window.innerWidth>900)return;$('#'+w).classList.add('open')}
-function closeDrawers(w){if(window.innerWidth>900)return;(w?[$('#'+w)]:document.querySelectorAll('aside')).forEach(a=>a.classList.remove('open'))}
+function openDrawer(w){if(!NARROW())return;$('#'+w).classList.add('open')}
+function closeDrawers(w){if(!NARROW())return;(w?[$('#'+w)]:document.querySelectorAll('aside')).forEach(a=>a.classList.remove('open'))}
 function toggleDrawer(w){const a=$('#'+w),o=a.classList.contains('open');closeDrawers();if(!o)a.classList.add('open')}
 let popEl=null;
 function closePop(){if(popEl){popEl.remove();popEl=null}}
 function openPop(anchor,html){closePop();popEl=document.createElement('div');popEl.className='pop';popEl.innerHTML=html;document.body.appendChild(popEl);
-  const r=anchor.getBoundingClientRect(),pw=popEl.offsetWidth;let x=Math.min(r.left,window.innerWidth-pw-12);x=Math.max(12,x);popEl.style.left=x+'px';popEl.style.top=(r.bottom+6)+'px'}
+  const r=anchor.getBoundingClientRect(),pw=popEl.offsetWidth;let x=Math.min(r.left,VW()-pw-12);x=Math.max(12,x);popEl.style.left=x+'px';popEl.style.top=(r.bottom+6)+'px'}
 document.addEventListener('pointerdown',e=>{if(popEl&&!popEl.contains(e.target)&&!e.target.closest('[data-act="maps-menu"],[data-act="export-menu"],[data-act="toolgroup"],[data-act="help"]'))closePop()},true);
 function toast(t){document.querySelectorAll('.toast').forEach(o=>o.remove());const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),2600)}
 // isolated line view, "ILVF" (idea by Paddy): chosen lines drawn as straight strips for platform displays and station signs.
@@ -3589,7 +3594,7 @@ function searchIndex(){const out=[],tl=(l)=>tr(l);
   return out}
 // open the Map panel at a setting: select nothing, open its section, scroll to it and outline it for a moment
 function searchGo(pane,n,adv){if(tool!=='select')setTool('select');if(adv&&mode!=='adv')setMode('adv');sel=[];render();renderLists();
-  OPEN.add(pane);lsSet('sndt:open',JSON.stringify([...OPEN]));renderInspector();if(window.innerWidth<=900){closeDrawers();sheetOpen('map',true)}
+  OPEN.add(pane);lsSet('sndt:open',JSON.stringify([...OPEN]));renderInspector();if(NARROW()){closeDrawers();sheetOpen('map',true)}
   requestAnimationFrame(()=>{const el=n<0?[...insp.querySelectorAll('.pane')].find(p=>{const h=p.querySelector('h3');return h&&foldKey(h)===pane}):insp.querySelectorAll('.fld')[n];if(!el)return;
     el.scrollIntoView({block:'center',behavior:'smooth'});el.classList.add('found');setTimeout(()=>el.classList.remove('found'),1800);
     const f=n>=0&&el.querySelector('input,select,textarea,button');if(f)f.focus({preventScroll:true})})}
@@ -3599,7 +3604,7 @@ function searchKeys(e){const n=cmdkListEl?cmdkListEl.querySelectorAll('.cmdk-row
   else if(e.key==='Enter'){e.preventDefault();searchPick(cmdkSel)}else if(e.key==='Escape'){e.preventDefault();searchClose()}}
 // wide screens: the bar in the header with results dropping down under it; phones (or a hidden bar): a full-screen box
 function searchOpen(){closePop();const hb=$('#hSearch');
-  if(hb&&window.innerWidth>900&&hb.offsetWidth>40){if(document.activeElement!==hb)hb.focus();searchDrop();return}
+  if(hb&&!NARROW()&&hb.offsetWidth>40){if(document.activeElement!==hb)hb.focus();searchDrop();return}
   searchClose();const sc=document.createElement('div');sc.className='scrim';sc.id='cmdk';
   sc.innerHTML=`<div class="cmdk" role="dialog" aria-label="${esc(tr('Search tools and settings'))}"><input type="search" id="cmdkIn" placeholder="${esc(tr('Search tools and settings'))}" autocomplete="off" aria-label="${esc(tr('Search tools and settings'))}"><div class="cmdk-list" id="cmdkList" role="listbox"></div></div>`;
   document.body.appendChild(sc);cmdkIdx=searchIndex();cmdkIn=$('#cmdkIn');cmdkListEl=$('#cmdkList');
@@ -3609,9 +3614,9 @@ function searchOpen(){closePop();const hb=$('#hSearch');
 function searchDrop(){const hb=$('#hSearch');let d=$('#cmdkDrop');
   if(!d){d=document.createElement('div');d.className='cmdk-drop';d.id='cmdkDrop';d.innerHTML='<div class="cmdk-list" id="cmdkList" role="listbox"></div>';document.body.appendChild(d);cmdkIdx=searchIndex();cmdkSel=0}
   cmdkIn=hb;cmdkListEl=d.querySelector('#cmdkList');const r=$('#searchBtn').getBoundingClientRect(),w=Math.max(360,r.width);
-  d.style.width=w+'px';d.style.left=Math.max(8,Math.min(r.left,innerWidth-w-8))+'px';d.style.top=(r.bottom+6)+'px';searchList()}
+  d.style.width=w+'px';d.style.left=Math.max(8,Math.min(r.left,VW()-w-8))+'px';d.style.top=(r.bottom+6)+'px';searchList()}
 function searchClose(){const sc=$('#cmdk');if(sc)sc.remove();const d=$('#cmdkDrop');if(d)d.remove();const hb=$('#hSearch');if(hb&&cmdkIn===hb){hb.value='';if(document.activeElement===hb)hb.blur()}cmdkIn=cmdkListEl=null}
-{const hb=$('#hSearch');hb.addEventListener('focus',()=>{if(window.innerWidth<=900){hb.blur();return}searchDrop()});hb.addEventListener('input',()=>{cmdkSel=0;searchDrop()});hb.addEventListener('keydown',searchKeys);
+{const hb=$('#hSearch');hb.addEventListener('focus',()=>{if(NARROW()){hb.blur();return}searchDrop()});hb.addEventListener('input',()=>{cmdkSel=0;searchDrop()});hb.addEventListener('keydown',searchKeys);
   hb.addEventListener('blur',()=>setTimeout(()=>{if(document.activeElement!==hb&&cmdkIn===hb)searchClose()},150))}
 let cmdkShown=[];
 function searchList(){if(!cmdkListEl)return;const q=(cmdkIn&&cmdkIn.value)||'',ql=q.trim().toLowerCase(),words=ql.split(/\s+/).filter(Boolean);
@@ -4245,7 +4250,7 @@ $('#stage').addEventListener('drop',e=>{const fl=e.dataTransfer&&[...e.dataTrans
 document.addEventListener('paste',e=>{if(section!=='map')return;const t=e.target;if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable))return;const fl=[...(e.clipboardData?e.clipboardData.files:[])].filter(f=>/^image\//.test(f.type));if(fl.length){e.preventDefault();addImageFiles(fl)}});
 /* ---------- resizable panels ---------- */
 const PANEL={lw:[256,180,560],rw:[304,240,640],tw:[300,240,640]};
-function setPanel(k,v){const [,mn,mx]=PANEL[k];v=Math.round(Math.max(mn,Math.min(mx,innerWidth*.42,v)));document.documentElement.style.setProperty('--'+k,v+'px');return v}
+function setPanel(k,v){const [,mn,mx]=PANEL[k];v=Math.round(Math.max(mn,Math.min(mx,VW()*.42,v)));document.documentElement.style.setProperty('--'+k,v+'px');return v}
 function panelW(k){const v=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--'+k));return v>0?v:PANEL[k][0]}
 function panelSaved(k,v){lsSet('sndt:'+k,v==null?'':String(v));if(section==='timeline')tlDraw()}
 for(const k in PANEL){const v=+lsGet('sndt:'+k);if(v>0)setPanel(k,v)}
@@ -4265,7 +4270,7 @@ window.addEventListener('resize',()=>{for(const k in PANEL){const v=+lsGet('sndt
    opened). Try it steps leave the map usable: no dimming, and keys go to the app. */
 const nSt=()=>M.stations.filter(s=>s.kind!=='waypoint').length,stopsAll=()=>M.lines.reduce((a,L)=>a+L.stops.length,0),posKey=()=>M.stations.map(s=>s.x+','+s.y).join('|');
 function paneEl(name){return [...insp.querySelectorAll('.pane')].find(p=>{const h=p.querySelector('h3');return h&&foldKey(h)===name})}
-function openPane(name){searchGo(name,-1,false);if(window.innerWidth<=900)sheetOpen('map',false)}
+function openPane(name){searchGo(name,-1,false);if(NARROW())sheetOpen('map',false)}
 const toTl=()=>{if(section!=='timeline')act('section','timeline')};
 // open one section of the Timeline settings (and only that one) and point at it
 const tlPaneEl=name=>[...document.querySelectorAll('#tlSide .pane')].find(p=>{const h=p.querySelector('h3');return h&&foldKey(h)===name});
@@ -4285,7 +4290,7 @@ const TUT=[
   {sel:'#right',t:'How it bends',b:'Choose how this segment bends: straight then 45°, 45° then straight, direct, two right-angle turns, a curve or a zigzag. Drag the handles on the map to give it any shape. Double-click a track to select the whole line.',tb:'Choose how this segment bends: straight then 45°, 45° then straight, direct, two right-angle turns, a curve or a zigzag. Long-press a track to insert a station.'},
   {sel:'#right',t:'One way',b:'Further down, Direction makes this line run one way on the segment. Arrows show the way, and stops served in one direction only get a small arrow too.'},
   {sel:()=>paneEl('Lines'),setup:()=>openPane('Lines'),t:'Map-wide bends',b:'With nothing selected, Map → Lines sets the bend for every segment you haven’t set by hand. Switch Bend types to Mix types and tick several: each segment then gets the one that fits best.'},
-  {sel:'#left',setup:()=>{if(window.innerWidth<=900)return;const L=M.lines[0];if(L)select([{t:'line',id:L.id}])},t:'Line settings',b:'Select a line in this list or on the map to rename it and set its colour (Minecraft dyes included), type (subway, tram, bus, rail, high-speed, ferry, minecart, ice boat…), style, width and status. The eye hides a line.',ts:'.lists-fab',tb:'The lines and stations list is behind this button. Select a line to rename it and set its colour, type, style, width and status.'},
+  {sel:'#left',setup:()=>{if(NARROW())return;const L=M.lines[0];if(L)select([{t:'line',id:L.id}])},t:'Line settings',b:'Select a line in this list or on the map to rename it and set its colour (Minecraft dyes included), type (subway, tram, bus, rail, high-speed, ferry, minecart, ice boat…), style, width and status. The eye hides a line.',ts:'.lists-fab',tb:'The lines and stations list is behind this button. Select a line to rename it and set its colour, type, style, width and status.'},
   {sel:'#stage',t:'Lines side by side',b:'Lines that share track run side by side on their own. To change their order at a station, switch to Advanced, select the station, turn on Reorder lines at stations and drag one line’s dot onto another.'},
   {sel:'#bendsBtn',t:'Bend points',b:'Bend points let a line turn without a station. Show or hide them with this button or B.',tb:'Bend points let a line turn without a station. Show or hide them with this button.'}]},
  {id:'stations',t:'Stations and labels',steps:[
@@ -4322,7 +4327,7 @@ function tourStart(){closePop();closeModal();closeDrawers();searchClose();tourLa
 function tourEnd(){clearInterval(tutPoll);if(tutCh>=0&&TUT[tutCh].id==='timeline'&&section==='timeline')act('section','map');tourI=-1;tutCh=-1;lsSet('sndt:tour','1');const t=$('#tour');if(t)t.remove();if(tourLast&&tourLast.focus)try{tourLast.focus()}catch(e){}}
 function tutStep(){return tutCh>=0?TUT[tutCh].steps[tourI]:null}
 function tutGo(ch,i){clearInterval(tutPoll);if(tutCh>=0&&TUT[tutCh].id==='timeline'&&ch!==tutCh&&section==='timeline')act('section','map');tutText=false;if(i===0||ch!==tutCh)tutSt0=new Set(M.stations.map(x=>x.id));tutCh=ch;tourI=i;tutOk=false;const st=tutStep();
-  if(st&&window.innerWidth<=900&&st.sel!=='#right'){closeDrawers();if(typeof st.sel!=='function'){sheetClose()}}
+  if(st&&NARROW()&&st.sel!=='#right'){closeDrawers();if(typeof st.sel!=='function'){sheetClose()}}
   if(st){if(st.setup)try{st.setup()}catch(e){}
     setTimeout(()=>{if(tutStep()===st&&tourI>=0)tourShow()},380);
     tutCtx={st:nSt(),stops:stopsAll(),pos:posKey(),lines:new Set(M.lines.map(L=>L.id))};
@@ -4338,11 +4343,11 @@ function tourShow(){
       if(a==='skip')tourEnd();else if(a==='menu'){clearInterval(tutPoll);if(tutCh>=0&&TUT[tutCh].id==='timeline'&&section==='timeline')act('section','map');tutCh=-1;tourI=0;tourShow()}else if(a.startsWith('ch:'))tutGo(+a.slice(3),0);
       else if(a==='practice'){newMap().then(()=>{M.name='Tutorial practice';changed();tutGo(0,0)})}
       else if(a==='back'){if(tourI>0)tutGo(tutCh,tourI-1)}else tutNext()})}
-  const narrow=window.innerWidth<=900,st=tutStep(),live=!!(st&&st.task);root.classList.toggle('live',live);
+  const narrow=NARROW(),st=tutStep(),live=!!(st&&st.task);root.classList.toggle('live',live);
   let r=null,stage=false;
   if(st){const sq=narrow&&'ts' in st?st.ts:st.sel;let el=null;if(sq==='#stage')stage=true;else if(typeof sq==='function')el=sq();else if(sq)el=document.querySelector(sq);
     if(narrow&&el&&el.closest&&el.closest('#right')&&$('#right').classList.contains('open'))el=$('#right');
-    r=el&&el.getBoundingClientRect();if(r&&(r.width<2||r.height<2||r.right<=0||r.left>=innerWidth||r.bottom<=0||r.top>=innerHeight))r=null}
+    r=el&&el.getBoundingClientRect();if(r&&(r.width<2||r.height<2||r.right<=0||r.left>=VW()||r.bottom<=0||r.top>=innerHeight))r=null}
   const pd=6,done=tutDone();let card;
   if(!st){card=`<div class="tour-step">${esc(tr('Tutorial'))}</div><h2 id="tourT">${esc(tr('Learn SNDT'))}</h2><p>${esc(tr('Pick a chapter. Steps marked Try it ask you to do something on the map, and move on once you have. Next always skips ahead.'))}</p>
     <div class="tut-chs">${TUT.map((C,i)=>`<button class="row" data-tour="ch:${i}"><b>${i+1}</b><span>${esc(tr(C.t))}</span><small>${done.has(C.id)?'✓ ':''}${C.steps.length} ${esc(tr('steps'))}</small></button>`).join('')}</div>
@@ -4357,15 +4362,15 @@ function tourShow(){
   <div class="tour-card" role="dialog" aria-modal="${!live}" aria-labelledby="tourT">${card}</div>`;
   requestAnimationFrame(()=>{const c=root.querySelector('.tour-card');if(!c)return;const cw=c.offsetWidth,ch=c.offsetHeight,M=16;let x,y;
     // phones, Try it steps: the card sits at the top so the tool bar and the Done / Undo bar at the bottom stay free
-    if(narrow&&live){x=(innerWidth-cw)/2;y=58}
-    else if(stage){const s=$('#stage').getBoundingClientRect();x=narrow?(innerWidth-cw)/2:s.right-cw-M;y=narrow?s.top+M:s.top+M}
-    else if(!r){x=(innerWidth-cw)/2;y=(innerHeight-ch)/2}
-    else if(r.right+M+cw<=innerWidth-M){x=r.right+M;y=r.top}
+    if(narrow&&live){x=(VW()-cw)/2;y=58}
+    else if(stage){const s=$('#stage').getBoundingClientRect();x=narrow?(VW()-cw)/2:s.right-cw-M;y=narrow?s.top+M:s.top+M}
+    else if(!r){x=(VW()-cw)/2;y=(innerHeight-ch)/2}
+    else if(r.right+M+cw<=VW()-M){x=r.right+M;y=r.top}
     else if(r.left-M-cw>=M){x=r.left-M-cw;y=r.top}
     else if(r.bottom+M+ch<=innerHeight-M){x=r.left;y=r.bottom+M}
     else if(r.top-M-ch>=M){x=r.left;y=r.top-M-ch}
-    else{x=(innerWidth-cw)/2;y=innerHeight-ch-M*2}
-    c.style.left=Math.max(M,Math.min(innerWidth-cw-M,x))+'px';c.style.top=Math.max(M,Math.min(innerHeight-ch-M,y))+'px';c.classList.add('on');
+    else{x=(VW()-cw)/2;y=innerHeight-ch-M*2}
+    c.style.left=Math.max(M,Math.min(VW()-cw-M,x))+'px';c.style.top=Math.max(M,Math.min(innerHeight-ch-M,y))+'px';c.classList.add('on');
     if(!live){const n=$('#tourNext')||root.querySelector('[data-tour^="ch:"]');if(n)n.focus()}})}
 document.addEventListener('keydown',e=>{if(tourI<0)return;const st=tutStep();
   if(st&&st.task)return; // Try it: keys belong to the app
@@ -4393,7 +4398,7 @@ try{document.fonts&&document.fonts.ready.then(()=>{measureCache.clear();render()
 // the tutorial opens by itself once: it counts as seen as soon as it is shown, not only when it is finished or skipped (players saw it
 // again after every refresh when they closed the tab mid-way); Help opens it again
 if(!EMBED&&!lsGet('sndt:tour'))setTimeout(()=>{if(tourI<0&&!lsGet('sndt:tour')){lsSet('sndt:tour','1');tourStart()}},900);i18nObs.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:I18N_ATTRS});
-window.addEventListener('resize',()=>{if(window.innerWidth>900)document.querySelectorAll('aside').forEach(a=>a.classList.remove('open'))});
+window.addEventListener('resize',()=>{if(!NARROW())document.querySelectorAll('aside').forEach(a=>a.classList.remove('open'))});
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>render());
 /* ---------- live rooms: Supabase Realtime for edits and cursors, one row per room keeps the latest map ---------- */
 const LIVE_URL='https://gqhmryctxlvprtgyddrr.supabase.co',LIVE_KEY='sb_publishable_k82u9dSsRgUTYNKLXkU5nw_U-qysMGd',LIVE_SEP='\u0001',
