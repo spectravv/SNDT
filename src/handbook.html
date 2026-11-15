@@ -138,7 +138,7 @@ td:first-child{white-space:nowrap;font-weight:600}
   <button class="btn menu-btn" id="menuBtn" aria-controls="toc" aria-expanded="false" aria-label="Contents"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
   <a class="brand" href="#start"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" fill="var(--ink)"/><path d="M5 21H12L20 13H28" fill="none" stroke="var(--paper)" stroke-width="3.2"/><path d="M5 17V25" stroke="var(--paper)" stroke-width="3.2"/><path d="M19 3V29" fill="none" stroke="var(--red)" stroke-width="3.2"/><circle cx="19" cy="14" r="3.7" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.8"/></svg><b>SNDT</b><span>Handbook</span></a>
   <label class="find"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5.5 5.5"/></svg><input id="q" type="search" placeholder="Search the handbook" autocomplete="off" aria-label="Search the handbook"></label>
-  <a class="btn acc open-app" id="openApp" href="../" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 17L17 7M9 7h8v8"/></svg><span>Open SNDT</span></a>
+  <a class="btn acc open-app" id="openApp" href="/app/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 17L17 7M9 7h8v8"/></svg><span>Open SNDT</span></a>
 </header>
 <div class="wrap">
 <nav class="toc" id="toc" aria-label="Contents"><div class="results" id="results" hidden></div><div id="tocList"></div></nav>
@@ -170,7 +170,7 @@ td:first-child{white-space:nowrap;font-weight:600}
   </ol>
   <div class="demo" data-demo="draw"><div class="demo-head">Draw a line<span>line tool is on</span></div><div class="stagebox"></div><p class="how">Click the map to place stops; each click adds the next station. Press Enter to finish, then click a station or track to select it.</p></div>
   <p>Your work saves automatically in your browser. The maps menu (the map's name in the header) starts new maps and switches between them; see <a href="#maps">Maps and saving</a>.</p>
-  <a class="btn try" data-app="#tutorial=basics" href="../#tutorial=basics" target="_blank" rel="noopener">Start the Basics tutorial in SNDT</a>
+  <a class="btn try" data-app="#tutorial=basics" href="/app/#tutorial=basics" target="_blank" rel="noopener">Start the Basics tutorial in SNDT</a>
 </article>
 
 <article id="interface" data-group="Start here">
@@ -484,7 +484,7 @@ td:first-child{white-space:nowrap;font-weight:600}
   <p><span class="ui">Add audio file…</span> plays music under the animation and is included in the video; <span class="ui">Remove audio</span> takes it off.</p>
   <h3>Export video</h3>
   <p><b>Resolution</b> (1280 × 720 or 1920 × 1080) and <span class="ui">Export video (WebM)</span>. The video is made frame by frame with a progress bar (Cancel stops it). It needs Chrome, Edge or a recent Firefox.</p>
-  <a class="btn try" data-app="#tutorial=timeline" href="../#tutorial=timeline" target="_blank" rel="noopener">Start the Timeline tutorial in SNDT</a>
+  <a class="btn try" data-app="#tutorial=timeline" href="/app/#tutorial=timeline" target="_blank" rel="noopener">Start the Timeline tutorial in SNDT</a>
 </article>
 
 <article id="import-export" data-group="Sharing">
@@ -561,7 +561,7 @@ td:first-child{white-space:nowrap;font-weight:600}
 <article id="search" data-group="Help">
   <h2>Search</h2>
   <p>The search bar in the header (or <kbd>Ctrl+K</kbd>, or <kbd>/</kbd>) finds tools, actions (export, fit, tutorial, theme and more) and every map setting by name, including the words on a setting's buttons. Use ↑ ↓ and Enter, or click. Picking a setting opens its section, switches to Advanced if it needs to, and outlines the field for a moment. On phones, Search is in the ☰ menu.</p>
-  <a class="btn try" data-app="#search=Corner%20radius" href="../#search=Corner%20radius" target="_blank" rel="noopener">Try it: open Corner radius in SNDT</a>
+  <a class="btn try" data-app="#search=Corner%20radius" href="/app/#search=Corner%20radius" target="_blank" rel="noopener">Try it: open Corner radius in SNDT</a>
 </article>
 
 <article id="shortcuts" data-group="Help">
@@ -627,7 +627,7 @@ td:first-child{white-space:nowrap;font-weight:600}
 'use strict';
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 // the app sits one level up: sndt.cc/handbook/ → sndt.cc/
-const APP=new URL('../',location.href).href;
+const APP=new URL('/app/',location.href).href;
 $('#openApp').href=APP;$$('[data-app]').forEach(a=>a.href=APP+a.dataset.app);
 // inside a frame (like the preview) new tabs are blocked, so these links open in place
 if((()=>{try{return window.top!==window}catch(e){return true}})())$$('a[target="_blank"]').forEach(a=>{a.removeAttribute('target');a.removeAttribute('rel')});

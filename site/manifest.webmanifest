@@ -1,8 +1,8 @@
 {
   "name": "SNDT",
   "short_name": "SNDT",
-  "description": "Draw transit network schematics for your Minecraft server.",
-  "start_url": "/",
+  "description": "A free editor for transit maps of any city, real or imagined.",
+  "start_url": "/app/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#efede7",

@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SNDT: draw the network in your head</title>
+<meta name="description" content="SNDT is a free editor for transit maps of any city, real or imagined. Lines, stations, rivers and districts on a clean grid, exported as images or animated videos. No account needed.">
+<script>
+/* The editor lived at sndt.cc/ until v1.0.7 and now lives at /app/. Share links (?m=), live sessions (#join=),
+   handbook demos (?embed=1), tutorial links, sign-in returns and the installed app still land here: send them on. */
+(function(){var l=location,q=l.search,h=l.hash;
+ if(/[?&](m|embed|code)=/.test(q)||/^#(join=|tutorial=|search=|embed|access_token=|error)/.test(h)||
+    (window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone)l.replace('/app/'+q+h)})();
+</script>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="theme-color" content="#efede7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)">
+<meta property="og:title" content="SNDT: draw the network in your head">
+<meta property="og:description" content="A free editor for transit maps of any city, real or imagined.">
+<meta property="og:image" content="https://sndt.cc/img/app-desktop.webp">
+<meta property="og:url" content="https://sndt.cc/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b0b0b'/%3E%3Cpath d='M5 21H12L20 13H28' fill='none' stroke='%23efede7' stroke-width='3.2'/%3E%3Cpath d='M5 17V25' stroke='%23efede7' stroke-width='3.2'/%3E%3Cpath d='M19 3V29' fill='none' stroke='%23e61919' stroke-width='3.2'/%3E%3Ccircle cx='19' cy='14' r='3.7' fill='%23efede7' stroke='%230b0b0b' stroke-width='1.8'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Same substrate as the editor: paper, carbon ink, hazard red, 90° corners, visible rules, hard offset shadows. */
+:root{--paper:#efede7;--paper-2:#e3e0d8;--ink:#0b0b0b;--muted:#55524c;--red:#e61919;--red-ink:#c41414;--line:#0b0b0b;--on-ink:#efede7;--shadow:#0b0b0b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#121212;--paper-2:#1e1e1d;--ink:#eaeaea;--muted:#a8a49c;--red:#ff2a2a;--red-ink:#ff5a5a;--line:#eaeaea;--on-ink:#121212;--shadow:#000}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.6 Figtree,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+img{display:block;max-width:100%;height:auto}
+a{color:inherit}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+.mono{font:700 12px/1.2 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase}
+.kick{display:flex;align-items:center;gap:10px;margin:0 0 14px}
+.kick::before{content:'//';color:var(--red)}
+h1,h2,h3{font-family:'Archivo Black','Arial Black',sans-serif;font-weight:400;letter-spacing:-.03em;margin:0}
+.btn{display:inline-flex;align-items:center;gap:10px;min-height:48px;padding:0 20px;border:2px solid var(--line);background:var(--paper);color:var(--ink);text-decoration:none;font:700 13px/1 'JetBrains Mono',monospace;letter-spacing:.12em;text-transform:uppercase;box-shadow:4px 4px 0 var(--shadow);transition:transform .12s ease,box-shadow .12s ease}
+.btn:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 var(--shadow)}
+.btn:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--shadow)}
+.btn.red{background:var(--red);border-color:var(--red);color:#fff}
+.btn svg{width:16px;height:16px}
+:focus-visible{outline:3px solid var(--red);outline-offset:3px}
+
+/* header */
+.top{position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:2px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:20px;min-height:64px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.brand svg{width:34px;height:34px}
+.brand b{font:26px/1 'Archivo Black',sans-serif;letter-spacing:-.04em}
+.top nav{display:flex;gap:22px;margin-left:auto}
+.top nav a{text-decoration:none;padding:8px 0}
+.top nav a:hover{color:var(--red-ink)}
+.top .btn{min-height:42px;padding:0 16px;box-shadow:3px 3px 0 var(--shadow)}
+
+/* hero */
+.hero{padding:64px 0 40px}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:48px;align-items:center}
+.hero h1{font-size:clamp(46px,7.2vw,96px);line-height:.92}
+.hero h1 em{font-style:normal;color:var(--red)}
+.lede{font-size:20px;line-height:1.5;margin:24px 0 28px;max-width:34ch}
+.ctas{display:flex;flex-wrap:wrap;gap:14px}
+.facts{display:flex;flex-wrap:wrap;gap:8px 18px;margin:28px 0 0;padding:0;list-style:none;color:var(--muted)}
+.facts li::before{content:'■ ';color:var(--red);font-size:10px;vertical-align:2px}
+.shot{border:2px solid var(--line);box-shadow:10px 10px 0 var(--shadow);background:var(--paper-2)}
+.hero .shot{transform:rotate(-.6deg)}
+
+/* line strip under the hero: one stroke per line colour */
+.strip{height:44px;background:linear-gradient(var(--paper) 0 8px,#d63a2f 8px 14px,var(--paper) 14px 19px,#2f86c6 19px 25px,var(--paper) 25px 30px,#f2b705 30px 36px,var(--paper) 36px)}
+
+/* features */
+section{padding:72px 0}
+.sec-head{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:48px;align-items:end;padding-bottom:28px;border-bottom:3px solid var(--line);margin-bottom:8px}
+.sec-head h2{font-size:clamp(34px,4.6vw,58px);line-height:.95}
+.sec-head p{margin:0;max-width:52ch;color:var(--muted)}
+.feature{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:48px;align-items:center;padding:40px 0;border-bottom:1px solid color-mix(in srgb,var(--ink) 25%,transparent)}
+.feature:nth-child(odd) .txt{order:2}
+.feature .num{font:64px/.9 'Archivo Black',sans-serif;color:var(--red);letter-spacing:-.04em}
+.feature h3{font-size:30px;line-height:1.05;margin:10px 0 12px}
+.feature p{margin:0 0 10px;max-width:46ch}
+.feature ul{margin:6px 0 0;padding:0;list-style:none}
+.feature li{padding:6px 0;border-top:1px solid color-mix(in srgb,var(--ink) 18%,transparent)}
+.feature li b{font-weight:700}
+.feature .shot{box-shadow:7px 7px 0 var(--shadow)}
+
+/* small facts grid */
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:3px solid var(--line);border-left:2px solid var(--line)}
+.cell{padding:22px 20px 24px;border-right:2px solid var(--line);border-bottom:2px solid var(--line)}
+.cell h3{font-size:20px;margin:8px 0 6px;line-height:1.1}
+.cell p{margin:0;color:var(--muted);font-size:15px}
+.cell .mono{color:var(--red-ink)}
+
+/* phone + minecraft */
+.split{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:48px;align-items:center}
+.phone{max-width:260px;margin:0 auto;border:2px solid var(--line);box-shadow:10px 10px 0 var(--shadow)}
+
+/* community */
+.community{background:var(--ink);color:var(--on-ink)}
+.community .sec-head{border-bottom-color:var(--on-ink)}
+.community .sec-head p{color:color-mix(in srgb,var(--on-ink) 75%,transparent)}
+.links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:28px}
+.link{display:block;padding:22px;border:2px solid var(--on-ink);text-decoration:none;transition:background .12s,color .12s}
+.link:hover{background:var(--on-ink);color:var(--ink)}
+.link h3{font-size:24px;margin:8px 0 6px}
+.link p{margin:0;font-size:15px;opacity:.8}
+
+/* final call */
+.final{text-align:left}
+.final h2{font-size:clamp(48px,9vw,128px);line-height:.88}
+.final .ctas{margin-top:28px}
+
+footer{border-top:3px solid var(--line);padding:28px 0 48px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:12px 28px;align-items:center}
+footer nav{display:flex;flex-wrap:wrap;gap:8px 22px}
+footer small{margin-left:auto;color:var(--muted)}
+
+@media (max-width:900px){
+  .top nav{display:none}
+  .top .btn{margin-left:auto}
+  .hero{padding-top:36px}
+  .hero .wrap,.sec-head,.feature,.split{grid-template-columns:1fr;gap:28px}
+  .feature:nth-child(odd) .txt{order:0}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .links{grid-template-columns:1fr}
+  section{padding:52px 0}
+}
+@media (max-width:520px){
+  .wrap{padding:0 16px}
+  .grid{grid-template-columns:1fr}
+  .shot,.hero .shot{box-shadow:6px 6px 0 var(--shadow)}
+  footer small{margin-left:0}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.btn,.link{transition:none}.hero .shot{transform:none}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="SNDT home"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" fill="var(--ink)"/><path d="M5 21H12L20 13H28" fill="none" stroke="var(--paper)" stroke-width="3.2"/><path d="M5 17V25" stroke="var(--paper)" stroke-width="3.2"/><path d="M19 3V29" fill="none" stroke="var(--red)" stroke-width="3.2"/><circle cx="19" cy="14" r="3.7" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.8"/></svg><b>SNDT</b></a>
+    <nav aria-label="Page">
+      <a href="#features">Features</a>
+      <a href="/handbook/">Handbook</a>
+      <a href="/changelog/">Changelog</a>
+      <a href="#community">Community</a>
+    </nav>
+    <a class="btn red" href="/app/"><span>Open the editor</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+  </div>
+</header>
+
+<main>
+<div class="hero">
+  <div class="wrap">
+    <div>
+      <p class="mono kick">Free transit map editor</p>
+      <h1>Draw the network in your <em>head.</em></h1>
+      <p class="lede">Lines, stations, rivers and districts on a clean grid, for any city, real or imagined. Then export it as a picture, a poster or an animated video.</p>
+      <div class="ctas">
+        <a class="btn red" href="/app/">Start drawing<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a class="btn" href="/handbook/">Read the handbook</a>
+      </div>
+      <ul class="facts">
+        <li>Free</li><li>No account needed</li><li>Works offline</li><li>11 languages</li>
+      </ul>
+    </div>
+    <img class="shot" src="/img/app-desktop.webp" width="1600" height="1000" alt="The SNDT editor with a map of Strasbourg's tram network: lines list on the left, the map in the middle, settings on the right.">
+  </div>
+</div>
+<div class="strip" aria-hidden="true"></div>
+
+<section id="features">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>From a sketch to a real map.</h2>
+      <p>Click stations, click them again in order, and the line draws itself. SNDT keeps the parallel lines tidy, the labels out of the way and the corners at clean angles, so you can think about the network instead of the drawing.</p>
+    </div>
+
+    <article class="feature">
+      <div class="txt">
+        <div class="num">01</div>
+        <h3>Lines that behave.</h3>
+        <p>Where lines share a track they run side by side, keep their order through every station and cross cleanly when they have to.</p>
+        <ul>
+          <li><b>Lines first</b> lane layout keeps through-running lines dead straight</li>
+          <li>Interchanges drawn as one mark, with walking links between nearby stations</li>
+          <li>Grid or free placement, 45° angles or smooth curves</li>
+        </ul>
+      </div>
+      <img class="shot" src="/img/detail.webp" width="822" height="750" loading="lazy" alt="Close-up of a dense interchange: four lines run in parallel through Homme de Fer and Republique.">
+    </article>
+
+    <article class="feature">
+      <div class="txt">
+        <div class="num">02</div>
+        <h3>Play it back as a film.</h3>
+        <p>The timeline builds your network station by station, with camera moves, line boards and an end legend, then exports it as a video.</p>
+      </div>
+      <img class="shot" src="/img/timeline.webp" width="1200" height="750" loading="lazy" alt="The timeline view: the map on a stage, a play bar and a track of stations and segments underneath.">
+    </article>
+
+    <article class="feature">
+      <div class="txt">
+        <div class="num">03</div>
+        <h3>Look down one line.</h3>
+        <p>The isolated line view straightens any line into the strip you see above train doors, with station codes, connections and facilities. Export it as PNG or SVG.</p>
+      </div>
+      <img class="shot" src="/img/ilvf.webp" width="1200" height="750" loading="lazy" alt="The isolated line view: one red line drawn straight with station names, codes and coloured connection marks.">
+    </article>
+  </div>
+</section>
+
+<section aria-labelledby="more">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="more">Everything else.</h2>
+      <p>The parts that turn a drawing into a map people can read.</p>
+    </div>
+    <div class="grid">
+      <div class="cell"><span class="mono">Style</span><h3>Templates and fonts</h3><p>Colour templates, station shapes, your own fonts and icons.</p></div>
+      <div class="cell"><span class="mono">Detail</span><h3>Station codes</h3><p>Numbered stations like A12, closed and planned stops, facilities.</p></div>
+      <div class="cell"><span class="mono">Ground</span><h3>Water and districts</h3><p>Rivers, coasts, parks, fare zones and labelled areas.</p></div>
+      <div class="cell"><span class="mono">Legend</span><h3>Readable legends</h3><p>Lines, descriptions and facilities, in as many columns as you like.</p></div>
+      <div class="cell"><span class="mono">Export</span><h3>PNG, SVG, video</h3><p>Sharp images for posters and the web, plus a full backup file.</p></div>
+      <div class="cell"><span class="mono">Account</span><h3>Sync if you want</h3><p>Sign in with Google or an email link to keep maps on every device.</p></div>
+      <div class="cell"><span class="mono">Share</span><h3>Links and gallery</h3><p>Send a link, or put your map in the public gallery.</p></div>
+      <div class="cell"><span class="mono">Together</span><h3>Live sessions</h3><p>Invite friends to draw on the same map at the same time.</p></div>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="phone">
+  <div class="wrap split">
+    <div>
+      <p class="mono kick">On a phone</p>
+      <h2 id="phone" style="font-size:clamp(34px,4.6vw,58px);line-height:.95">Fits in your pocket.</h2>
+      <p class="lede" style="max-width:42ch">Pan with one finger, double-tap to select, long-press for the menu. Add SNDT to your home screen and it opens like an app, even without a connection.</p>
+      <a class="btn" href="/app/">Open on this device</a>
+    </div>
+    <img class="phone" src="/img/phone.webp" width="560" height="1211" loading="lazy" alt="SNDT on a phone: the map fills the screen with the tools in a bar at the bottom.">
+  </div>
+</section>
+
+<section aria-labelledby="mc">
+  <div class="wrap split">
+    <img class="shot" src="/img/minecraft.webp" width="1200" height="750" loading="lazy" alt="A map with five lines and the line settings panel showing Minecraft dye colours and route length in blocks.">
+    <div>
+      <p class="mono kick">Made with Minecraft servers</p>
+      <h2 id="mc" style="font-size:clamp(30px,3.8vw,46px);line-height:1">Running a server? It speaks blocks.</h2>
+      <p>SNDT grew up drawing server networks, so it knows the details: dye colours, route lengths in blocks, travel times by minecart or ice boat, teleport commands, and an importer for MTR mod servers.</p>
+    </div>
+  </div>
+</section>
+
+<section class="community" id="community">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Made with its players.</h2>
+      <p>Most of SNDT's features started as an idea from someone drawing their own network. Bring yours.</p>
+    </div>
+    <div class="links">
+      <a class="link" href="https://discord.gg/jTycUK7Uvs" rel="noopener"><span class="mono">Discord</span><h3>Join the community</h3><p>Show your maps, report bugs and suggest what comes next.</p></a>
+      <a class="link" href="https://github.com/spectravv/SNDT" rel="noopener"><span class="mono">GitHub</span><h3>Read the code</h3><p>SNDT is open source under the AGPL-3.0 licence.</p></a>
+      <a class="link" href="https://ko-fi.com/spectra_vv" rel="noopener"><span class="mono">Ko-fi</span><h3>Support SNDT</h3><p>SNDT is free. A coffee helps keep it that way.</p></a>
+    </div>
+  </div>
+</section>
+
+<section class="final">
+  <div class="wrap">
+    <p class="mono kick">Ready?</p>
+    <h2>Lay the first<br>station.</h2>
+    <div class="ctas">
+      <a class="btn red" href="/app/">Open the editor<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      <a class="btn" href="/handbook/#start">How it works</a>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="SNDT home"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" fill="var(--ink)"/><path d="M5 21H12L20 13H28" fill="none" stroke="var(--paper)" stroke-width="3.2"/><path d="M5 17V25" stroke="var(--paper)" stroke-width="3.2"/><path d="M19 3V29" fill="none" stroke="var(--red)" stroke-width="3.2"/><circle cx="19" cy="14" r="3.7" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.8"/></svg><b>SNDT</b></a>
+    <nav aria-label="Footer">
+      <a href="/app/">Editor</a><a href="/handbook/">Handbook</a><a href="/changelog/">Changelog</a><a href="/privacy">Privacy</a><a href="https://discord.gg/jTycUK7Uvs" rel="noopener">Discord</a><a href="https://github.com/spectravv/SNDT" rel="noopener">GitHub</a>
+    </nav>
+    <small>v1.0.7 · free and open source</small>
+  </div>
+</footer>
+</body>
+</html>

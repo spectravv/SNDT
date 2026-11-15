@@ -12,3 +12,6 @@ site/handbook/
 node_modules/
 CHANGELOG-v0.*.md
 CHANGES-v0.*.md
+site/app/
+site/img/
+site/changelog/

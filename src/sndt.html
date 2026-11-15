@@ -314,6 +314,7 @@ body:not(.adv) .grid2:has(>.adv-only:last-child){grid-template-columns:1fr}
 .btn{height:30px;padding:0 10px;border:2px solid var(--ink);background:var(--paper);text-transform:uppercase;font-size:10.5px;letter-spacing:.07em}
 @media (hover:hover){.btn:hover{background:var(--ink);color:var(--paper)}}
 .btn:disabled{opacity:.35;cursor:default;background:var(--paper);color:var(--ink)}
+.modal ul.wn{margin:6px 0 14px;padding-left:18px;line-height:1.5}.modal ul.wn li{margin:5px 0}
 .btn.acc{background:var(--ink);color:var(--paper)}
 @media (hover:hover){.btn.acc:hover{background:var(--red)}}
 .btn.warn{color:var(--red);border-color:var(--red)}
@@ -583,7 +584,7 @@ input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}
     <div id="stage">
       <div class="rsz l" data-k="lw" aria-label="Resize the lists panel" role="separator" aria-orientation="vertical" tabindex="0" title="Drag to resize. Double-click to reset."></div>
       <div class="rsz r" data-k="rw" aria-label="Resize the inspector" role="separator" aria-orientation="vertical" tabindex="0" title="Drag to resize. Double-click to reset."></div>
-      <svg id="under" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g id="vpu"><g id="gridL"></g><g id="natureL"></g><g id="waterL"></g></g></svg>
+      <svg id="under" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g id="vpu"><g id="gridL"></g><g id="backL"></g><g id="natureL"></g><g id="waterL"></g></g></svg>
       <svg id="map" class="t-select" xmlns="http://www.w3.org/2000/svg"><g id="vp"></g></svg>
       <div class="tools" role="toolbar" aria-label="Tools" id="tools"></div>
       <button class="lists-fab only-narrow" data-act="drawer:left" aria-label="Lines and stations" title="Lines and stations"><svg viewBox="0 0 24 24"><path d="M2 18h5l6-12h9"/><circle cx="4" cy="18" r="2.4"/><circle cx="10" cy="12" r="2.4"/><circle cx="19" cy="6" r="2.4"/></svg></button>
@@ -1798,14 +1799,19 @@ function labelBox(s,G,dk,push=0){
   const bold=s.bold!=null&&s.bold!=='auto'?s.bold==='bold':(s.kind==='terminus'||s.kind==='hub'||(S.boldInter&&(s.kind==='interchange'||s.kind==='portal')));
   const tw=Math.max(...rows.map(r=>textW(r,fs,bold?700:500,s.kind==='arrow')),...subRows.map(r=>textW(r,sfs,400,true,M.settings.subFont)),0),icons=(s.icons||[]).filter(k=>ICONS[k]),isz=fs*1.15*(s.iconScale||100)/100,
     // facility icons wrap after "icons per row" (0 = one row) and sit at the top, middle or bottom of the name (idea by Curt)
-    cols=Math.max(1,Math.min(icons.length,S.iconRow>0?Math.round(S.iconRow):icons.length)),irows=Math.ceil(icons.length/cols)||1,iw=icons.length?cols*(isz+2)-2:0,ih=irows*(isz+2)-2;
+    iRow=stIconRow(s),iAl=stIconAlign(s),cols=Math.max(1,Math.min(icons.length,iRow>0?Math.round(iRow):icons.length)),irows=Math.ceil(icons.length/cols)||1,iw=icons.length?cols*(isz+2)-2:0,ih=irows*(isz+2)-2;
   let x=x0,top=dir[1]<-.3?y0-H:dir[1]>.3?y0:y0-H/2,ix=0,iy=0;
   if(icons.length){
-    if(anchor==='start'){ix=x0;x=x0+iw+4}else if(anchor==='end'){ix=x0-iw;x=x0-iw-4}
-    else{ix=x0-iw/2;if(dir[1]>.3){iy=y0;top=y0+ih+3}else{iy=y0-ih;top=y0-ih-3-H}}
-    if(anchor!=='middle')iy=S.iconAlign==='middle'?top+H/2-ih/2:S.iconAlign==='bottom'?top+H-ih:top+fs*.45-isz/2}
+    // gap between the icons and the name: a little more than before, plus the background's padding when the name has one (owner, 2026-11-15)
+    const ig=bgp?bgp+3:5;
+    if(anchor==='start'){ix=x0;x=x0+iw+ig}else if(anchor==='end'){ix=x0-iw;x=x0-iw-ig}
+    else{ix=x0-iw/2;if(dir[1]>.3){iy=y0;top=y0+ih+ig}else{iy=y0-ih;top=y0-ih-ig-H}}
+    if(anchor!=='middle')iy=iAl==='middle'?top+H/2-ih/2:iAl==='bottom'?top+H-ih:top+fs*.45-isz/2}
   const left=anchor==='start'?x:anchor==='end'?x-tw:x-tw/2;
-  const tb={x0:left-bgp,x1:left+tw+bgp*1.5,y0:top-bgp*.6,y1:top+H+bgp*.6};
+  // label background (s.lbg): even padding round the visible text, from the first row's cap height to just under the last row's baseline
+  // (the line box has empty room above the caps and below the baseline, which left the text high and to the left; owner comment 2026-11-15)
+  const vb=subRows.length?top+H-ssz[ssz.length-1]*.12:top+h-rsz[rsz.length-1]*.12,tb={x0:left-bgp,x1:left+tw+bgp,y0:top+fe*.06-bgp,y1:vb+bgp};
+  if(s.lbg&&icons.length&&anchor!=='middle'&&irows===1)iy=(tb.y0+tb.y1)/2-ih/2;
   // text alignment set on the station (lalign left/center/right): the label stays where it is, its rows line up inside it
   const LA={left:'start',center:'middle',right:'end'}[s.lalign],ta=LA||anchor,tx=LA?(LA==='start'?left:LA==='end'?left+tw:left+tw/2):x;
   const rect={x0:Math.min(tb.x0,icons.length?ix:tb.x0),x1:Math.max(tb.x1,icons.length?ix+iw:tb.x1),y0:Math.min(tb.y0,icons.length?iy:tb.y0),y1:Math.max(tb.y1,icons.length?iy+ih:tb.y1)};
@@ -1881,9 +1887,10 @@ function regionSVG(r,i){
   const front=i==null?[]:M.regions.slice(i+1).filter(o=>regionsOverlap(R,regionShapes(o),gap));
   let defs=`<mask id="${id}-o" maskUnits="userSpaceOnUse" ${box}><rect ${box} fill="#fff"/>${shp(r,'fill="#000"')}</mask>`,cut='',edge='';
   // (the outline is cut a little wider than the fill, so with no gap between areas it still stops at the other area's outline instead
-  // of running on beside it; player report)
+  // of running on beside it; player report. The extra is the 1.5 that an outline reaches outside its area, so at gap 0 the two
+  // outlines meet: 6 left a visible break (Curt, 2026-11-12); a hair less at gap 0 so they overlap instead of leaving a seam)
   let ocut='';
-  if(front.length){defs+=`<mask id="${id}-c" maskUnits="userSpaceOnUse" ${box}><rect ${box} fill="#fff"/>${front.map(F=>shp(F,`fill="#000" stroke="#000" stroke-width="${f(gap*2)}"`)).join('')}</mask><mask id="${id}-c2" maskUnits="userSpaceOnUse" ${box}><rect ${box} fill="#fff"/>${front.map(F=>shp(F,`fill="#000" stroke="#000" stroke-width="${f(gap*2+6)}"`)).join('')}</mask><clipPath id="${id}-k">${shp(r,'')}</clipPath>`;
+  if(front.length){defs+=`<mask id="${id}-c" maskUnits="userSpaceOnUse" ${box}><rect ${box} fill="#fff"/>${front.map(F=>shp(F,`fill="#000" stroke="#000" stroke-width="${f(gap*2)}"`)).join('')}</mask><mask id="${id}-c2" maskUnits="userSpaceOnUse" ${box}><rect ${box} fill="#fff"/>${front.map(F=>shp(F,`fill="#000" stroke="#000" stroke-width="${f(gap>0?gap*2+3:2.5)}"`)).join('')}</mask><clipPath id="${id}-k">${shp(r,'')}</clipPath>`;
     cut=` mask="url(#${id}-c)"`;ocut=` mask="url(#${id}-c2)"`;edge=`<g clip-path="url(#${id}-k)" opacity="${Math.min(1,op*4)}">${front.filter(F=>!F.pts).map(F=>shp(F,`fill="none" stroke="${r.color}" stroke-width="1.5"${dash}`,gap+.75)).join('')}</g>`}
   const lp=r.pts&&r.pts.length>2?{x:r.pts.reduce((a,p)=>a+p[0],0)/r.pts.length,y:r.pts.reduce((a,p)=>a+p[1],0)/r.pts.length+4,anchor:' text-anchor="middle"'}:r.zone?{x:r.x+r.w/2,y:r.y+r.h/2+4,anchor:' text-anchor="middle"'}:{x:r.x+10,y:r.y+19,anchor:''};
   // fare zone (Tube-map style): a plain shaded area, no border, its number big and faint
@@ -2042,7 +2049,7 @@ function onewaySVG(G){let o='';G.owStops=new Map();const agg=new Map();
   for(const [sid,g] of agg)if(!g.two&&g.us.length&&g.us.every(u=>u.x*g.us[0].x+u.y*g.us[0].y>.7))G.owStops.set(sid,g.us[0]);
   return o?'<g>'+o+'</g>':''}
 function mapSVG(editor){
-  const G=geom(),S=M.settings,cuts=crossings(G);let o=editor?'':'<g>'+natureSVG()+waterSVG()+'</g>',xdefs='';
+  const G=geom(),S=M.settings,cuts=crossings(G);let o=editor?'':'<g>'+imagesSVG('back',false)+natureSVG()+waterSVG()+'</g>',xdefs='';
   o+='<g>'+M.regions.map(regionSVG).join('')+imagesSVG('bottom',editor)+'</g>';
   const keep=editor?fadeKeep():null;o+='<g>';
   for(const L of M.lines.slice().reverse()){if(L.hidden)continue;const runs=lineRuns(L,G);if(!runs.length)continue;const d=runs.map(dOf).join(''),fade=keep&&!keep.has(L.id);if(fade)o+='<g opacity=".15">';
@@ -2160,7 +2167,8 @@ function overlaySVG(G){
     if(s.t==='line'&&s.seg&&manualLay()){const t=G.tracks.get(s.seg),g=t&&legGeo(t,s.id),L=lnOf(s.id);
       // manual layout: the picked part, and the corners where the line's parts on this segment meet
       if(g&&L){const l=g[Math.min(s.leg??0,g.length-1)],k=view.k;o+=`<path d="${dOf(l.pts)}" fill="none" stroke="${c}" stroke-opacity=".55" stroke-width="${f(lw(L)+6/k)}" stroke-linecap="butt" pointer-events="none"/><path d="${dOf(l.pts)}" fill="none" stroke="#fff" stroke-width="${f(1.5/k)}" stroke-dasharray="${f(5/k)} ${f(4/k)}" pointer-events="none"/>`;
-        for(const p of g)if(p.corner)o+=`<circle cx="${f(p.corner.x)}" cy="${f(p.corner.y)}" r="${f(4/k)}" fill="#fff" stroke="${c}" stroke-width="${f(1.5/k)}" pointer-events="none"/>`}continue}
+        // (click a corner to turn it into a bend point with Scratch-style curve handles; Curt, Discord 2026-11-12)
+        g.forEach((p,ci)=>{if(p.corner)o+=`<circle data-kind="mcorner" data-key="${s.seg}" data-i="${ci}" cx="${f(p.corner.x)}" cy="${f(p.corner.y)}" r="${f(5/k)}" fill="#fff" stroke="${c}" stroke-width="${f(1.5/k)}" style="cursor:pointer"><title>${tr('Click to bend the line here with curve handles')}</title></circle>`})}continue}
     if(s.t==='line'&&s.seg){const t=G.tracks.get(s.seg);if(t)o+=`<path d="${dOf(t.pts)}" fill="none" stroke="${c}" stroke-width="2" stroke-dasharray="5 4" pointer-events="none"/>`}
     // station number codes: drag a corner or an edge to size the box by hand (it stays a rectangle centred on the station)
     if(s.t==='station'&&sel.length===1&&tool==='select'){const st=stOf(s.id),nb=st&&!ciconBox(st)&&numBox(st,G);if(nb){const E=(G.ends.get(st.id)||[]).filter(e=>!passesAt(e.lid,st.id)),[p,q]=farPair(E,st),cx=(p.x+q.x)/2,cy=(p.y+q.y)/2,hw=nb.W/2,hh=nb.h/2,z=8/view.k;
@@ -2195,6 +2203,10 @@ function renderGrid(){const S=M.settings,G0=gridNow(),G=G0*2**Math.max(0,Math.ce
   $('#gridL').innerHTML=S.showGrid&&view.k>=.25?`<defs><pattern id="gp" width="${G}" height="${G}" patternUnits="userSpaceOnUse"><circle cx="0" cy="0" r="${f(r)}" fill="${S.ink}" fill-opacity=".22"/></pattern></defs><rect x="${x0}" y="${y0}" width="${4*C}" height="${4*C}" fill="url(#gp)" pointer-events="none"/>`:''}
 function natureSVG(){let o='';for(const a of M.nature||[]){if(!a.pts||a.pts.length<3)continue;let P=a.pts.map(p=>({x:p[0],y:p[1]}));if(a.smooth)P=catmullClosed(P);else if((M.settings.shapeR??10)>0)P=roundClosed(P,M.settings.shapeR??10);
   o+=`<path d="M${P.map(p=>f(p.x)+' '+f(p.y)).join('L')}Z" fill="${a.color}"${a.opacity!=null&&a.opacity<1?` fill-opacity="${a.opacity}"`:''} stroke="${mix(a.color,'#000000',.14)}" stroke-opacity="${a.opacity??1}" stroke-width="1.2" stroke-linejoin="round"/>`}return o}
+// background images (image.layer 'back', idea by SlimboAmingon 2026-11-12): drawn under the water, parks and areas, in the editor in the
+// #under layer so they can't be clicked on the map and don't get in the way while drawing; picked from This map › Background images
+let backKey=null;
+function renderBack(){const B=(M.images||[]).filter(i=>i.layer==='back'),key=JSON.stringify(B.map(i=>[i.id,i.x,i.y,i.w,i.h,i.rot,i.opacity,i.radius,i.bw,i.bc,String(i.src).length]));if(key===backKey)return;backKey=key;$('#backL').innerHTML=imagesSVG('back',true)}
 let natureKey=null;
 function renderNature(){const key=JSON.stringify([M.nature||[],M.settings.shapeR]);if(key===natureKey)return;natureKey=key;$('#natureL').innerHTML=natureSVG()}
 function shapeOf(s){if(s.t==='region'&&String(s.id).includes('#')){const [rid,k]=String(s.id).split('#'),r=M.regions.find(a=>a.id===rid&&!a.locked);return r?regionParts(r)[+k]||null:null}
@@ -2215,7 +2227,7 @@ function render(){syncFonts();if(drawTip&&drawLine!==drawTip.line)dropTip(true);
   const S=M.settings;ensureLayers();
   selColor=getComputedStyle(document.documentElement).getPropertyValue('--sel').trim()||'#e8590c';
   const {o,G}=mapSVG(true);lastG=G;
-  renderGrid();renderNature();renderWater();
+  renderGrid();renderBack();renderNature();renderWater();
   $('#content').innerHTML=o;
   renderOverlay();
   $('#under').style.background='';$('#stage').style.background=S.bg;
@@ -2264,6 +2276,12 @@ function renderLists(){
 /* ---------- inspector ---------- */
 const adv=()=>mode==='adv';
 function fid(o,p){return 'f-'+o+'-'+p.replace(/\./g,'-')}
+// facility icons: a station's own alignment / icons per row win over the map's (idea by Curt, 2026-11-12)
+const stIconRow=s=>s.iconRow!=null&&s.iconRow!==''?+s.iconRow:(M.settings.iconRow||0),stIconAlign=s=>s.iconAlign||M.settings.iconAlign||'top';
+// the picked bend point's curve handle, typed in: angle in degrees (0 = right, 90 = up) and length (owner request 2026-11-15)
+function bendField(key){const A=anchorSel,sg=M.segs[key];if(!A||A.kind!=='cp'||A.key!==key||!sg||sg.route!=='custom')return'';const q=(sg.pts||[])[A.i];if(!q)return'';
+  const on=!!(q.hx||q.hy),ang=on?Math.round(Math.atan2(-q.hy,q.hx)*1800/Math.PI)/10:'',len=on?Math.round(Math.hypot(q.hx,q.hy)*10)/10:'';
+  return `<div class="fld"><span>${tr('Bend point')} ${A.i+1}</span><div class="grid2"><label class="fld"><span>${tr('Angle °')}</span><input type="number" class="bend-ang" step="1" value="${ang}" placeholder="${esc(tr('sharp'))}"></label><label class="fld"><span>${tr('Handle length')}</span><input type="number" class="bend-len" min="0" step="1" value="${len}" placeholder="${esc(tr('sharp'))}"></label></div>${on?`<div class="btns"><button class="btn" data-act="bend-sharp">${tr('Sharp corner')}</button></div>`:''}</div>`}
 function inp(o,id,p,v,type='text',x=''){return `<input id="${fid(o,p)}" data-obj="${o}" data-id="${id}" data-prop="${p}" data-type="${type}" type="${type==='num'||type==='numnull'?'number':type}" value="${esc(v??'')}" ${x}>`}
 function area(o,id,p,v,x=''){return `<textarea id="${fid(o,p)}" data-obj="${o}" data-id="${id}" data-prop="${p}" data-type="text" ${x}>${esc(v??'')}</textarea>`}
 function selectF(o,id,p,v,opts,x=''){return `<select id="${fid(o,p)}" data-obj="${o}" data-id="${id}" data-prop="${p}" data-type="text" ${x}>${opts.map(([k,l])=>`<option value="${esc(k)}" ${String(v)===String(k)?'selected':''}>${esc(l)}</option>`).join('')}</select>`}
@@ -2289,7 +2307,7 @@ function renderInspector(){
 }
 function inspMap(){
   const S=M.settings;
-  return `<div class="pane"><h3>This map</h3>${fld('Map name',inp('map','m','name',M.name,'text','data-relist="1"'))}<div class="btns"><button class="btn" data-act="clean-map">Clean up map…</button></div><p class="sub">Nothing is selected. Click a station, line, label or area to edit it.</p></div>
+  return `<div class="pane"><h3>This map</h3>${fld('Map name',inp('map','m','name',M.name,'text','data-relist="1"'))}<div class="btns"><button class="btn" data-act="clean-map">Clean up map…</button></div><p class="sub">Nothing is selected. Click a station, line, label or area to edit it.</p>${(M.images||[]).some(i=>i.layer==='back')?`<div class="fld"><span>${tr('Background images')}</span><div class="btns">${(M.images||[]).filter(i=>i.layer==='back').map(i=>`<button class="btn" data-act="sel-img:${esc(i.id)}">${esc(i.name||tr('Image'))}</button>`).join('')}</div></div>`:''}</div>
   <div class="pane"><h3>Colours</h3><div class="grid2">${fld('Background',inp('settings','s','bg',S.bg,'color'))}${fld('Text & outlines',inp('settings','s','ink',S.ink,'color'))}${fld('Station fill',inp('settings','s','stFill',S.stFill,'color'))}${fld('Water',inp('settings','s','water',S.water,'color'))}</div>
    <div class="fld"><span>Colour templates</span><div class="chips tpl-grid">${MAP_THEMES.map(([k,l,c])=>`<button class="chip" data-act="preset:${k}" aria-pressed="${c.every((v,i)=>[S.bg,S.ink,S.stFill,S.water][i].toLowerCase()===v)}"><svg viewBox="0 0 22 14" width="22" height="14" aria-hidden="true"><rect width="22" height="14" fill="${c[0]}" stroke="${c[1]}" stroke-width="1.5"/><rect x="2" y="9" width="18" height="5" fill="${c[3]}"/><circle cx="11" cy="6" r="3" fill="${c[2]}" stroke="${c[1]}" stroke-width="1.5"/></svg>${l}</button>`).join('')}</div></div></div>
   <div class="pane"><h3>Lines</h3><p class="sub">How tracks bend between two stations. You can override any single segment by clicking it.</p><div class="fld"><span>Bend types</span><div class="opts" style="width:fit-content"><button class="opt" data-act="mmix:off" aria-pressed="${routeMix().length<2}">One type</button><button class="opt" data-act="mmix:on" aria-pressed="${routeMix().length>1}">Mix types</button></div></div>${routeMix().length>1?`<div class="routes">${ROUTES.filter(([k])=>ROUTE_MIX.includes(k)).map(([k,l])=>`<button class="opt" data-act="mixroute:${k}" aria-pressed="${routeMix().includes(k)}">${routeIcon(k)}${l}</button>`).join('')}</div><p class="sub">Tick the types to use. Each segment gets the ticked type that fits best: Direct where stations already line up, otherwise the bend that keeps lines smooth and crosses least.</p>`:routePicker(S.route,'mroute',false)}
@@ -2360,7 +2378,7 @@ function inspStation(s){
    ${(()=>{const G=lastG||geom();if(!markFree(s,G))return'';const m=markGeom(s,G),r=v=>Math.round(v*10)/10;
      return `<div class="grid2">${fld(tr('Mark length'),inp('station',s.id,'markW',s.markW??'','numnull','min="3" step="0.5" placeholder="'+r(m.W0)+'"'))}${fld(tr('Mark thickness'),inp('station',s.id,'markH',s.markH??'','numnull','min="3" step="0.5" placeholder="'+r(m.H0)+'"'))}</div><p class="sub">${tr('Or drag the square handles around the mark on the map. Empty means the automatic size.')}</p>${s.markW||s.markH?'<div class="btns"><button class="btn" data-act="mark-size-reset">'+tr('Reset mark size')+'</button></div>':''}`})()}
    ${s.kind==='waypoint'?fld('Corner radius at this bend point',inp('station',s.id,'radius',s.radius??'','numnull','min="0" max="400" placeholder="'+(M.settings.cornerR??16)+' (map default)"')):''}
-   <div class="fld"><span>Facilities</span><div class="chips">${Object.keys(ICONS).map(k=>`<button class="chip" data-act="icon:${k}" aria-pressed="${(s.icons||[]).includes(k)}"><svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true"><rect width="14" height="14" rx="2.5" fill="#0b0b0b"/>${iconGlyph(k,'#ffffff','#0b0b0b')}</svg>${ICONS[k][0]}</button>`).join('')}</div></div>${(s.icons||[]).length?`<label class="wp-w" style="display:flex;padding:0;border:0"><span>${esc(tr('Icon size'))}</span><input type="range" class="fac-size" min="50" max="300" step="5" value="${s.iconScale||100}"><b data-nt>${s.iconScale||100}%</b></label>`:''}
+   <div class="fld"><span>Facilities</span><div class="chips">${Object.keys(ICONS).map(k=>`<button class="chip" data-act="icon:${k}" aria-pressed="${(s.icons||[]).includes(k)}"><svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true"><rect width="14" height="14" rx="2.5" fill="#0b0b0b"/>${iconGlyph(k,'#ffffff','#0b0b0b')}</svg>${ICONS[k][0]}</button>`).join('')}</div></div>${(s.icons||[]).length?`<label class="wp-w" style="display:flex;padding:0;border:0"><span>${esc(tr('Icon size'))}</span><input type="range" class="fac-size" min="50" max="300" step="5" value="${s.iconScale||100}"><b data-nt>${s.iconScale||100}%</b></label>`+`<div class="grid2">${fld('Facility icons',selectF('station',s.id,'iconAlign',s.iconAlign||'',[['','As the map'],['top','Top'],['middle','Centre'],['bottom','Bottom']]))}${fld('Icons per row',inp('station',s.id,'iconRow',s.iconRow??'','numnull','min="0" max="20" placeholder="'+esc(tr('As the map'))+'"'))}</div>`:''}
    ${ciconField([s])}
    ${chk('station',s.id,'closed',!!s.closed,'Not in service')}
    <div class="fld"><span>Served by</span><div class="chips">${lines.map(L=>`<button class="chip" data-nt data-act="sel-line:${L.id}"><i style="background:${L.color}"></i>${esc(L.name)}</button>`).join('')||'<span class="sub">No lines yet. Use the line tool (L) and click this station.</span>'}</div></div>
@@ -2426,7 +2444,7 @@ function inspLine(L,segK){
   const stops=L.stops.map((id,i)=>{const s=stOf(id);const wp=s&&s.kind==='waypoint';return `<div class="stop"><span class="n">${i+1}</span><button class="nm ${wp?'wp':''}" data-nt data-act="sel-st:${id}">${esc(s?(wp?'bend point':String(s.name).replace(/\n/g,' ')):'missing')}</button><span class="b"><button data-act="stop-up:${i}" aria-label="Move up" ${i?'':'disabled'}>↑</button><button data-act="stop-down:${i}" aria-label="Move down" ${i<L.stops.length-1?'':'disabled'}>↓</button><button data-act="stop-del:${i}" aria-label="Remove stop">×</button></span></div>`}).join('');
   let segH='';
   if(segK){const G=geom(),t=G.tracks.get(segK);if(t){const A=stOf(t.a),B=stOf(t.b),sg=M.segs[segK]||{},d=mcDist(A,B);
-    segH=`<div class="pane"><h3>Selected segment</h3><h2 style="font-size:14px" data-nt>${esc(A.kind==='waypoint'?'bend':A.name)} — ${esc(B.kind==='waypoint'?'bend':B.name)}</h2>
+    segH=`<div class="pane"><h3>Selected segment</h3><h2 style="font-size:14px" data-nt>${esc(A.kind==='waypoint'?'bend':A.name)} — ${esc(B.kind==='waypoint'?'bend':B.name)}</h2>${bendField(segK)}
     ${d?`<dl class="facts"><dt>Distance</dt><dd>${Math.round(d.d).toLocaleString()} blocks${d.dim==='nether'?' in the Nether':''}</dd>${d.dim==='nether'?`<dt>Overworld equal</dt><dd>${Math.round(d.d*8).toLocaleString()} blocks</dd>`:''}${spd?`<dt>Travel time</dt><dd>about ${fmtTime(d.d/spd)} ${md.how}</dd>`:''}</dl>`:'<p class="sub">Add X and Z coordinates to both stations to see distance and travel time.</p>'}
     ${(()=>{const o=(L.segs||{})[segK]||{},lk=segLook(L,segK)||{color:L.color};return `<div class="fld"><span>${esc(L.name)} on this segment</span><div class="opts g2">${[['','Same as line'],['open','Open'],['planned','Planned'],['construction','Building']].map(([k,l])=>`<button class="opt" data-act="sstatus:${k}" aria-pressed="${(o.status||'')===k}">${l}</button>`).join('')}</div></div>
     <div class="grid2">${fld('Colour here',`<input type="color" id="f-lseg-color" data-obj="lseg" data-id="${L.id}|${segK}" data-prop="color" data-type="text" value="${esc(lk.color)}">`)}${fld('Style here',selectF('lseg',L.id+'|'+segK,'style',o.style||'',[['','Automatic'],...Object.entries(STYLES)]))}</div>
@@ -2724,6 +2742,8 @@ function act(name,arg,el){
     case 'undo':undo();break;case 'redo':redo();break;
     // Shift-click in the Lines list adds the line to the selection (or takes it out)
     case 'sel-line':if(actShift){const ls=sel.filter(x=>x.t==='line'),has=ls.some(x=>x.id===arg);select(has?ls.filter(x=>x.id!==arg):ls.filter(x=>!x.seg).concat([{t:'line',id:arg}]))}else{select([{t:'line',id:arg}]);closeDrawers('left')}break;
+    case 'sel-img':{select([{t:'image',id:arg}]);break}
+    case 'bend-sharp':{const A=anchorSel,q=A&&A.kind==='cp'&&M.segs[A.key]&&(M.segs[A.key].pts||[])[A.i];if(q&&(q.hx||q.hy)){pushUndo();delete q.hx;delete q.hy;changed()}break}
     case 'sel-st':{select([{t:'station',id:arg}]);const s=stOf(arg);if(s)centerOn(s);closeDrawers('left');break}
     case 'hide-mode':{const Ls=M.lines.filter(L=>modeKey(L)===arg);if(!Ls.length)break;pushUndo();const h=!Ls.every(L=>L.hidden);Ls.forEach(L=>L.hidden=h);changed();break}
     case 'hide-line':{const L=lnOf(arg);pushUndo();L.hidden=!L.hidden;changed();break}
@@ -2763,7 +2783,8 @@ function act(name,arg,el){
     case 'arc-fit':case 'arc-manual':if(one&&one.seg){pushUndo();const sg=M.segs[one.seg]||(M.segs[one.seg]={});if(!sg.route)sg.route='arc';sg.fit=name==='arc-fit';if(!sg.fit&&sg.arc==null)sg.arc=90;changed()}break;
     case 'lstatus':if(curL){pushUndo();if(arg)curL.status=arg;else delete curL.status;changed()}break;
     case 'sstatus':if(curL&&one.seg){pushUndo();curL.segs=curL.segs||{};const o=curL.segs[one.seg]||(curL.segs[one.seg]={});if(arg)o.status=arg;else delete o.status;changed()}break;
-    case 'help':openPop(el,`<button class="row" data-act="tour">${esc(tr('Tutorial'))} <small>${esc(tr('step by step, on the map'))}</small></button><a class="row" href="handbook/" ${FRAMED?'':'target="_blank" rel="noopener"'} style="color:inherit;text-decoration:none">${esc(tr('Handbook'))} <small>${esc(tr('every tool and setting, with live demos'))}</small></a><button class="row" data-act="creators">${esc(tr('Creators'))} <small>${esc(tr('the people who made SNDT'))}</small></button>`);break;
+    case 'help':openPop(el,`<button class="row" data-act="tour">${esc(tr('Tutorial'))} <small>${esc(tr('step by step, on the map'))}</small></button><a class="row" href="handbook/" ${FRAMED?'':'target="_blank" rel="noopener"'} style="color:inherit;text-decoration:none">${esc(tr('Handbook'))} <small>${esc(tr('every tool and setting, with live demos'))}</small></a><button class="row" data-act="whats-new">${esc(tr('What’s new'))} <small>SNDT ${WHATSNEW.v}</small></button><a class="row" href="${CHANGELOG_URL}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">${esc(tr('Changelog'))} <small>${esc(tr('every version since 1.0, on sndt.cc'))}</small></a><button class="row" data-act="creators">${esc(tr('Creators'))} <small>${esc(tr('the people who made SNDT'))}</small></button>`);break;
+    case 'whats-new':closePop();whatsNew();break;
     case 'creators':closePop();modal(`<h2>${esc(tr('Creators'))}</h2><div class="crew">${CREATORS.map(([n,r,i,img])=>`<div class="crew-card"><img src="${img}" alt=""><b data-nt>${esc(n)}</b><span class="role">${esc(tr(r))}</span>${i?`<span class="idea" data-nt>“${esc(i)}”</span>`:''}</div>`).join('')}</div>
       <div class="crew-thanks"><img src="${SNDTLOGO}" alt="SNDT"><img src="${PETROLAVIA}" alt="Petrolavia"><span>${esc(tr('And everyone else in the SNDT and Petrolavia communities, for ideas, testing and feedback.'))}</span></div><div class="btns"><button class="btn acc" data-act="close-modal">${esc(tr('Close'))}</button></div>`);break;
     case 'search':if(!NARROW()&&el&&el.id==='searchBtn')break;closeDrawers();searchOpen();break;
@@ -3015,7 +3036,7 @@ function toolGroupOpen(){const g=$('#toolGroup');if(popEl&&popEl.classList.conta
 
 /* ---------- view ---------- */
 function zoomAt(fac,sx,sy){const r=mapRect();if(sx==null){sx=r.width/2;sy=r.height/2}const k=Math.min(6,Math.max(.15,view.k*fac));const wx=(sx-view.x)/view.k,wy=(sy-view.y)/view.k;view.k=k;view.x=sx-wx*k;view.y=sy-wy*k;viewChanged()}
-function fit(){const c=vp.querySelector('#content');if(!c)return;let b;try{b=c.getBBox();for(const q of ['#waterL','#natureL']){const wl=$(q);if(wl&&wl.firstChild){const w=wl.getBBox();if(w.width){const x0=Math.min(b.x,w.x),y0=Math.min(b.y,w.y);b={x:x0,y:y0,width:Math.max(b.x+b.width,w.x+w.width)-x0,height:Math.max(b.y+b.height,w.y+w.height)-y0}}}}}catch(e){return}if(!b.width&&!b.height){view={x:60,y:60,k:1};render();return}
+function fit(){const c=vp.querySelector('#content');if(!c)return;let b;try{b=c.getBBox();for(const q of ['#waterL','#natureL','#backL']){const wl=$(q);if(wl&&wl.firstChild){const w=wl.getBBox();if(w.width){const x0=Math.min(b.x,w.x),y0=Math.min(b.y,w.y);b={x:x0,y:y0,width:Math.max(b.x+b.width,w.x+w.width)-x0,height:Math.max(b.y+b.height,w.y+w.height)-y0}}}}}catch(e){return}if(!b.width&&!b.height){view={x:60,y:60,k:1};render();return}
   const r=mapRect(),pad=Math.min(80,r.width*.1),k=Math.min(3,Math.max(.15,Math.min((r.width-pad*2)/b.width,(r.height-pad*2)/b.height)));
   view.k=k;view.x=r.width/2-(b.x+b.width/2)*k;view.y=r.height/2-(b.y+b.height/2)*k;render()}
 function centerOn(p){const r=mapRect();view.x=r.width/2-p.x*view.k;view.y=r.height/2-p.y*view.k;viewChanged()}
@@ -3045,7 +3066,7 @@ function lpFire(){const {e,x,y,id}=lp;lp=null;if(drag&&drag.type==='dtap')return
 function flushTouch(){if(!pendTouch)return;const ev=pendTouch.e;clearTimeout(pendTouch.t);pendTouch=null;pointerDown(ev)}
 function hitOf(e){const el=e.target.closest&&e.target.closest('[data-kind]');return el?{kind:el.dataset.kind,id:el.dataset.id,key:el.dataset.key,i:el.dataset.i,coll:el.dataset.coll}:null}
 // fingers are imprecise: when a touch misses, take the nearest target within ~26px; on a big area (district, track, image), a small target within ~12px wins
-const HIT_SMALL=new Set(['stub','station','label','text','legend','vx','hdl','cp','cpadd','mid','handle','ihandle','lane']);
+const HIT_SMALL=new Set(['mcorner','stub','station','label','text','legend','vx','hdl','cp','cpadd','mid','handle','ihandle','lane']);
 function hitTouch(e){const h=hitOf(e);if(e.pointerType!=='touch'||tool==='station'||tool==='text'||(h&&HIT_SMALL.has(h.kind)))return h;let any=null;
   for(const r of h?[6,12]:[6,12,18,26])for(let a=0;a<8;a++){const x=e.clientX+r*Math.cos(a*Math.PI/4),y=e.clientY+r*Math.sin(a*Math.PI/4),el=document.elementFromPoint(x,y),k=el&&el.closest&&el.closest('#map [data-kind]');
     if(!k)continue;const o={kind:k.dataset.kind,id:k.dataset.id,key:k.dataset.key,i:k.dataset.i,coll:k.dataset.coll};if(HIT_SMALL.has(o.kind))return o;if(!any)any=o}
@@ -3113,6 +3134,7 @@ function pointerDown(e){if(multiAdd&&e.pointerType!=='mouse'&&dtapSel)Object.def
   if(h&&(h.kind==='vx'||h.kind==='mid')){const a=shapeOf({t:h.coll,id:h.id});if(a){drag={type:h.kind==='vx'?'nvx':'nmid',a,i:+h.i,start:w,moved:false};return}}
   if(h&&h.kind==='lane'){drag={type:'lane',sid:h.id,lid:h.key,start:w,at:w,moved:false};return}
   if(h&&h.kind==='hdl'){drag={type:'hdl',key:h.key,i:+h.i,s:+h.coll||1,start:w,moved:false,off:cpOff(h.key,+h.i)};return}
+  if(h&&h.kind==='mcorner'){pushUndo();const sg=makeCustom(h.key);if(sg&&sg.pts[+h.i]){anchorSel={kind:'cp',key:h.key,i:+h.i}}changed();return}
   if(h&&(h.kind==='cp'||h.kind==='cpadd')){const v=sel[0]&&segView(h.key,sel[0].id),i=+h.i,m=v&&(h.kind==='cp'?[v.ch[i+1],v.dv[i+1]]:[{x:(v.ch[i].x+v.ch[i+1].x)/2,y:(v.ch[i].y+v.ch[i+1].y)/2},{x:(v.dv[i].x+v.dv[i+1].x)/2,y:(v.dv[i].y+v.dv[i+1].y)/2}]);
     drag={type:h.kind,key:h.key,i,start:w,moved:false,off:m?{x:m[1].x-m[0].x,y:m[1].y-m[0].y}:{x:0,y:0}};return}
   if(h&&h.kind==='ihandle'){const im=(M.images||[]).find(x=>x.id===h.id);if(im){drag={type:'iresize',im,start:w,ow:im.w,oh:im.h,moved:false};return}}
@@ -3263,7 +3285,7 @@ function endPointer(e){
   if(d.type==='dtap'){lastTap=null;if(e.type!=='pointercancel'){dtapSel=true;try{pointerDown(d.e)}finally{dtapSel=false}drag=null;render()}return}
   if(d.type==='pan'&&d.touch){if(!d.moved){lastTap={t:performance.now(),x:e.clientX,y:e.clientY};if(d.clear&&sel.length){sel=[];render();renderLists();renderInspector()}}else lastTap=null;return}
   if(d.type==='pan'){svg.style.cursor=spaceDown?'grab':'';if(d.click&&!d.moved&&(tool!=='select'||hitOf(d.click))){pointerDown(d.click);drag=null}return}
-  if(!d.moved&&d.type==='cp'){anchorSel={kind:'cp',key:d.key,i:d.i};requestOverlay();return}
+  if(!d.moved&&d.type==='cp'){anchorSel={kind:'cp',key:d.key,i:d.i};requestOverlay();renderInspector();return}
   if(!d.moved&&d.type==='nvx'){const coll=d.a===shapeOf({t:'region',id:d.a.id})?'region':(M.water||[]).includes(d.a)?'water':'nature';anchorSel={kind:'vx',coll,id:d.a.id,i:d.i};requestOverlay();return}
   if(d.type==='lane'){if(d.moved)laneDrop(d);requestOverlay();return}
   if(d.type==='mlane'){if(d.moved)changed();else if(d.click)select([d.click]);return}
@@ -3517,6 +3539,15 @@ function cleanModal(){const o=cleanFind(),nm=x=>esc(String(x.name||'').replace(/
    <div class="btns">${h?`<button class="btn acc" data-act="clean-go">${tr('Remove ticked')}</button>`:''}<button class="btn" data-act="close-modal">${tr(h?'Cancel':'Close')}</button></div></div>`);
   const all=$('#cleanAll'),boxes=[...document.querySelectorAll('#cleanModal input[data-clean],#cleanWps')],sync=()=>{if(all)all.checked=boxes.every(b=>b.checked)};
   if(all){sync();all.addEventListener('change',()=>boxes.forEach(b=>b.checked=all.checked));boxes.forEach(b=>b.addEventListener('change',sync))}}
+const WHATSNEW={v:'1.0.7',items:[
+  'Background images: put a picture behind everything and trace your network over it.',
+  'Facility icons can be set per station: their own alignment and icons per row.',
+  'In Manual lanes, click a corner to bend the line there with curve handles, or type the angle.',
+  'Label backgrounds are evenly padded, and facility icons sit centred beside them.',
+  'Area outlines meet properly when the gap between areas is 0.',
+  'A new home page at sndt.cc. The editor now lives at sndt.cc/app, and old links still work.']};
+const CHANGELOG_URL='https://sndt.cc/changelog/';
+function whatsNew(){lsSet('sndt:whatsNew',WHATSNEW.v);modal(`<h2>${esc(tr('What’s new in SNDT'))} ${WHATSNEW.v}</h2><ul class="wn">${WHATSNEW.items.map(t=>`<li>${esc(tr(t))}</li>`).join('')}</ul><div class="btns"><a class="btn" href="${CHANGELOG_URL}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;display:inline-flex;align-items:center">${esc(tr('Full changelog'))}</a><span style="flex:1"></span><button class="btn acc" data-act="close-modal">${esc(tr('Got it'))}</button></div>`)}
 function modal(html){closeModal();const s=document.createElement('div');s.className='scrim';s.id='scrim';s.innerHTML=`<div class="modal" role="dialog">${html}</div>`;s.addEventListener('pointerdown',e=>{if(e.target===s)closeModal()});document.body.appendChild(s)}
 function closeModal(){const s=$('#scrim');if(s)s.remove();if(textAsk)textEmptyKeep()}
 function ago(t){const s=(Date.now()-t)/1000;if(s<60)return'just now';if(s<3600)return Math.floor(s/60)+' min ago';if(s<86400)return Math.floor(s/3600)+' h ago';return new Date(t).toLocaleDateString()}
@@ -3937,11 +3968,11 @@ function inspImage(im){if(!im)return inspMap();return `<div class="pane"><h3>Ima
   ${fld('Name',inp('image',im.id,'name',im.name||'','text'))}
   <div class="grid2">${fld('Width',inp('image',im.id,'w',Math.round(im.w),'num','min="4"'))}${fld('Height',inp('image',im.id,'h',Math.round(im.h),'num','min="4"'))}</div>
   ${chk('image',im.id,'free',!!im.free,'Allow stretching')}
-  ${fld('Layer',selectF('image',im.id,'layer',im.layer||'top',[['top','Above lines and labels'],['bottom','Below lines']]))}
+  ${fld('Layer',selectF('image',im.id,'layer',im.layer||'top',[['top','Above lines and labels'],['bottom','Below lines'],['back','Background, behind everything']]))}
   <div class="grid2">${fld('Opacity',inp('image',im.id,'opacity',im.opacity??1,'num','min="0.05" max="1" step="0.05"'))}<div class="adv-only">${fld('Rotation °',inp('image',im.id,'rot',im.rot||0,'num','step="15"'))}</div></div>
   <div class="grid2">${fld('Corner radius',inp('image',im.id,'radius',im.radius||0,'num','min="0" max="500"'))}${fld('Border width',inp('image',im.id,'bw',im.bw||0,'num','min="0" max="60" step="0.5"'))}${(im.bw||0)>0?fld('Border colour',inp('image',im.id,'bc',im.bc||M.settings.ink,'color')):''}</div>
-  <div class="grid2 adv-only">${fld('X',inp('image',im.id,'x',im.x,'num'))}${fld('Y',inp('image',im.id,'y',im.y,'num'))}</div>
-  <p class="sub">Drag the image to move it and the orange corner to resize it. Hold Alt while resizing to stretch it.</p>
+  <div class="grid2${im.layer==='back'?'':' adv-only'}">${fld('X',inp('image',im.id,'x',im.x,'num'))}${fld('Y',inp('image',im.id,'y',im.y,'num'))}</div>
+  <p class="sub">${im.layer==='back'?tr('A background image can’t be clicked on the map, so it stays out of the way while you draw over it. Move it with X and Y, and find it again in This map › Background images.'):'Drag the image to move it and the orange corner to resize it. Hold Alt while resizing to stretch it.'}</p>
   <div class="btns"><button class="btn" data-act="img-replace">Replace image…</button>${im.free?'<button class="btn" data-act="img-reset">Original proportions</button>':''}<button class="btn" data-act="dup">Duplicate</button><button class="btn warn" data-act="del-sel" data-confirm="1">Delete image</button></div></div>`}
 /* ---------- timeline ---------- */
 const TLDEF={nodeDur:.6,edgeDur:1,flow:false,follow:true,zoom:2.5,endHold:3,res:'1080',edgeMode:'time',speed:150,board:false,boardCorner:'tl',endLegend:true,legendCorner:'',legendScale:1,boardScale:1};
@@ -4067,7 +4098,7 @@ function tlScene(T,missing,live){const c=tlCache,G=c.G,S=M.settings;let lines=''
   if(missing){const cov=tlCoverage();for(const e of cov.edges){const P=tlEdgePts(G,e),L=lnOf(e.line);if(P&&L)miss+=`<path d="${dOf(P)}" fill="none" stroke="${L.color}" stroke-width="${lw(L)}" stroke-opacity=".28" stroke-dasharray="5 5"/>`}
     for(const id of cov.nodes){const st=stOf(id);if(st)miss+=`<circle cx="${st.x}" cy="${st.y}" r="7" fill="none" stroke="${S.ink}" stroke-opacity=".4" stroke-dasharray="2 2"/>`}}
   const legend=c.segs.length&&T>c.total&&!tlEndLegendOn()?`<g opacity="${f(Math.min(1,(T-c.total)/1.5))}">${legendSVG()}</g>`:'';
-  return '<g>'+natureSVG()+waterSVG()+'</g><g>'+M.regions.map(regionSVG).join('')+imagesSVG('bottom',live)+'</g><g>'+miss+lines+'</g><g>'+nodes+'</g>'+`<g font-family="${esc(famStack(S.labelFont))}">`+labels+M.texts.map(textSVG).join('')+legend+'</g><g>'+imagesSVG('top',live)+'</g>'}
+  return '<g>'+imagesSVG('back',live)+natureSVG()+waterSVG()+'</g><g>'+M.regions.map(regionSVG).join('')+imagesSVG('bottom',live)+'</g><g>'+miss+lines+'</g><g>'+nodes+'</g>'+`<g font-family="${esc(famStack(S.labelFont))}">`+labels+M.texts.map(textSVG).join('')+legend+'</g><g>'+imagesSVG('top',live)+'</g>'}
 function tlFrameInner(T,W,H,missing,live){const cam=tlCam(T,W,H);return `<rect width="${W}" height="${H}" fill="${M.settings.bg}"/><g transform="translate(${f(W/2-cam.x*cam.k)} ${f(H/2-cam.y*cam.k)}) scale(${f(cam.k*10000)/10000})">${tlScene(T,missing,live)}</g>`+
   tlBoardList(T).map(x=>{const b=tlBoardFor(x,H,W),q=tlBoardPos(b,x.corner,W,H);return `<g transform="translate(${q.x} ${q.y})" opacity="${f(x.a)}">${b.svg}</g>`}).join('')}
 function renderTimeline(){if(section!=='timeline')return;tlPrepare();renderTlTrack();renderTlSide();tlDraw()}
@@ -4159,7 +4190,7 @@ async function tlFastRenderer(W,H,font){const c=tlCache,G=c.G,S=M.settings,b=c.b
   // background + finished lines, in world space at the follow zoom (or less for huge maps)
   const q=40,sc=Math.min(kmax,8192/(b.x1-b.x0+2*q),8192/(b.y1-b.y0+2*q),Math.sqrt(24e6/((b.x1-b.x0+2*q)*(b.y1-b.y0+2*q)))),exact=sc>=kmax*(1-1e-9);
   const px0=Math.floor((b.x0-q)*sc),py0=Math.floor((b.y0-q)*sc),pw=Math.max(1,Math.ceil((b.x1+q)*sc)-px0),ph=Math.max(1,Math.ceil((b.y1+q)*sc)-py0),bx=px0/sc,by=py0/sc,ww=pw/sc,hh=ph/sc;
-  const acc=await raster('<g>'+natureSVG()+waterSVG()+'</g><g>'+M.regions.map(regionSVG).join('')+imagesSVG('bottom',false)+'</g>',bx,by,ww,hh,pw,ph,true),ag=acc.getContext('2d');
+  const acc=await raster('<g>'+imagesSVG('back',false)+natureSVG()+waterSVG()+'</g><g>'+M.regions.map(regionSVG).join('')+imagesSVG('bottom',false)+'</g>',bx,by,ww,hh,pw,ph,true),ag=acc.getContext('2d');
   const lineOf=x=>{const it=x.it,L=lnOf(it.line);if(!L||L.hidden)return null;const lk=segLook(L,segKey(it.a,it.b));return{L:lk?Object.assign({},L,{color:lk.color,style:lk.style,dash:lk.dash}):L,w:lw(L)}};
   const edges=c.segs.filter(x=>x.it.t==='edge'&&x.pts&&lineOf(x)),nodeSegs=c.segs.filter(x=>x.it.t==='node'),strokes=new Map();
   const full=x=>{if(!strokes.has(x)){const o=lineOf(x);strokes.set(x,tlParseStrokes(strokeFor(dOf(x.pts),o.L,o.w)))}return strokes.get(x)};
@@ -4273,6 +4304,12 @@ $('#iconIn').addEventListener('change',async e=>{const fl=e.target.files[0];e.ta
 insp.addEventListener('input',e=>{const fac=e.target.classList.contains('fac-size');if(!fac&&!e.target.classList.contains('cicon-size'))return;const v=+e.target.value,key=fac?'iconScale':'ciconSize',ss=sel.filter(x=>x.t==='station').map(x=>stOf(x.id)).filter(Boolean);
   if(!iconSizeUndo){pushUndo();iconSizeUndo=true}ss.forEach(s=>{if(v===100)delete s[key];else s[key]=v});const b=e.target.nextElementSibling;if(b)b.textContent=v+'%';requestRender();scheduleSave()});
 insp.addEventListener('change',e=>{if(e.target.classList.contains('cicon-size')||e.target.classList.contains('fac-size')){iconSizeUndo=false;updUndo()}});
+insp.addEventListener('change',e=>{const el=e.target,isA=el.classList.contains('bend-ang');if(!isA&&!el.classList.contains('bend-len'))return;const A=anchorSel;if(!A||A.kind!=='cp')return;
+  const sg=M.segs[A.key],q=sg&&sg.pts&&sg.pts[A.i];if(!q)return;const v=parseFloat(el.value);if(!isFinite(v)&&el.value!=='')return;pushUndo();
+  let len=Math.hypot(q.hx||0,q.hy||0),ang=Math.atan2(-(q.hy||0),q.hx||0);
+  if(!len){const [ia,ib]=A.key.split('~'),P=[stOf(ia),...sg.pts,stOf(ib)],a=P[A.i],b=P[A.i+2];if(a&&b)ang=Math.atan2(-(b.y-a.y),b.x-a.x)}
+  if(isA){ang=(isFinite(v)?v:0)*Math.PI/180;if(!len)len=30}else len=isFinite(v)?Math.max(0,v):0;
+  if(len<1){delete q.hx;delete q.hy}else{q.hx=Math.round(Math.cos(ang)*len*100)/100;q.hy=Math.round(-Math.sin(ang)*len*100)/100}changed()});
 $('#imgIn').addEventListener('change',e=>{const fl=[...e.target.files];e.target.value='';if(fl.length)addImageFiles(fl)});
 $('#stage').addEventListener('dragover',e=>{if(e.dataTransfer&&[...e.dataTransfer.types].includes('Files')){e.preventDefault();e.dataTransfer.dropEffect='copy'}});
 $('#stage').addEventListener('drop',e=>{const fl=e.dataTransfer&&[...e.dataTransfer.files].filter(f=>/^image\//.test(f.type)||/\.svg$/i.test(f.name));if(!fl||!fl.length)return;e.preventDefault();addImageFiles(fl,toWorld(e))});
@@ -4426,6 +4463,9 @@ if(LANG!=='en')i18nTree(document.body);
 try{document.fonts&&document.fonts.ready.then(()=>{measureCache.clear();render()})}catch(e){}
 // the tutorial opens by itself once: it counts as seen as soon as it is shown, not only when it is finished or skipped (players saw it
 // again after every refresh when they closed the tab mid-way); Help opens it again
+// what's new: a short note, once per version, for players who have used SNDT before (first-time players get the tutorial and won't see
+// it until the next version); "Full changelog" opens sndt.cc/changelog/. Idea by Plentk (2026-11-15). Update WHATSNEW with every release.
+if(!EMBED){if(!lsGet('sndt:tour'))lsSet('sndt:whatsNew',WHATSNEW.v);else if(lsGet('sndt:whatsNew')!==WHATSNEW.v)setTimeout(()=>{if(tourI<0&&!$('#scrim'))whatsNew()},1200)}
 if(!EMBED&&!lsGet('sndt:tour'))setTimeout(()=>{if(tourI<0&&!lsGet('sndt:tour')){lsSet('sndt:tour','1');tourStart()}},900);i18nObs.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:I18N_ATTRS});
 window.addEventListener('resize',()=>{if(!NARROW())document.querySelectorAll('aside').forEach(a=>a.classList.remove('open'))});
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>render());
