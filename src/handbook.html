@@ -145,9 +145,9 @@ td:first-child{white-space:nowrap;font-weight:600}
 <main id="main">
 
 <article id="start" data-group="Start here">
-  <div class="kicker">SNDT Handbook · v1.0</div>
+  <div class="kicker">SNDT Handbook · v1.0.7</div>
   <h1>Draw your server's transit map</h1>
-  <p class="lede">SNDT is a free editor for transit maps of Minecraft servers: stations, lines, rivers, parks and districts, drawn on a grid and exported as images, backups or animated videos. This handbook explains every tool and setting, in both the Map and the Timeline sections, with live demos you can play with right here.</p>
+  <p class="lede">SNDT is a free editor for transit maps of any city, real or imagined, including Minecraft servers: stations, lines, rivers, parks and districts, drawn on a grid and exported as images, backups or animated videos. This handbook explains every tool and setting, in both the Map and the Timeline sections, with live demos you can play with right here.</p>
   <div class="cards">
     <a href="#first-map"><b>First map</b><span>Stations, a line, done in a minute.</span></a>
     <a href="#bends"><b>Bends</b><span>How tracks turn, Zigzag and Mix types.</span></a>
@@ -235,7 +235,7 @@ td:first-child{white-space:nowrap;font-weight:600}
     <li><b>Text alignment</b> (next to Label position): Auto, Left, Centre or Right lines up the rows of the name (both name lines and the sublabel) inside the label. Auto aligns them towards the station.</li>
     <li><b>Moving a label</b>: drag the name on the map to put it exactly where you want; drag the station's mark to move the station. The label stays on the side it started on and snaps to the grid (hold <kbd>Alt</kbd> for finer steps, or use Free placement).</li>
     <li><b>Mark length</b> and <b>Mark thickness</b> (when the station has a dot, pill or shape mark): size the mark yourself, or drag the square handles around it on the map; both sides move, so it stays centred and turned along its lines. Empty means the automatic size; <span class="ui">Reset mark size</span> goes back to it.</li>
-    <li><b>Facilities</b>: Airport, Ferry, Cable car, Bus, Rail, Metro, Tram, Parking and Landmark icons next to the name.</li>
+    <li><b>Facilities</b>: Airport, Ferry, Cable car, Bus, Rail, Metro, Tram, Parking and Landmark icons next to the name. Under <b>Icon size</b>, a station can also have its own <b>Facility icons</b> alignment (top, centre or bottom) and <b>Icons per row</b>; left at <b>As the map</b> or empty, it follows the map's setting (idea by Curt).</li>
     <li><b>Custom icon</b>: see <a href="#icons">Custom icons</a>.</li>
     <li><b>Not in service</b>: draws a cross over the station and greys its name.</li>
     <li><b>Served by</b>: the lines through the station; click one to select it.</li>
@@ -350,6 +350,7 @@ td:first-child{white-space:nowrap;font-weight:600}
   <div class="demo" data-demo="bends"><div class="demo-head">Bend types<span>drag a station</span></div><div class="stagebox"></div><div class="controls"></div></div>
   <h3>Free shape</h3>
   <p>With a segment selected, drag the handles on the track to give it any shape: the dots in the middle of each piece add a new point, and points can get curve handles. <b>Smooth</b> rounds the whole shape, and the panel can clear the points again.</p>
+  <p>Click a point to pick it: two square <b>curve handles</b> appear. Drag one to bend the line through the point, or double-click it for a sharp corner again. With a point picked, the segment panel shows <b>Bend point</b> with its <b>Angle °</b> (0 points right, 90 up) and <b>Handle length</b>, so you can type exact values; <span class="ui">Sharp corner</span> removes the handles.</p>
   <h3>Corners</h3>
   <p><b>Corner rounding</b> (Map → Lines) rounds every corner: Sharp, Soft, Round, Wide or Sweeping. In Advanced, <b>Corner radius</b> sets an exact radius for the map, <b>Corner radius on this segment</b> for one segment, and a bend point has its own <b>Corner radius at this bend point</b>.</p>
   <h3>Mix types</h3>
@@ -400,6 +401,7 @@ td:first-child{white-space:nowrap;font-weight:600}
     <li>Click a line to pick the part under the pointer (the stretch between two corners). Shift-click picks more parts, on any line, and Shift-clicking a picked part drops it. While parts are picked, the other lines fade so the ones you edit stand out.</li>
     <li>Drag sideways to move every picked part. Each part moves across its own direction, so dragging both parts of an L corner diagonally moves the corner. Steps are half a lane on the grid, a tenth of a lane in Free placement, and any amount with <kbd>Alt</kbd>. On a phone, pick a part first, then drag it; swiping elsewhere still moves the map.</li>
     <li>The segment panel shows <b>Lanes on this segment</b>: each line's offset per part, which you can also type. <span class="ui">Back to the automatic lanes here</span> resets just that segment.</li>
+    <li>The corners where a picked line's parts meet show as white circles. Click one to turn that corner into a bend point with curve handles (see <a href="#bends">Bends</a>), then drag the handles or type the angle (idea by Curt).</li>
     <li>Segments you draw after switching to Manual follow the automatic layout until you move them.</li>
     <li>Switching back to Lines first or Stations first keeps the lanes you moved by hand; everything else goes back to the automatic layout.</li>
   </ul>
@@ -455,7 +457,8 @@ td:first-child{white-space:nowrap;font-weight:600}
   <h3>Nature <kbd>N</kbd></h3>
   <p>Click points around a shape and close it on the first point (or press Enter). With the tool on, <b>Fill for new areas</b> picks what you draw next; select an area for its <b>Nature area</b> panel. <b>Fill</b>: Park, Forest, Plains, Desert, Mesa, Snow, Mountain, Swamp or Cherry grove, or a <b>Custom colour</b>, with <b>Opacity</b> and <b>Smooth edges</b>. <span class="ui">Bring forward</span> and <span class="ui">Send back</span> stack overlapping areas, and <span class="ui">Delete area</span> removes one. <b>Corner rounding, all water and nature</b> rounds every water and nature shape at once.</p>
   <h3>Images <kbd>I</kbd></h3>
-  <p>Places a picture; drop files on the map to add several. <b>Name</b>, <b>Width</b>, <b>Height</b> (drag the corner handle; Alt+drag ignores the aspect ratio), <b>Layer</b> (below or above the map), <b>Opacity</b>, <b>Corner radius</b>, <b>Border width</b>, <b>Border colour</b>, <b>Rotation °</b>, <b>X</b> and <b>Y</b>. Smaller files work best: very large images make maps slow to save.</p>
+  <p>Places a picture; drop files on the map to add several. <b>Name</b>, <b>Width</b>, <b>Height</b> (drag the corner handle; Alt+drag ignores the aspect ratio), <b>Layer</b> (above lines and labels, below lines, or <b>Background, behind everything</b>), <b>Opacity</b>, <b>Corner radius</b>, <b>Border width</b>, <b>Border colour</b>, <b>Rotation °</b>, <b>X</b> and <b>Y</b>. Smaller files work best: very large images make maps slow to save.</p>
+  <p><b>Background images</b> (idea by SlimboAmingon) sit under the water, parks and areas, so you can put a real map behind everything and trace your network over it. They can't be clicked on the map, so they stay out of the way while you draw; move one with <b>X</b> and <b>Y</b>, and find it again in <b>This map › Background images</b>.</p>
 </article>
 
 <article id="timeline" data-group="Timeline">
@@ -609,6 +612,7 @@ td:first-child{white-space:nowrap;font-weight:600}
   <h3>A segment ignores Mix types</h3><p>It has its own bend. Select it and choose <span class="ui">Use map default</span>.</p>
   <h3>My map is gone</h3><p>Maps are saved in the browser they were made in. Check the maps menu, use the same browser and device, and import a JSON backup if you have one.</p>
   <h3>Fetch map fails for my MTR server</h3><p>Fetching works on sndt.cc. Elsewhere, open the server's <code>/mtr/api/map/stations-and-routes</code> address, copy everything and paste it into the dialog.</p>
+  <h3>What changed in the last update?</h3><p>After an update SNDT shows a short <b>What's new</b> list once; Help → What's new opens it again. Every version since 1.0 is on the <a href="https://sndt.cc/changelog/">changelog page</a> (idea by Plentk).</p>
   <h3>The tutorial</h3><p>Help → Tutorial walks you through everything on your own map, with steps that wait for you to try things. Chapters: Basics, Lines and tracks, Stations and labels, Map look, Timeline, Sharing and more.</p>
 </article>
 

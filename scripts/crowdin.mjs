@@ -1,6 +1,8 @@
 // Crowdin sync for the string-based project https://crowdin.com/project/sndt-cc
 //   node scripts/crowdin.mjs push   uploads i18n/en.json (run scripts/i18n-export.mjs first); unchanged lines keep their translations
 //   node scripts/crowdin.mjs pull   downloads the approved translations into i18n/<lang>.json (then run scripts/i18n-import.mjs)
+//   node scripts/crowdin.mjs suggest keys.json   uploads our translations of just those keys (a JSON list of English keys) as
+//                                   UNAPPROVED suggestions in every language, for the proofreaders to check
 // The API token is read from CROWDIN_TOKEN or ~/.crowdin-token (never stored in the repo).
 import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {spawnSync} from 'node:child_process';
 const PROJECT=941815,BRANCH=1,BUNDLE=1,API='https://api.crowdin.com/api/v2';
@@ -35,4 +37,12 @@ async function pull(){
     if(!n){continue}fs.writeFileSync(DIR+lang+'.json',JSON.stringify(out,null,2)+'\n');console.log(`${lang}: ${n} approved translations`)}
   fs.rmSync(tmp,{recursive:true,force:true});
 }
-const cmd=process.argv[2];if(cmd==='push')await push();else if(cmd==='pull')await pull();else console.log('usage: node scripts/crowdin.mjs push|pull');
+// our language files → Crowdin language ids
+const CROWDIN_LANG={zh:'zh-CN',es:'es-ES',fr:'fr',de:'de',ru:'ru',it:'it',pt:'pt-BR',ms:'ms',ar:'ar',tr:'tr'};
+async function suggest(listFile){const keys=JSON.parse(fs.readFileSync(listFile,'utf8'));
+  for(const [lang,id] of Object.entries(CROWDIN_LANG)){const all=JSON.parse(fs.readFileSync(DIR+lang+'.json','utf8')),out={};
+    for(const k of keys)if(all[k])out[k]=all[k];if(!Object.keys(out).length)continue;
+    const st=await api('/storages',{method:'POST',body:JSON.stringify(out),headers:{'Crowdin-API-FileName':lang+'.json'}});
+    const im=await api(`/projects/${PROJECT}/translations/imports`,{method:'POST',body:JSON.stringify({storageId:st.id,languageIds:[id],branchId:BRANCH,autoApproveImported:false,importEqSuggestions:false})});
+    await wait(`/projects/${PROJECT}/translations/imports/${im.identifier}`);console.log(`${lang}: ${Object.keys(out).length} suggestions`)}}
+const cmd=process.argv[2];if(cmd==='push')await push();else if(cmd==='pull')await pull();else if(cmd==='suggest')await suggest(process.argv[3]);else console.log('usage: node scripts/crowdin.mjs push|pull|suggest keys.json');
