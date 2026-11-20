@@ -145,7 +145,7 @@ td:first-child{white-space:nowrap;font-weight:600}
 <main id="main">
 
 <article id="start" data-group="Start here">
-  <div class="kicker">SNDT Handbook · v1.0.7</div>
+  <div class="kicker">SNDT Handbook · v1.1</div>
   <h1>Draw your server's transit map</h1>
   <p class="lede">SNDT is a free editor for transit maps of any city, real or imagined, including Minecraft servers: stations, lines, rivers, parks and districts, drawn on a grid and exported as images, backups or animated videos. This handbook explains every tool and setting, in both the Map and the Timeline sections, with live demos you can play with right here.</p>
   <div class="cards">
@@ -305,7 +305,7 @@ td:first-child{white-space:nowrap;font-weight:600}
     <li><b>Name</b> and <b>Legend text</b> (what the legend shows instead of the name).</li>
     <li><b>Colour · Minecraft dyes</b>: the 16 dye colours, or a <b>Custom colour</b>.</li>
     <li><b>Line type</b>: Subway / metro, Tram / light rail, Bus, Regional rail, Local rail, High-speed rail, Ferry, Minecart rail, Ice boat road, Boat on water, Walkway, Elytra route or Other. The type picks a matching style and travel speed, and groups lines in the lists and the legend.</li>
-    <li><b>Line style</b>: Solid, Narrow, Dashed, Dotted, Railway (dashed centre), Striped, Double (hollow), Outlined or Thin dashed.</li>
+    <li><b>Line style</b>: Solid, Narrow, Dashed, Dotted, Railway (dashed centre), Striped, Double (hollow), Triple (hollow), Outlined or Thin dashed. Dashed, Thin dashed and Railway lines get <b>Dash length</b> and <b>Gap length</b>, Dotted lines <b>Gap between dots</b>, and Outlined lines an <b>Outline colour</b> (empty fields are automatic).</li>
     <li><b>Status, whole line</b>: Open, Planned or Under construction.</li>
     <li><b>Leave out of the legend</b>.</li>
   </ul>
@@ -315,6 +315,7 @@ td:first-child{white-space:nowrap;font-weight:600}
   <p><b>Width</b>, <b>Opacity</b>, <b>Speed, blocks per second</b> (for travel times and the Timeline), <b>Custom dash pattern</b>, and <span class="ui">Draw above</span> / <span class="ui">Draw below</span> to decide which line passes over at a crossing. Below: <span class="ui">Duplicate line</span> and <span class="ui">Delete line</span>.</p>
   <h3>One segment of a line</h3>
   <p>Click a track to select just that segment. For the line on that segment you can set its own status (<i>Same as line</i>, Open, Planned, Building), <b>Colour here</b> and <b>Style here</b> (<span class="ui">Reset colour and style here</span> undoes both), and the <a href="#one-way">Direction</a>.</p>
+  <p><b>Several segments at once</b>: Shift-click more segments (on any line; Shift-click a picked one to drop it). The <b>Segments</b> panel then sets <b>Status</b>, <b>Colour here</b>, <b>Style here</b> and the <b>Bend type</b> for all of them (idea by Curt).</p>
   <h3>Merging lines</h3>
   <p>Select two or more lines (Shift-click them on the map, or Shift-click or Ctrl-click them in the Lines list) and press <span class="ui">Merge into one line</span>. The lines are joined where one ends and the next begins, turned round where needed; if the chain comes back to where it started, it becomes a loop. The merged line keeps the name and look of the first line you selected, and the other lines' per-segment colours and styles. Lines that don't meet end to end, and loop lines, can't be merged; SNDT says which ones. <kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes it.</p>
 </article>
@@ -329,7 +330,7 @@ td:first-child{white-space:nowrap;font-weight:600}
     <li><span class="ui">Facilities</span> shows each station's facility icons under it (idea by Curt).</li>
     <li><b>Names</b>: <span class="ui">Auto</span> tilts them only when they don't fit, <span class="ui">Straight</span> keeps them level and spaces the stations wider, <span class="ui">Angled</span> always tilts them.</li>
     <li>Drag the slider under the strip (or the strip itself) to scroll along it. Drag the bar on top of the panel to make it taller or shorter; double-click the bar to reset.</li>
-    <li><span class="ui">PNG</span> and <span class="ui">SVG</span> export just the strips. A loop line ends back at its first station.</li>
+    <li><span class="ui">PNG</span> and <span class="ui">SVG</span> export just the strips. <span class="ui">Loops as a circle</span> (on at first) draws a loop line as a closed racetrack; off, it ends back at its first station (idea by VSad).</li>
   </ul>
 </article>
 
@@ -427,12 +428,13 @@ td:first-child{white-space:nowrap;font-weight:600}
   <h3>Colours</h3>
   <p><b>Background</b>, <b>Text &amp; outlines</b>, <b>Station fill</b> and <b>Water</b>, or a <b>Colour template</b>: Paper, Night, Blueprint, Sandstone, Slate, Mint, Mono, Overworld, Nether and The End. Templates change those four colours; line colours, parks and areas stay as they are.</p>
   <div class="demo" data-demo="colours"><div class="demo-head">Colour templates<span>pick one</span></div><div class="stagebox"></div><div class="controls"></div></div>
+  <h3>Style sets</h3><p>One click restyles the whole map; see <a href="#style-sets">Style sets</a>.</p>
   <h3>Lines</h3>
   <p><a href="#bends">Bend types</a>, <a href="#auto-build">Auto build</a>, <a href="#bends">Corner rounding</a> (and <b>Corner radius</b> <span class="tag a">Advanced</span>), <a href="#parallel">Reorder lines at stations</a>, <a href="#parallel">Where lines cross</a> (and <b>Gap size</b> <span class="tag a">Advanced</span>), <b>Line width</b> and <b>Gap between lines</b> <span class="tag a">Advanced</span>.</p>
   <h3>Stations</h3>
   <p><b>Single-line stops</b>: the shape of every station that has no shape of its own (see <a href="#stations">Stations</a>). <b>Station numbers</b> and <b>Code size</b>: see <a href="#numbers">Station numbers</a>. <b>Station size</b> <span class="tag a">Advanced</span>.</p>
   <h3>Labels</h3>
-  <p><b>Label size</b>, <b>Main font</b> (Overpass, Figtree, Pixelify Sans, Cianan Ur, Helvetica, Arial, Georgia, Courier New, and any fonts you add), <b>Facility icons</b> (Top, Centre or Bottom beside the name) and <b>Icons per row (0 = all)</b> (more icons wrap onto new rows), <b>Label halo</b> (an outline in the background colour so names stay readable over lines), <b>Keep station names off lines</b>, <b>Bigger Chinese, Japanese and Korean text</b> (with <b>CJK text size, times the normal size</b> in Advanced) and <b>Bold names at interchanges</b>.</p>
+  <p><b>Label size</b>, <b>Main font</b> (Overpass, Figtree, Pixelify Sans, Inter, PT Sans, Cabin, Cianan Ur, Helvetica, Arial, Georgia, Courier New, and any fonts you add), <b>Facility icons</b> (Top, Centre or Bottom beside the name) and <b>Icons per row (0 = all)</b> (more icons wrap onto new rows), <b>Label halo</b> (an outline in the background colour so names stay readable over lines), <b>Keep station names off lines</b>, <b>Bigger Chinese, Japanese and Korean text</b> (with <b>CJK text size, times the normal size</b> in Advanced) and <b>Bold names at interchanges</b>.</p>
   <p><b>Fonts</b> <span class="tag a">Advanced</span>: <b>CJK text</b> sets a separate font for Chinese, Japanese and Korean characters in names, and <b>Subtitles</b> one for the second line under a name (for example Noto Serif HK for Chinese with Noto Sans HK for the rest); both are <i>Same as main</i> at first. <b>Add a font</b> takes the name of any family on fonts.google.com. <span class="ui">Upload a font file</span> adds a .ttf, .otf, .woff or .woff2 file up to 1.5 MB; it is saved inside the map and travels with it, so only upload fonts whose licence allows that. Added fonts can be removed with ×. Exports (PNG, SVG, the line strip and timeline videos) carry the fonts inside them, so they look the same everywhere. Helvetica uses the computer's own Helvetica, with Arimo (same letter widths) as the stand-in.</p>
   <h3>Grid</h3>
   <p><b>Placement</b> (also <span class="ui">Grid</span> / <span class="ui">Free</span> in the top bar): Grid snaps stations to the grid; Free places them precisely (to a tenth of a unit) and, while you drag, snaps the station under the pointer into line with other stations — same X, same Y or at 45° — showing a dashed guide (hold <kbd>Alt</kbd> to place without it). In Free, arrow keys move the selection by 1 unit, <kbd>Shift</kbd> + arrow by 0.1. <b>Grid size</b> sets the snapping step; <span class="ui">Snap all to grid</span> moves everything onto it. Hold <kbd>Alt</kbd> to place freely.</p>
@@ -441,6 +443,38 @@ td:first-child{white-space:nowrap;font-weight:600}
   <h3>Game coordinates</h3>
   <p><b>Blocks per grid cell</b> links the map to your world, so in-game coordinates become map positions and distances. Nether coordinates count eight times further, like in the game. <span class="ui">Place stations</span> moves every station with coordinates to its in-game spot.</p>
   <h3>Shortcuts</h3><p>The keyboard shortcuts; see <a href="#shortcuts">Shortcuts</a>.</p>
+</article>
+
+<article id="style-sets" data-group="The map">
+  <h2>Style sets</h2>
+  <p>Map settings → <b>Style sets</b> restyles the whole map in one click, after a real network's map: <b>Moscow</b>, <b>London</b> and <b>NYC</b>. <b>Default</b> puts the look back the way SNDT starts. A set only fills in settings that stay editable afterwards (colours, line width, fonts, station shapes, interchanges); no station, line or label moves, and your line colours are kept.</p>
+  <div class="demo" data-demo="sets"><div class="demo-head">Style sets<span>pick one</span></div><div class="stagebox"></div><div class="controls"></div></div>
+  <h3>Colours</h3>
+  <p><b>Line colour saturation</b> and <b>Line colour brightness</b> shift every line colour when drawn (map, legend, strips, timeline, exports) while the lines keep the colours you picked. Moscow makes them a little stronger.</p>
+  <h3>Moscow</h3>
+  <p>Thin lines with wide, sweeping corners, ticks for stops, PT Sans names and bold names at hubs.</p>
+  <ul>
+    <li><b>Interchanges</b> → <b>Joined rings</b>: an interchange is one white circle whose outline is shared by its lines, each line's colour on the side where it comes in, blending into the next.</li>
+    <li>Walking links between stations become slim white paths whose edges shade between the two stations' colours. A walking link group of three or more stations can be <b>Drawn as a round circle</b>; <span class="ui">Put the stations on the circle</span> moves them onto it.</li>
+    <li><b>Line badges</b> (Map → Stations): Off or Round. In a line's panel, <span class="ui">Add badges at the ends</span> puts a badge just past each end; drag badges anywhere on the map, <span class="ui">Remove badges</span> clears them. A badge shows the line's <b>Short code</b> (automatic from the number in its name, or its first letter).</li>
+  </ul>
+  <h3>London</h3>
+  <p>The classic Tube diagram: ticks for stops, dark blue names in Cabin (a free font in the spirit of the Tube's own lettering), white interchange rings in the text colour joined by white connectors, and no badges.</p>
+  <ul>
+    <li><b>Rings in the text colour (London)</b>: turn it off and the rings take the line colours like Moscow's.</li>
+    <li>Stations get the <b>Step-free</b> facility sign (white on blue) in their Facilities.</li>
+  </ul>
+  <h3>NYC</h3>
+  <p>Thick lines, Inter names, upright second names and a round black <b>route bullet</b> for every service at every station.</p>
+  <ul>
+    <li>A line is one service, shown by its short code, until you open its panel → <b>Services</b> → <span class="ui">Add a service</span> and give each one a <b>Code</b> (for example 4, 5 and 6 on one line). Each service gets its own bullet, its own legend bullet and its own end badge.</li>
+    <li><b>Each service is its own strip (NYC trunks)</b>: a line with services is drawn as one strip per service side by side, like the 1 2 3 and 4 5 6 trunks, and each service's bullet sits on its own strip.</li>
+    <li>In a station's panel, <b>Route bullets</b> lists every service there: untick one that passes without stopping, <span class="ui">Express ◆</span> draws a diamond, and the direction menu (<b>Both directions</b>, or <b>One way</b> towards N, NE, E…) adds an arrow bullet for a service that only runs one way.</li>
+    <li><b>Move the bullets aside</b> shifts the row away from the line, joined back to the stop; once moved, drag them on the map while the station is selected.</li>
+    <li>Big interchanges get a white pill around their bullets, and walking links between them become black connectors. Stations not in service show faded bullets with an X.</li>
+    <li><b>Planned and under construction</b> → <b>Hatched (NYC)</b> draws those lines with diagonal stripes instead of dashes.</li>
+  </ul>
+  <div class="note"><b>Each set's own tools</b>Rings, badges, services, strips, bullets and hatching only show while their set is picked, so the Default map stays plain. Switching back keeps what you set up; pick the set again and it's there.</div>
 </article>
 
 <article id="more-drawing" data-group="The map">
@@ -688,6 +722,9 @@ const DEMOS={
   lanes:{map:()=>base([st('a','North',0,-140,'terminus'),st('h','Hub',0,0,'interchange'),st('s','South',0,140,'terminus'),st('w','West',-160,0,'terminus'),st('e','East',160,60,'terminus')],
     [ln('r','Red Line','#B02E26',['a','h','e']),ln('u','Blue Line','#3C44AA',['w','h','s']),ln('g','Lime Line','#80C71F',['a','h','s'])],{}),mode:'adv',lane:true,select:[{t:'station',id:'h'}]},
   autobuild:{map:NET,select:[{t:'station',id:'d'}]},
+  sets:{map:()=>{const m=base([st('a','Harbour',0,0,'terminus'),st('b','Market',120,0,'interchange'),st('c','Castle',240,60,'interchange'),st('d','Mill',360,60,'terminus'),st('e','Spawn',120,-120,'terminus'),st('f','Docks',60,140),st('g','Quarry',200,220,'terminus'),st('h','North Gate',240,-100,'terminus'),st('i','Lakeside',300,180,'terminus')],
+      [ln('r','Red Line 1','#B02E26',['a','b','c','d']),ln('u','Blue Line 2','#3C44AA',['e','b','f','g']),ln('g','Green Line 3','#5E7C16',['h','c','i'])]);m.settings.legend.show=false;return m},
+    controls:[['default','Default'],['moscow','Moscow'],['london','London'],['nyc','NYC']].map(([k,l])=>({label:l,msg:{sndt:'act',name:'styleset',arg:k},fit:true,group:'set',on:k==='default'}))},
   colours:{map:NET,controls:[['light','Paper'],['dark','Night'],['blueprint','Blueprint'],['sand','Sandstone'],['slate','Slate'],['mint','Mint'],['mono','Mono'],['overworld','Overworld'],['nether','Nether'],['end','The End']].map(([k,l])=>({label:l,msg:{sndt:'act',name:'preset',arg:k},group:'tpl',on:k==='light'}))}
 };
 function startDemo(fig){const D=DEMOS[fig.dataset.demo];if(!D)return;const box=fig.querySelector('.stagebox');
@@ -700,7 +737,7 @@ for(const fig of $$('.demo')){const D=DEMOS[fig.dataset.demo];if(!D)continue;con
   box.innerHTML=`<button class="start" type="button"><b>▶ Start live demo</b><small>${esc(fig.querySelector('.how')?fig.querySelector('.how').textContent:'Runs the real SNDT here, on a small example map.')}</small></button>`;
   box.querySelector('.start').addEventListener('click',()=>startDemo(fig));
   const c=fig.querySelector('.controls');if(c&&D.controls){c.innerHTML=D.controls.map((o,i)=>`<button type="button" data-i="${i}" aria-pressed="${!!o.on}" disabled>${esc(o.label)}</button>`).join('');
-    c.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||!fig._send)return;const o=D.controls[+b.dataset.i];fig._send(o.msg);c.querySelectorAll('button').forEach(x=>{if(D.controls[+x.dataset.i].group===o.group)x.setAttribute('aria-pressed',x===b)})})}}
+    c.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||!fig._send)return;const o=D.controls[+b.dataset.i];fig._send(o.msg);if(o.fit)setTimeout(()=>fig._send({sndt:'fit'}),60);c.querySelectorAll('button').forEach(x=>{if(D.controls[+x.dataset.i].group===o.group)x.setAttribute('aria-pressed',x===b)})})}}
 })();
 </script>
 </body>
