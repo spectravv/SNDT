@@ -3574,8 +3574,8 @@ function hitTouch(e){const h=hitOf(e);if(e.pointerType!=='touch'||tool==='statio
 svg.addEventListener('pointerdown',e=>{lastPT=e.pointerType;
   svg.setPointerCapture(e.pointerId);pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(pts.size===2){lpCancel();if(pendTouch){clearTimeout(pendTouch.t);pendTouch=null}const [a,b]=[...pts.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),k:view.k,vx:view.x,vy:view.y,mx:(a.x+b.x)/2,my:(a.y+b.y)/2};drag=null;return}
-  // handbook demos (embed): the right mouse button drags the map; a right-click without moving still finishes a line
-  if(EMBED&&e.button===2&&e.pointerType==='mouse'){drag={type:'pan',sx:e.clientX,sy:e.clientY,vx:view.x,vy:view.y,rmb:true,moved:false};svg.style.cursor='grabbing';return}
+  // the right mouse button drags the map, like the middle one; a right-click without moving finishes a line, or opens the track menu
+  if(e.button===2&&e.pointerType==='mouse'){drag={type:'pan',sx:e.clientX,sy:e.clientY,vx:view.x,vy:view.y,rmb:true,e,moved:false};svg.style.cursor='grabbing';return}
   if((e.ctrlKey||e.metaKey)&&e.button===0){drag={type:'pan',sx:e.clientX,sy:e.clientY,vx:view.x,vy:view.y,click:e,moved:false};svg.style.cursor='grabbing';return}
   if(e.pointerType==='touch'&&pts.size===1){lpStart(e);pendTouch={e,t:setTimeout(flushTouch,90)};return}
   pointerDown(e);
@@ -3790,7 +3790,7 @@ function endPointer(e){
   if(!drag)return;const d=drag;drag=null;
   if(d.type==='dtap'){lastTap=null;if(e.type!=='pointercancel'){dtapSel=true;try{pointerDown(d.e)}finally{dtapSel=false}drag=null;render()}return}
   if(d.type==='pan'&&d.touch){if(!d.moved){lastTap={t:performance.now(),x:e.clientX,y:e.clientY};if(d.clear&&sel.length){sel=[];render();renderLists();renderInspector()}}else lastTap=null;return}
-  if(d.type==='pan'){svg.style.cursor=spaceDown?'grab':'';if(d.rmb&&!d.moved&&tool==='line'&&drawLine)finishDraw();if(d.click&&!d.moved&&(tool!=='select'||hitOf(d.click))){pointerDown(d.click);drag=null}return}
+  if(d.type==='pan'){svg.style.cursor=spaceDown?'grab':'';if(d.rmb&&!d.moved){if(tool==='line'&&drawLine)finishDraw();else if(tool==='select'&&!EMBED){lp={id:-1,x:d.e.clientX,y:d.e.clientY,e:d.e};lpFire()}}if(d.click&&!d.moved&&(tool!=='select'||hitOf(d.click))){pointerDown(d.click);drag=null}return}
   if(!d.moved&&d.type==='cp'){anchorSel={kind:'cp',key:d.key,i:d.i};requestOverlay();renderInspector();return}
   if(!d.moved&&d.type==='nvx'){const coll=d.a===shapeOf({t:'region',id:d.a.id})?'region':(M.water||[]).includes(d.a)?'water':'nature';anchorSel={kind:'vx',coll,id:d.a.id,i:d.i};requestOverlay();return}
   if(d.type==='lane'){if(d.moved)laneDrop(d);requestOverlay();return}
@@ -3814,9 +3814,8 @@ svg.addEventListener('pointerup',endPointer);svg.addEventListener('pointercancel
 svg.addEventListener('pointerleave',()=>{if(hover&&!drag){hover=null;requestOverlay()}});
 svg.addEventListener('contextmenu',e=>{
   // phones send contextmenu on a long press: that's not a right-click, so it mustn't finish a line (or open the browser's menu)
-  if(lastPT!=='mouse'){e.preventDefault();return}
-  if(EMBED){e.preventDefault();return}
-  if(e.ctrlKey)e.preventDefault();if(tool==='line'&&drawLine){e.preventDefault();finishDraw()}});
+  // a mouse right-click is handled on pointerup instead (right-drag pans): no browser menu on the map
+  e.preventDefault()});
 svg.addEventListener('dblclick',e=>{const h=hitOf(e);
   if(tool==='water'){finishWater();return}
   if(tool==='nature'){finishNature();return}
