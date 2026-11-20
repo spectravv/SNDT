@@ -1274,6 +1274,7 @@
   "Untick a line that passes through without stopping: it runs beside the station here and gets no stop.": "Durmadan geçen hattın işaretini kaldırın: burada istasyonun yanından geçer ve durmaz.",
   "Writes the numbers in order along the line into every station, replacing ones typed by hand. Use it after adding a station in between.": "Hat boyunca sırayla her istasyona numara yazar, elle girilenlerin yerine geçer. Araya istasyon ekledikten sonra kullanın.",
   "Zone number": "Bölge numarası",
+  "Off while Reorder lines at stations is on.": "“İstasyonlarda hat sırasını değiştir” açıkken kapalıdır.",
   "Style sets: one click turns your map into a Moscow, London or NYC style map, and everything stays editable.": "Stil setleri: tek tıkla haritanız Moskova, Londra veya NYC tarzına dönüşür ve her şey düzenlenebilir kalır.",
   "NYC: several services on one line, each with its own route bullet and strip, plus express and one-way stops.": "NYC: bir hatta birden çok hizmet, her birinin kendi rozeti ve şeridi, ayrıca ekspres ve tek yönlü duraklar.",
   "Moscow and London: interchange rings joined by walking links. Moscow and NYC add line badges at the ends.": "Moskova ve Londra: yürüme bağlantılarıyla birleşen aktarma halkaları. Moskova ve NYC uçlara hat rozetleri ekler.",

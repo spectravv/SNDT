@@ -1274,6 +1274,7 @@
   "Untick a line that passes through without stopping: it runs beside the station here and gets no stop.": "Untick a line that passes through without stopping: it runs beside the station here and gets no stop.",
   "Writes the numbers in order along the line into every station, replacing ones typed by hand. Use it after adding a station in between.": "Writes the numbers in order along the line into every station, replacing ones typed by hand. Use it after adding a station in between.",
   "Zone number": "Zone number",
+  "Off while Reorder lines at stations is on.": "Off while Reorder lines at stations is on.",
   "Style sets: one click turns your map into a Moscow, London or NYC style map, and everything stays editable.": "Style sets: one click turns your map into a Moscow, London or NYC style map, and everything stays editable.",
   "NYC: several services on one line, each with its own route bullet and strip, plus express and one-way stops.": "NYC: several services on one line, each with its own route bullet and strip, plus express and one-way stops.",
   "Moscow and London: interchange rings joined by walking links. Moscow and NYC add line badges at the ends.": "Moscow and London: interchange rings joined by walking links. Moscow and NYC add line badges at the ends.",

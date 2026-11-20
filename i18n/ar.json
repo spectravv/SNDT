@@ -1274,6 +1274,7 @@
   "Untick a line that passes through without stopping: it runs beside the station here and gets no stop.": "ألغِ تحديد خط يمر دون توقف: سيمر هنا بجانب المحطة دون توقف.",
   "Writes the numbers in order along the line into every station, replacing ones typed by hand. Use it after adding a station in between.": "يكتب الأرقام بالترتيب على طول الخط في كل محطة، ويستبدل المكتوبة يدويًا. استخدمه بعد إضافة محطة في الوسط.",
   "Zone number": "رقم المنطقة",
+  "Off while Reorder lines at stations is on.": "متوقف ما دامت «إعادة ترتيب الخطوط في المحطات» مفعّلة.",
   "Style sets: one click turns your map into a Moscow, London or NYC style map, and everything stays editable.": "مجموعات الأنماط: نقرة واحدة تحوّل خريطتك إلى نمط موسكو أو لندن أو نيويورك، ويبقى كل شيء قابلاً للتعديل.",
   "NYC: several services on one line, each with its own route bullet and strip, plus express and one-way stops.": "نيويورك: عدة خدمات على خط واحد، لكل منها شارتها وشريطها، مع محطات سريعة وأخرى باتجاه واحد.",
   "Moscow and London: interchange rings joined by walking links. Moscow and NYC add line badges at the ends.": "موسكو ولندن: حلقات تبديل تصلها ممرات مشاة. وتضيف موسكو ونيويورك شارات الخطوط عند الطرفين.",

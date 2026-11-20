@@ -1274,6 +1274,7 @@
   "Untick a line that passes through without stopping: it runs beside the station here and gets no stop.": "Décochez une ligne qui passe sans s’arrêter : elle passe ici à côté de la station, sans arrêt.",
   "Writes the numbers in order along the line into every station, replacing ones typed by hand. Use it after adding a station in between.": "Écrit les numéros dans l’ordre le long de la ligne dans chaque station, en remplaçant ceux saisis à la main. À utiliser après avoir ajouté une station intermédiaire.",
   "Zone number": "Numéro de zone",
+  "Off while Reorder lines at stations is on.": "Désactivé tant que « Réordonner les lignes aux stations » est activé.",
   "Style sets: one click turns your map into a Moscow, London or NYC style map, and everything stays editable.": "Ensembles de style : un clic donne à votre carte le style de Moscou, Londres ou NYC, et tout reste modifiable.",
   "NYC: several services on one line, each with its own route bullet and strip, plus express and one-way stops.": "NYC : plusieurs services sur une ligne, chacun avec sa pastille et sa bande, plus des arrêts express et à sens unique.",
   "Moscow and London: interchange rings joined by walking links. Moscow and NYC add line badges at the ends.": "Moscou et Londres : anneaux de correspondance reliés par des couloirs. Moscou et NYC ajoutent des badges de ligne aux extrémités.",

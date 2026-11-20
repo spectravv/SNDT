@@ -1274,6 +1274,7 @@
   "Untick a line that passes through without stopping: it runs beside the station here and gets no stop.": "取消勾选不停靠而直接通过的线路：它会从本站旁边经过，不设停靠。",
   "Writes the numbers in order along the line into every station, replacing ones typed by hand. Use it after adding a station in between.": "沿线按顺序为每个车站写入编号，替换手动输入的编号。在中间新增车站后使用。",
   "Zone number": "区号",
+  "Off while Reorder lines at stations is on.": "“在车站调整线路顺序”开启时不可用。",
   "Style sets: one click turns your map into a Moscow, London or NYC style map, and everything stays editable.": "风格套装：一键把地图变成莫斯科、伦敦或纽约风格，所有内容仍可编辑。",
   "NYC: several services on one line, each with its own route bullet and strip, plus express and one-way stops.": "纽约：一条线路上可有多项服务，每项都有自己的线路圆标和色条，还有快车站和单向站。",
   "Moscow and London: interchange rings joined by walking links. Moscow and NYC add line badges at the ends.": "莫斯科和伦敦：换乘圆环由步行通道相连。莫斯科和纽约还可在线路两端加标记。",
