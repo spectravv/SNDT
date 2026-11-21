@@ -733,6 +733,18 @@ const PLAT={kind:'web',
   fontUrl:u=>u,
   // load an extra script only when a feature needs it (video export, accounts). The desktop app ships these files instead
   script:src=>new Promise((res,rej)=>{const sc=document.createElement('script');sc.src=src;sc.onload=()=>res();sc.onerror=()=>rej(new Error('script'));document.head.appendChild(sc)})};
+// the desktop app (Tauri now, Steam later): files go through a Save dialog and web pages open in the person's own browser.
+// Settings and maps keep using the web storage, which the desktop app keeps on disk. On the web this block does nothing.
+if(window.__TAURI__&&window.__TAURI__.core){const T=window.__TAURI__.core;
+  PLAT.kind='steam';document.documentElement.dataset.plat='steam';
+  // the app's own pages (handbook, changelog) aren't bundled: relative links go to sndt.cc
+  const site=u=>new URL(u,'https://sndt.cc/').href;
+  PLAT.open=u=>{T.invoke('open_link',{url:site(u)}).catch(e=>console.warn('open',e))};
+  PLAT.download=(name,blob)=>{blob.arrayBuffer().then(b=>T.invoke('save_file',new Uint8Array(b),{headers:{'x-name':encodeURIComponent(name)}}))
+    .then(ok=>{if(ok)toast(tr('Saved')+': '+name)}).catch(e=>{console.warn('save',e);toast(tr('Could not save the file.'))});return true};
+  // plain links to other sites (Discord, GitHub, Ko-fi) would otherwise try to open inside the app
+  document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[href]');if(!a||e.defaultPrevented||a.hasAttribute('download'))return;
+    const h=a.getAttribute('href');if(!h||h[0]==='#'||/^(javascript|blob|data):/i.test(h))return;e.preventDefault();PLAT.open(h)},true)}
 const lsGet=k=>PLAT.kv.get(k);
 // embed mode (?embed=1 or #embed): the handbook's live demos run the app in a frame. It shows only the map and tools,
 // takes its map and commands from the page around it, and never saves or changes the player's own settings.
@@ -1819,7 +1831,9 @@ function numBox(s,G){if(M.settings.stNums!=='marks'||s.kind==='waypoint')return 
     cells.forEach((c,i)=>Object.assign(c,fit(B[i].text,c.w,c.h)));return cells};
   let cells=lay(1),best=Math.min(...cells.map(c=>c.fz));
   if(s.numH>0)for(let r=2;r<=B.length;r++){const c=lay(r),v=Math.min(...c.map(c=>c.fz));if(v>best*1.05){cells=c;best=v}}
-  return{B,h,fs:best,cells,W}}
+  // station.numRot turns the codes (degrees, clockwise), e.g. 90 to run them down a vertical line
+  const rot=((+s.numRot||0)%360+360)%360;
+  return{B,h,fs:best,cells,W,rot}}
 // a slider and a number box for the same size (empty number = automatic / follow the map)
 function sizePair(o,id,p,v,auto){return `<div class="sizepair"><input type="range" data-obj="${o}" data-id="${id}" data-prop="${p}" data-type="numnull" min="6" max="60" step="1" value="${v>0?v:auto}" aria-label="Size"><input type="number" id="${fid(o,p)}" data-obj="${o}" data-id="${id}" data-prop="${p}" data-type="numnull" min="4" max="200" step="0.5" value="${v>0?v:''}" placeholder="${f(auto)}"></div>`}
 function numBadgesSVG(s,nb,c){const S=M.settings,x0=c.x-nb.W/2,y0=c.y-nb.h/2,r=Math.min(...nb.cells.map(q=>Math.min(q.w,q.h)))*.3,id='nb'+s.id;let o='',tx='';
@@ -1828,7 +1842,8 @@ function numBadgesSVG(s,nb,c){const S=M.settings,x0=c.x-nb.W/2,y0=c.y-nb.h/2,r=M
   // not in service: diagonal stripes in the background colour across the badges, under the codes
   if(s.closed){const g=nb.h*.34,w=g*.45;let st='';for(let k=-nb.h;k<nb.W+nb.h;k+=g)st+=`M${f(x0+k)} ${f(y0+nb.h)}L${f(x0+k+nb.h)} ${f(y0)}`;o+=`<path d="${st}" stroke="${S.bg}" stroke-width="${f(w)}" stroke-opacity=".75" fill="none"/>`}
   o+=tx;
-  return `<clipPath id="${id}"><rect x="${f(x0)}" y="${f(y0)}" width="${f(nb.W)}" height="${f(nb.h)}" rx="${f(r)}"/></clipPath><rect x="${f(x0-1)}" y="${f(y0-1)}" width="${f(nb.W+2)}" height="${f(nb.h+2)}" rx="${f(r+1)}" fill="${S.bg}"/><g clip-path="url(#${id})">${o}</g>`}
+  const out=`<clipPath id="${id}"><rect x="${f(x0)}" y="${f(y0)}" width="${f(nb.W)}" height="${f(nb.h)}" rx="${f(r)}"/></clipPath><rect x="${f(x0-1)}" y="${f(y0-1)}" width="${f(nb.W+2)}" height="${f(nb.h+2)}" rx="${f(r+1)}" fill="${S.bg}"/><g clip-path="url(#${id})">${o}</g>`;
+  return nb.rot?`<g transform="rotate(${f(nb.rot)} ${f(c.x)} ${f(c.y)})">${out}</g>`:out}
 // lane layout: 'lines' first, 'stations' first, or 'manual' (lanes frozen from the layout the map had, layoutBase, saved per
 // segment as each line's sideways offset in lanes: seg.lanes {lid:[...]}, one value per part (leg between corners) of the route,
 // or [start,end] for a straight or smooth segment); the automatic layout still runs underneath
@@ -2098,7 +2113,7 @@ function stationSVG(s,G,editor){
   if(cb)g=s.ciconOver?g+ciconSVG(s):ciconSVG(s);
   // codes as the mark: a station not in service shows them striped instead of crossed out (the X would hide the codes)
   const nb=!cb&&numBox(s,G);if(nb)g=numBadgesSVG(s,nb,{x:(p.x+q.x)/2,y:(p.y+q.y)/2});
-  const nbHit=nb&&editor?`<rect x="${f((p.x+q.x)/2-nb.W/2)}" y="${f((p.y+q.y)/2-nb.h/2)}" width="${f(nb.W)}" height="${f(nb.h)}" fill="transparent"/>`:'';
+  const nbHit=nb&&editor?`<rect x="${f((p.x+q.x)/2-nb.W/2)}" y="${f((p.y+q.y)/2-nb.h/2)}" width="${f(nb.W)}" height="${f(nb.h)}" fill="transparent"${nb.rot?` transform="rotate(${f(nb.rot)} ${f((p.x+q.x)/2)} ${f((p.y+q.y)/2)})"`:''}/>`:'';
   const ow=G.owStops&&k!=='waypoint'&&k!=='arrow'&&k!=='local'&&!s.closed?G.owStops.get(s.id):null;
   const om=ow?chevron(mc.x,mc.y,ow,Math.max(4,sz*.5),S.ink,Math.max(1.3,sz*.13)):'';
   const mh=editor&&hit&&markHits.get(s.id),hitN=mh?`<circle cx="${f(mh.x)}" cy="${f(mh.y)}" r="${f(Math.max(mh.r,10))}" fill="transparent"/>`+(bl0&&bl0.home?hit:''):hit;
@@ -2139,7 +2154,7 @@ function textW0(str,fs,weight,italic,fam){const S=M.settings;fam=fam||S.labelFon
 function contrastOn(hex){const [r,g,b]=hexRgb(hex);return(.299*r+.587*g+.114*b)/255>.6?'#1d2226':'#ffffff'}
 function labelBox(s,G,dk,push=0){
   const S=M.settings,dir=DIRS[dk]||DIRS.e,mg=(s.markW||s.markH)&&markGeom(s,G),E=mg?(G.ends.get(s.id)||[]).concat([mg.p,mg.q]):G.ends.get(s.id)||[],cb=ciconBox(s),rm=isRingSt(s,G)&&ringModelFor(s,G),bl=S.xferStyle==='bullets'&&s.kind!=='waypoint'&&bulletLayout(s,G),sz=Math.max(mg?mg.sz:stSize(s),bl?2*bl.ext-4:0,cb?Math.max(cb.w,cb.h):0,rm?2*(rm.R+rm.rw/2+Math.max(Math.abs(rm.cx-s.x),Math.abs(rm.cy-s.y)))-4:0),bgp=s.lbg?4:0,o=markAt(s,G);
-  let ext=0;const nb=numBox(s,G);if(nb)ext=Math.abs(dir[0])*nb.W/2+Math.abs(dir[1])*nb.h/2-sz/2;
+  let ext=0;const nb=numBox(s,G);if(nb){const a=nb.rot*Math.PI/180,c=Math.abs(Math.cos(a)),sn=Math.abs(Math.sin(a)),bw=c*nb.W+sn*nb.h,bh=sn*nb.W+c*nb.h;ext=Math.abs(dir[0])*bw/2+Math.abs(dir[1])*bh/2-sz/2}
   for(const e of E){ext=Math.max(ext,(e.x-o.x)*dir[0]+(e.y-o.y)*dir[1]);if(s.kind==='arrow'){const L=lnOf(e.lid),len=(L?lw(L):S.lineWidth)*1.9;ext=Math.max(ext,(e.x-e.dir.x*len-o.x)*dir[0]+(e.y-e.dir.y*len-o.y)*dir[1]-sz/2+2)}}
   const gap=sz/2+ext+5+push+bgp,x0=o.x+dir[0]*gap+(s.ldx||0),y0=o.y+dir[1]*gap+(s.ldy||0);
   const fs=s.fs||(s.kind==='hub'?Math.round(S.labelSize*1.15):S.labelSize),rows=String(s.name).split('\n'),rsz=rows.map(r=>cjkFs([r],fs)),fe=rsz[0],dys=rows.map((r,i)=>i?rsz[i-1]*.3+rsz[i]*.85:0),h=rsz.reduce((a,v)=>a+v*1.15,0);
@@ -2618,9 +2633,9 @@ function overlaySVG(G){
     if(s.t==='line'&&s.seg){const t=G.tracks.get(s.seg);if(t)o+=`<path d="${dOf(t.pts)}" fill="none" stroke="${c}" stroke-width="2" stroke-dasharray="5 4" pointer-events="none"/>`}
     // station number codes: drag a corner or an edge to size the box by hand (it stays a rectangle centred on the station)
     if(s.t==='station'&&sel.length===1&&tool==='select'){const st=stOf(s.id),nb=st&&!ciconBox(st)&&numBox(st,G);if(nb){const E=(G.ends.get(st.id)||[]).filter(e=>!passesAt(e.lid,st.id)),[p,q]=farPair(E,st),cx=(p.x+q.x)/2,cy=(p.y+q.y)/2,hw=nb.W/2,hh=nb.h/2,z=8/view.k;
-      o+=`<rect x="${f(cx-hw)}" y="${f(cy-hh)}" width="${f(nb.W)}" height="${f(nb.h)}" fill="none" stroke="${c}" stroke-width="${f(1.2/view.k)}" stroke-dasharray="${f(4/view.k)} ${f(3/view.k)}" pointer-events="none"/>`;
+      o+=`<g transform="rotate(${f(nb.rot)} ${f(cx)} ${f(cy)})"><rect x="${f(cx-hw)}" y="${f(cy-hh)}" width="${f(nb.W)}" height="${f(nb.h)}" fill="none" stroke="${c}" stroke-width="${f(1.2/view.k)}" stroke-dasharray="${f(4/view.k)} ${f(3/view.k)}" pointer-events="none"/>`;
       for(const [k,ax,ay] of [['nw',-1,-1],['n',0,-1],['ne',1,-1],['e',1,0],['se',1,1],['s',0,1],['sw',-1,1],['w',-1,0]])
-        o+=`<rect data-kind="nbh" data-id="${st.id}" data-i="${k}" x="${f(cx+ax*hw-z/2)}" y="${f(cy+ay*hh-z/2)}" width="${f(z)}" height="${f(z)}" fill="#fff" stroke="${c}" stroke-width="${f(1.5/view.k)}" style="cursor:${k==='n'||k==='s'?'ns':k==='e'||k==='w'?'ew':k==='nw'||k==='se'?'nwse':'nesw'}-resize"/>`}}
+        o+=`<rect data-kind="nbh" data-id="${st.id}" data-i="${k}" x="${f(cx+ax*hw-z/2)}" y="${f(cy+ay*hh-z/2)}" width="${f(z)}" height="${f(z)}" fill="#fff" stroke="${c}" stroke-width="${f(1.5/view.k)}" style="cursor:${k==='n'||k==='s'?'ns':k==='e'||k==='w'?'ew':k==='nw'||k==='se'?'nwse':'nesw'}-resize"/>`;o+='</g>'}}
     // a station's mark: drag a corner or an edge to size it by hand (it stays centred, turned along its lines)
     if(s.t==='station'&&sel.length===1&&tool==='select'){const st=stOf(s.id);if(st&&markFree(st,G)){const m=markGeom(st,G),cx=(m.p.x+m.q.x)/2,cy=(m.p.y+m.q.y)/2,hw=m.W/2+2,hh=m.H/2+2,z=7/view.k,ang=Math.atan2(m.u.y,m.u.x)*180/Math.PI;
       o+=`<g transform="rotate(${f(ang)} ${f(cx)} ${f(cy)})"><rect x="${f(cx-hw)}" y="${f(cy-hh)}" width="${f(hw*2)}" height="${f(hh*2)}" fill="none" stroke="${c}" stroke-width="${f(1.2/view.k)}" stroke-dasharray="${f(4/view.k)} ${f(3/view.k)}" pointer-events="none"/>`;
@@ -2837,7 +2852,7 @@ function inspStation(s){
    <div class="fld"><span>${tr('Text alignment')}</span><div class="opts" style="flex-direction:column;align-items:stretch">${[['','Auto'],['left','Left'],['center','Centre'],['right','Right']].map(([k,l])=>`<button class="opt" data-act="lalign:${k}" aria-pressed="${(s.lalign||'')===k}">${tr(l)}</button>`).join('')}</div></div></div>
    <div class="fld"><span>Type</span>${kindPicker(s.kind||'stop')}</div>
    ${(()=>{if(s.kind==='waypoint')return'';const G=lastG||geom(),B=stNums(G).get(s.id)||[],ls=lines.filter(L=>String(L.numPrefix||'').trim());if(!ls.length)return'';
-     return (M.settings.stNums==='marks'?`<p class="sub">${tr('Drag the square handles around the codes on the map to size them.')}</p>`+(s.numW||s.numH||s.numSize?'<div class="btns"><button class="btn" data-act="num-size-reset">'+tr('Reset code size')+'</button></div>':''):'')+(B.length>1?`<div class="fld"><span>${tr('Code order')}</span>${B.map((b,i)=>`<div style="display:flex;gap:6px;align-items:stretch;margin-bottom:6px"><button class="btn" style="flex:0 0 40px" data-act="num-left:${esc(b.lid)}"${i?'':' disabled'} title="${esc(tr('Move left'))}" aria-label="${esc(tr('Move left'))}">◀</button><span data-nt style="flex:1;display:flex;align-items:center;padding:0 10px;font-weight:700;background:${esc(b.color)};color:${contrastOn(b.color)}">${esc(b.text)}</span><button class="btn" style="flex:0 0 40px" data-act="num-right:${esc(b.lid)}"${i<B.length-1?'':' disabled'} title="${esc(tr('Move right'))}" aria-label="${esc(tr('Move right'))}">▶</button></div>`).join('')}${s.numOrder?`<button class="btn" data-act="num-order-reset">${tr('Back to line order')}</button>`:''}</div>`:'')+`<div class="grid2">${ls.map(L=>{const auto=(B.find(b=>b.lid===L.id)||{}).text||'';return fld(tr('Number on')+' '+String(L.name).split('\n')[0],inp('station',s.id,'nums.'+L.id,(s.nums||{})[L.id]||'','text','placeholder="'+esc(auto)+'" maxlength="10"'))}).join('')}</div>`})()}
+     return (M.settings.stNums==='marks'?`<p class="sub">${tr('Drag the square handles around the codes on the map to size them.')}</p>`+(s.numW||s.numH||s.numSize?'<div class="btns"><button class="btn" data-act="num-size-reset">'+tr('Reset code size')+'</button></div>':'')+`<div class="fld"><span>${tr('Code rotation °')}</span><div style="display:flex;gap:6px"><button class="btn" style="flex:0 0 40px" data-act="num-rot:-90" title="${esc(tr('Turn left'))}" aria-label="${esc(tr('Turn left'))}">↺</button>${inp('station',s.id,'numRot',+s.numRot||0,'num','step="15"')}<button class="btn" style="flex:0 0 40px" data-act="num-rot:90" title="${esc(tr('Turn right'))}" aria-label="${esc(tr('Turn right'))}">↻</button></div></div>`:'')+(B.length>1?`<div class="fld"><span>${tr('Code order')}</span>${B.map((b,i)=>`<div style="display:flex;gap:6px;align-items:stretch;margin-bottom:6px"><button class="btn" style="flex:0 0 40px" data-act="num-left:${esc(b.lid)}"${i?'':' disabled'} title="${esc(tr('Move left'))}" aria-label="${esc(tr('Move left'))}">◀</button><span data-nt style="flex:1;display:flex;align-items:center;padding:0 10px;font-weight:700;background:${esc(b.color)};color:${contrastOn(b.color)}">${esc(b.text)}</span><button class="btn" style="flex:0 0 40px" data-act="num-right:${esc(b.lid)}"${i<B.length-1?'':' disabled'} title="${esc(tr('Move right'))}" aria-label="${esc(tr('Move right'))}">▶</button></div>`).join('')}${s.numOrder?`<button class="btn" data-act="num-order-reset">${tr('Back to line order')}</button>`:''}</div>`:'')+`<div class="grid2">${ls.map(L=>{const auto=(B.find(b=>b.lid===L.id)||{}).text||'';return fld(tr('Number on')+' '+String(L.name).split('\n')[0],inp('station',s.id,'nums.'+L.id,(s.nums||{})[L.id]||'','text','placeholder="'+esc(auto)+'" maxlength="10"'))}).join('')}</div>`})()}
    ${['stop','interchange','terminus','hub'].includes(s.kind||'stop')?fld('Shape',selectF('station',s.id,'shape',s.shape||'',[['',tr('Same as map')+' ('+tr((SHAPES.find(x=>x[0]===(M.settings.stopStyle||'circle'))||SHAPES[0])[1])+')']].concat(SHAPES))):''}
    ${(()=>{const G=lastG||geom();if(!markFree(s,G))return'';const m=markGeom(s,G),r=v=>Math.round(v*10)/10;
      return `<div class="grid2">${fld(tr('Mark length'),inp('station',s.id,'markW',s.markW??'','numnull','min="3" step="0.5" placeholder="'+r(m.W0)+'"'))}${fld(tr('Mark thickness'),inp('station',s.id,'markH',s.markH??'','numnull','min="3" step="0.5" placeholder="'+r(m.H0)+'"'))}</div><p class="sub">${tr('Or drag the square handles around the mark on the map. Empty means the automatic size.')}</p>${s.markW||s.markH?'<div class="btns"><button class="btn" data-act="mark-size-reset">'+tr('Reset mark size')+'</button></div>':''}`})()}
@@ -3276,6 +3291,7 @@ function act(name,arg,el){
     case 'mgap':pushUndo();M.settings.crossGap=+arg;changed();break;
     case 'mark-size-reset':{const ss=sel.filter(x=>x.t==='station').map(x=>stOf(x.id)).filter(Boolean);if(!ss.length)break;pushUndo();ss.forEach(x=>{delete x.markW;delete x.markH});changed();break}
     case 'num-left':case 'num-right':{if(!curSt)break;const ids=(stNums(lastG||geom()).get(curSt.id)||[]).map(b=>b.lid),i=ids.indexOf(arg),j=name==='num-left'?i-1:i+1;if(i<0||j<0||j>=ids.length)break;pushUndo();[ids[i],ids[j]]=[ids[j],ids[i]];curSt.numOrder=ids;changed();break}
+    case 'num-rot':if(curSt){pushUndo();const v=(((+curSt.numRot||0)+(+arg))%360+360)%360;const n=v>180?v-360:v;if(n)curSt.numRot=n;else delete curSt.numRot;changed()}break;
     case 'num-order-reset':if(curSt){pushUndo();delete curSt.numOrder;changed()}break;
     case 'num-size-reset':if(curSt){pushUndo();delete curSt.numW;delete curSt.numH;delete curSt.numSize;changed()}break;
     case 'mlayout':{const v=arg==='lines'||arg==='manual'?arg:'stations';if(M.settings.layout===v)break;pushUndo();
@@ -3652,7 +3668,7 @@ function pointerDown(e){if(multiAdd&&e.pointerType!=='mouse'&&dtapSel)Object.def
     drag={type:h.kind,key:h.key,i,start:w,moved:false,off:m?{x:m[1].x-m[0].x,y:m[1].y-m[0].y}:{x:0,y:0}};return}
   if(h&&h.kind==='ihandle'){const im=(M.images||[]).find(x=>x.id===h.id);if(im){drag={type:'iresize',im,start:w,ow:im.w,oh:im.h,moved:false};return}}
   if(h&&h.kind==='mkh'){const st=stOf(h.id);if(st){const m=markGeom(st,lastG||geom());drag={type:'mkresize',s:st,i:h.i,start:w,ow:m.W,oh:m.H,u:m.u,moved:false};return}}
-  if(h&&h.kind==='nbh'){const st=stOf(h.id),nb=st&&numBox(st,lastG);if(nb){drag={type:'nbresize',s:st,i:h.i,start:w,ow:nb.W,oh:nb.h,moved:false};return}}
+  if(h&&h.kind==='nbh'){const st=stOf(h.id),nb=st&&numBox(st,lastG);if(nb){drag={type:'nbresize',s:st,i:h.i,start:w,ow:nb.W,oh:nb.h,rot:nb.rot,moved:false};return}}
   if(h&&h.kind==='handle'){const g=M.regions.find(x=>x.id===h.id),r=+h.i>=0?g.more[+h.i]:g;drag={type:'resize',r,start:w,ow:r.w,oh:r.h,moved:false};return}
   if(h&&h.kind==='label'){const s=stOf(h.id);if(!isSel('station',s.id))select([{t:'station',id:s.id}]);drag={type:'label',s,start:w,moved:false};return}
   if(h&&(h.kind==='station'||h.kind==='label'||h.kind==='text'||h.kind==='region'||h.kind==='legend'||h.kind==='image')){
@@ -3786,8 +3802,10 @@ svg.addEventListener('pointermove',e=>{
   if(drag.type==='mkresize'){if(!drag.moved){if(Math.hypot(dx,dy)*view.k<2)return;pushUndo();drag.moved=true}const k=drag.i,sx=k.includes('e')?1:k.includes('w')?-1:0,sy=k.includes('s')?1:k.includes('n')?-1:0,u=drag.u,da=dx*u.x+dy*u.y,dn=-dx*u.y+dy*u.x;
     const st=e.altKey?.5:1,r=v=>Math.round(v/st)*st;if(sx)drag.s.markW=Math.max(4,r(drag.ow+2*da*sx));if(sy)drag.s.markH=Math.max(3,r(drag.oh+2*dn*sy));if(sx&&!drag.s.markH)drag.s.markH=r(drag.oh);if(sy&&!drag.s.markW)drag.s.markW=r(drag.ow);requestRender();return}
   if(drag.type==='nbresize'){if(!drag.moved){if(Math.hypot(dx,dy)*view.k<2)return;pushUndo();drag.moved=true}const k=drag.i,sx=k.includes('e')?1:k.includes('w')?-1:0,sy=k.includes('s')?1:k.includes('n')?-1:0;
+    // the pointer's move measured along the (turned) box
+    const ra=(drag.rot||0)*Math.PI/180,bu=dx*Math.cos(ra)+dy*Math.sin(ra),bv=-dx*Math.sin(ra)+dy*Math.cos(ra);
     // both sides move together, so the box stays centred on the station; Alt for finer steps
-    const st=e.altKey?.5:1,r=v=>Math.round(v/st)*st;if(sx)drag.s.numW=Math.max(8,r(drag.ow+2*dx*sx));if(sy)drag.s.numH=Math.max(6,r(drag.oh+2*dy*sy));requestRender();return}
+    const st=e.altKey?.5:1,r=v=>Math.round(v/st)*st;if(sx)drag.s.numW=Math.max(8,r(drag.ow+2*bu*sx));if(sy)drag.s.numH=Math.max(6,r(drag.oh+2*bv*sy));requestRender();return}
   if(drag.type==='iresize'){if(!drag.moved){if(Math.hypot(dx,dy)*view.k<2)return;pushUndo();drag.moved=true}const im=drag.im,nw=Math.max(8,Math.round(drag.ow+dx));im.w=nw;im.h=(e.altKey||im.free)?Math.max(8,Math.round(drag.oh+dy)):Math.max(8,Math.round(nw/(im.ar||drag.ow/drag.oh)));if(e.altKey)im.free=true;requestRender();return}
   if(drag.type==='resize'){if(!drag.moved){pushUndo();drag.moved=true}drag.r.w=Math.max(20,snap(drag.ow+dx,e.altKey));drag.r.h=Math.max(20,snap(drag.oh+dy,e.altKey));requestRender();return}
   if(drag.type==='marquee'){drag.b=w;drag.moved=true;requestOverlay();return}
